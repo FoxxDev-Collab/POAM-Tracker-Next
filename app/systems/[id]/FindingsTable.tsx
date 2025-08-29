@@ -1,0 +1,257 @@
+"use client"
+
+import { Fragment, useEffect, useMemo, useState } from "react"
+import { ChevronRight } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+
+type Finding = {
+  id: number
+  system_id: number
+  scan_id: number
+  group_id: string | null
+  rule_id: string
+  rule_version: string | null
+  rule_title: string | null
+  severity: string | null
+  status: string | null
+  finding_details: string | null
+  check_content: string | null
+  fix_text: string | null
+  cci: string | null
+  last_seen: string
+}
+
+type Resp = { items: Finding[]; total: number; page: number; pageSize: number }
+
+const severities = ["low", "medium", "high", "critical"]
+const statuses = ["not_reviewed", "open", "not_a_finding", "not_applicable", "mitigated"]
+
+export default function FindingsTable({ systemId }: { systemId: number }) {
+  const [q, setQ] = useState("")
+  const [severity, setSeverity] = useState<string>("")
+  const [status, setStatus] = useState<string>("")
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(20)
+  const [data, setData] = useState<Resp>({ items: [], total: 0, page: 1, pageSize })
+  const [loading, setLoading] = useState(false)
+  const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  const [comments, setComments] = useState<Record<number, string>>({})
+  const [refreshToken, setRefreshToken] = useState(0)
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil((data.total || 0) / pageSize)), [data.total, pageSize])
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const usp = new URLSearchParams()
+        usp.set("page", String(page))
+        usp.set("pageSize", String(pageSize))
+        if (q) usp.set("q", q)
+        if (severity) usp.set("severity", severity)
+        if (status) usp.set("status", status)
+        const res = await fetch(`/api/systems/${systemId}/stig/findings?` + usp.toString(), { cache: "no-store" })
+        const j = await res.json()
+        if (!cancelled) setData(j as Resp)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [systemId, page, pageSize, q, severity, status, refreshToken])
+
+  // Auto-refresh when an upload completes for this system
+  useEffect(() => {
+    function onUploaded(e: Event) {
+      const ce = e as CustomEvent<{ systemId: number }>
+      if (ce.detail?.systemId === systemId) {
+        setRefreshToken((t) => t + 1)
+      }
+    }
+    window.addEventListener("scan-uploaded", onUploaded as EventListener)
+    return () => window.removeEventListener("scan-uploaded", onUploaded as EventListener)
+  }, [systemId])
+
+  function onSearch(e: React.FormEvent) {
+    e.preventDefault()
+    setPage(1)
+  }
+
+  function toggleRow(id: number) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Findings</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form className="flex flex-col md:flex-row gap-3 mb-3" onSubmit={onSearch}>
+          <Input placeholder="Search Group ID / STIG ID / Title" value={q} onChange={(e) => setQ(e.target.value)} />
+          <select className="h-9 rounded-md border px-2" value={severity} onChange={(e) => { setSeverity(e.target.value); setPage(1) }}>
+            <option value="">All severities</option>
+            {severities.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          <select className="h-9 rounded-md border px-2" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }}>
+            <option value="">All statuses</option>
+            {statuses.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          <Button type="submit">Filter</Button>
+        </form>
+
+        {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
+        {!loading && data.items.length === 0 && (
+          <div className="text-sm text-muted-foreground">No findings match the filters.</div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left border-b">
+                <th className="py-2 pr-2 w-[80px]">Actions</th>
+                <th className="py-2 pr-3 w-[120px]">Group ID</th>
+                <th className="py-2 pr-3 w-[160px]">STIG ID</th>
+                <th className="py-2 pr-3 w-[35%]">Title</th>
+                <th className="py-2 pr-3 w-[140px]">Severity</th>
+                <th className="py-2 pr-3 w-[160px]">Status</th>
+                <th className="py-2 pr-3">Last Seen</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((f) => (
+                <Fragment key={f.id}>
+                  <tr className="border-b align-top">
+                    <td className="py-2 pr-2">
+                      <button
+                        type="button"
+                        aria-label={expanded.has(f.id) ? "Collapse details" : "Expand details"}
+                        className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground hover:bg-muted transition-colors"
+                        onClick={() => toggleRow(f.id)}
+                      >
+                        <ChevronRight className={`h-4 w-4 transition-transform ${expanded.has(f.id) ? "rotate-90" : ""}`} />
+                        {expanded.has(f.id) ? "Hide" : "View"}
+                      </button>
+                    </td>
+                    <td className="py-2 pr-3 whitespace-nowrap font-mono">{f.group_id || f.rule_id}</td>
+                    <td className="py-2 pr-3 whitespace-nowrap font-mono">{f.rule_id}</td>
+                    <td className="py-2 pr-3 max-w-[380px] truncate">{f.rule_title || ""}</td>
+                    <td className="py-2 pr-3 whitespace-nowrap">
+                      <SeverityBadge value={f.severity} />
+                    </td>
+                    <td className="py-2 pr-3 whitespace-nowrap">
+                      <StatusBadge value={f.status} />
+                    </td>
+                    <td className="py-2 pr-3 whitespace-nowrap">{new Date(f.last_seen).toLocaleString()}</td>
+                  </tr>
+                  {expanded.has(f.id) && (
+                    <tr className="border-b bg-muted/30">
+                      <td colSpan={7} className="p-3 space-y-4">
+                        <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
+                          <Field label="Rule Version" value={f.rule_version} />
+                          <Field label="STIG ID" value={f.rule_id} />
+                          <Field label="CCI" value={f.cci} />
+                          <Field label="Scan ID" value={String(f.scan_id)} />
+                          <Field label="System ID" value={String(f.system_id)} />
+                        </div>
+                        <Separator />
+                        <div className="space-y-3">
+                          <Field label="Finding Details" value={f.finding_details} pre />
+                          <Field label="Check Content" value={f.check_content} pre />
+                          <Field label="Fix Text" value={f.fix_text} pre />
+                        </div>
+                        <Separator />
+                        <div className="space-y-2">
+                          <div className="text-xs font-medium text-muted-foreground">Comments</div>
+                          <textarea
+                            rows={3}
+                            className="w-full rounded-md border bg-background p-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                            placeholder="Add reviewer comments, notes, rationale, or remediation steps..."
+                            value={comments[f.id] ?? ""}
+                            onChange={(e) => setComments((m) => ({ ...m, [f.id]: e.target.value }))}
+                          />
+                          <div className="flex justify-end">
+                            <Button type="button" size="sm" variant="secondary" onClick={() => console.log("Save comments", { id: f.id, text: comments[f.id] ?? "" })}>
+                              Save Comment
+                            </Button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex items-center justify-between mt-3 text-sm">
+          <div>
+            Page {page} of {totalPages} • {data.total} total
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Prev</Button>
+            <Button variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Next</Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SeverityBadge({ value }: { value: string | null }) {
+  const v = (value || "").toLowerCase()
+  // STIG mapping: High/Critical = CAT I (Red), Medium = CAT II (Orange), Low = CAT III (Yellow)
+  let variant: "red" | "orange" | "yellow" | "gray" = "gray"
+  let label = "Unknown"
+  if (v === "critical" || v === "high") { variant = "red"; label = "CAT I" }
+  else if (v === "medium") { variant = "orange"; label = "CAT II" }
+  else if (v === "low") { variant = "yellow"; label = "CAT III" }
+  return <Badge variant={variant}>{label}</Badge>
+}
+
+function StatusBadge({ value }: { value: string | null }) {
+  const v = (value || "").toLowerCase()
+  // Status colors: Open=Red, Not Reviewed=Blue, Not Applicable=Gray, Not a Finding=Green
+  let variant: "red" | "blue" | "gray" | "green" = "gray"
+  let label = value ? toTitle(value) : "Unknown"
+  if (v === "open") { variant = "red"; label = "Open" }
+  else if (v === "not_reviewed") { variant = "blue"; label = "Not Reviewed" }
+  else if (v === "not_applicable") { variant = "gray"; label = "Not Applicable" }
+  else if (v === "not_a_finding") { variant = "green"; label = "Not a Finding" }
+  return <Badge variant={variant}>{label}</Badge>
+}
+
+function toTitle(s: string) {
+  return s.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase())
+}
+
+function Field({ label, value, pre = false }: { label: string; value?: string | null; pre?: boolean }) {
+  const content = value ?? "—"
+  return (
+    <div>
+      <div className="text-xs font-medium text-muted-foreground mb-1">{label}</div>
+      {pre ? (
+        <pre className="text-xs whitespace-pre-wrap rounded-md border bg-muted/50 p-2 max-h-64 overflow-auto">{content}</pre>
+      ) : (
+        <div className="text-sm">{content}</div>
+      )}
+    </div>
+  )
+}
+
