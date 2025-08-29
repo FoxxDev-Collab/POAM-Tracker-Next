@@ -28,17 +28,30 @@ export default function LoginPage() {
     setIsLoading(true)
     setError("")
 
-    // Simulate authentication delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      })
 
-    // Mock authentication - in real app, this would call your auth API
-    if (email === "admin@dod.gov" && password === "password123") {
-      router.push("/dashboard")
-    } else {
-      setError("Invalid credentials. Please try again.")
+      const result = await response.json()
+
+      if (response.ok) {
+        // Check for redirect parameter
+        const urlParams = new URLSearchParams(window.location.search)
+        const redirect = urlParams.get('redirect') || '/dashboard'
+        router.push(redirect)
+      } else {
+        setError(result.error || 'Authentication failed')
+      }
+    } catch {
+      setError('Network error. Please try again.')
+    } finally {
+      setIsLoading(false)
     }
-    
-    setIsLoading(false)
   }
 
   return (

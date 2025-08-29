@@ -1,9 +1,66 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { AlertTriangle, CheckCircle, Clock, Shield } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AppShell } from "@/components/layout/app-shell"
 
+type DashboardStats = {
+  critical: number;
+  high: number;
+  resolvedToday: number;
+  pendingReviews: number;
+  totalSystems: number;
+  totalPackages: number;
+};
+
+type RecentActivity = {
+  rule_title: string | null;
+  severity: string | null;
+  status: string | null;
+  last_seen: string;
+  system_name: string;
+  rule_id: string;
+};
+
 export default function DashboardPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await fetch('/api/dashboard/stats');
+        const data = await response.json();
+        if (data.stats) {
+          setStats(data.stats);
+          setRecentActivity(data.recentActivity || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="animate-pulse">
+            <div className="h-8 bg-slate-200 rounded w-1/3 mb-2"></div>
+            <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -25,8 +82,8 @@ export default function DashboardPage() {
               <AlertTriangle className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">12</div>
-              <p className="text-xs text-slate-500">+2 from yesterday</p>
+              <div className="text-2xl font-bold text-red-600">{stats?.critical || 0}</div>
+              <p className="text-xs text-slate-500">High severity findings</p>
             </CardContent>
           </Card>
 
@@ -38,8 +95,8 @@ export default function DashboardPage() {
               <AlertTriangle className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">34</div>
-              <p className="text-xs text-slate-500">-5 from yesterday</p>
+              <div className="text-2xl font-bold text-orange-600">{stats?.high || 0}</div>
+              <p className="text-xs text-slate-500">Medium severity findings</p>
             </CardContent>
           </Card>
 
@@ -51,8 +108,8 @@ export default function DashboardPage() {
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">28</div>
-              <p className="text-xs text-slate-500">+8 from yesterday</p>
+              <div className="text-2xl font-bold text-green-600">{stats?.resolvedToday || 0}</div>
+              <p className="text-xs text-slate-500">Findings resolved today</p>
             </CardContent>
           </Card>
 
@@ -64,8 +121,8 @@ export default function DashboardPage() {
               <Clock className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">156</div>
-              <p className="text-xs text-slate-500">-12 from yesterday</p>
+              <div className="text-2xl font-bold text-blue-600">{stats?.pendingReviews || 0}</div>
+              <p className="text-xs text-slate-500">Awaiting review</p>
             </CardContent>
           </Card>
         </div>
@@ -80,44 +137,46 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center space-x-4 p-4 bg-red-50 rounded-lg border border-red-200">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-900">
-                    Critical vulnerability detected in Network Segment A
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    CVE-2024-1234 - Remote code execution vulnerability
-                  </p>
-                </div>
-                <span className="text-xs text-slate-500">2 hours ago</span>
-              </div>
-
-              <div className="flex items-center space-x-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
-                <AlertTriangle className="h-5 w-5 text-orange-500" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-900">
-                    High priority patch required for Server Cluster B
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    CVE-2024-5678 - Privilege escalation vulnerability
-                  </p>
-                </div>
-                <span className="text-xs text-slate-500">4 hours ago</span>
-              </div>
-
-              <div className="flex items-center space-x-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-900">
-                    Vulnerability successfully patched in Database Server C
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    CVE-2024-9012 - SQL injection vulnerability resolved
-                  </p>
-                </div>
-                <span className="text-xs text-slate-500">6 hours ago</span>
-              </div>
+              {recentActivity.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-4">
+                  No recent activity found. Import STIG scan results to see vulnerability data.
+                </p>
+              ) : (
+                recentActivity.map((activity, index) => {
+                  const getSeverityColor = (severity: string | null) => {
+                    switch (severity?.toLowerCase()) {
+                      case 'high': return 'red';
+                      case 'medium': return 'orange';
+                      case 'low': return 'yellow';
+                      default: return 'gray';
+                    }
+                  };
+                  
+                  const getStatusIcon = (status: string | null) => {
+                    if (status === 'NotAFinding') return <CheckCircle className="h-5 w-5 text-green-500" />;
+                    return <AlertTriangle className="h-5 w-5 text-red-500" />;
+                  };
+                  
+                  const color = getSeverityColor(activity.severity);
+                  
+                  return (
+                    <div key={index} className={`flex items-center space-x-4 p-4 bg-${color}-50 rounded-lg border border-${color}-200`}>
+                      {getStatusIcon(activity.status)}
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-slate-900">
+                          {activity.rule_title || `Rule ${activity.rule_id}`}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          System: {activity.system_name} • Severity: {activity.severity || 'Unknown'}
+                        </p>
+                      </div>
+                      <span className="text-xs text-slate-500">
+                        {new Date(activity.last_seen).toLocaleDateString()}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </CardContent>
         </Card>

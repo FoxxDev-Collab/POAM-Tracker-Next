@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Teams, Users } from "@/lib/db";
-import { getRequestUser } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = getRequestUser(req);
+    const user = await requireAuth();
     if (!user || !canManageTeams(user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

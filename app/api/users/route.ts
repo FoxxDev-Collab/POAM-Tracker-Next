@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Users, type Role } from "@/lib/db";
-import { getRequestUser, requireAdmin } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
@@ -30,8 +30,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = getRequestUser(req);
-    requireAdmin(user);
+    await requireAdmin();
     const body = await req.json();
     const parsed = createSchema.parse(body);
     const passwordHash = await bcrypt.hash(parsed.password, 12);
@@ -49,3 +48,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status });
   }
 }
+
+export const runtime = 'nodejs';

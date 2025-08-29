@@ -102,6 +102,99 @@ function init() {
     CREATE INDEX IF NOT EXISTS idx_stig_findings_system ON stig_findings(system_id);
     CREATE INDEX IF NOT EXISTS idx_stig_findings_severity ON stig_findings(severity);
     CREATE INDEX IF NOT EXISTS idx_stig_findings_status ON stig_findings(status);
+
+    -- Security Test Plans (STPs)
+    CREATE TABLE IF NOT EXISTS stps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      system_id INTEGER NOT NULL,
+      package_id INTEGER NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('Draft','In_Progress','Under_Review','Approved','Rejected')) DEFAULT 'Draft',
+      priority TEXT NOT NULL CHECK (priority IN ('Low','Medium','High','Critical')) DEFAULT 'Medium',
+      assigned_team_id INTEGER,
+      created_by INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      due_date TEXT,
+      FOREIGN KEY(system_id) REFERENCES systems(id) ON DELETE CASCADE,
+      FOREIGN KEY(package_id) REFERENCES packages(id) ON DELETE CASCADE,
+      FOREIGN KEY(assigned_team_id) REFERENCES teams(id) ON DELETE SET NULL,
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_stps_system ON stps(system_id);
+    CREATE INDEX IF NOT EXISTS idx_stps_package ON stps(package_id);
+    CREATE INDEX IF NOT EXISTS idx_stps_status ON stps(status);
+    CREATE INDEX IF NOT EXISTS idx_stps_team ON stps(assigned_team_id);
+
+    CREATE TRIGGER IF NOT EXISTS stps_updated_at
+    AFTER UPDATE ON stps
+    FOR EACH ROW BEGIN
+      UPDATE stps SET updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+
+    -- STP Test Cases
+    CREATE TABLE IF NOT EXISTS stp_test_cases (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      stp_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      test_procedure TEXT DEFAULT '',
+      expected_result TEXT DEFAULT '',
+      actual_result TEXT DEFAULT '',
+      status TEXT NOT NULL CHECK (status IN ('Not_Started','In_Progress','Passed','Failed','Blocked')) DEFAULT 'Not_Started',
+      assigned_user_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(stp_id) REFERENCES stps(id) ON DELETE CASCADE,
+      FOREIGN KEY(assigned_user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_stp_test_cases_stp ON stp_test_cases(stp_id);
+    CREATE INDEX IF NOT EXISTS idx_stp_test_cases_status ON stp_test_cases(status);
+
+    CREATE TRIGGER IF NOT EXISTS stp_test_cases_updated_at
+    AFTER UPDATE ON stp_test_cases
+    FOR EACH ROW BEGIN
+      UPDATE stp_test_cases SET updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+
+    -- STP Evidence Files
+    CREATE TABLE IF NOT EXISTS stp_evidence (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      stp_id INTEGER NOT NULL,
+      test_case_id INTEGER,
+      filename TEXT NOT NULL,
+      original_filename TEXT NOT NULL,
+      file_size INTEGER NOT NULL,
+      mime_type TEXT,
+      description TEXT DEFAULT '',
+      uploaded_by INTEGER NOT NULL,
+      uploaded_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(stp_id) REFERENCES stps(id) ON DELETE CASCADE,
+      FOREIGN KEY(test_case_id) REFERENCES stp_test_cases(id) ON DELETE CASCADE,
+      FOREIGN KEY(uploaded_by) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_stp_evidence_stp ON stp_evidence(stp_id);
+    CREATE INDEX IF NOT EXISTS idx_stp_evidence_test_case ON stp_evidence(test_case_id);
+
+    -- Audit Logs for security events
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event TEXT NOT NULL,
+      timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+      data TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
+      user_id INTEGER,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_event ON audit_logs(event);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
   `);
   // Users and roles
   d.exec(`
@@ -229,6 +322,31 @@ function init() {
       d.exec("ALTER TABLE packages ADD COLUMN team_id INTEGER REFERENCES teams(id)");
     }
 
+    // Add enhanced ATO fields to packages
+    const hasSystemType = packageCols.some((c) => c.name === 'system_type');
+    if (!hasSystemType) {
+      d.exec(`
+        ALTER TABLE packages ADD COLUMN system_type TEXT CHECK (system_type IN ('Major Application','General Support System','Minor Application','Subsystem'));
+        ALTER TABLE packages ADD COLUMN confidentiality_impact TEXT CHECK (confidentiality_impact IN ('Low','Moderate','High'));
+        ALTER TABLE packages ADD COLUMN integrity_impact TEXT CHECK (integrity_impact IN ('Low','Moderate','High'));
+        ALTER TABLE packages ADD COLUMN availability_impact TEXT CHECK (availability_impact IN ('Low','Moderate','High'));
+        ALTER TABLE packages ADD COLUMN overall_categorization TEXT CHECK (overall_categorization IN ('Low','Moderate','High'));
+        ALTER TABLE packages ADD COLUMN authorization_status TEXT CHECK (authorization_status IN ('Not Started','In Progress','Authorized','Reauthorization Required','Expired','Denied'));
+        ALTER TABLE packages ADD COLUMN authorization_date TEXT;
+        ALTER TABLE packages ADD COLUMN authorization_expiry TEXT;
+        ALTER TABLE packages ADD COLUMN risk_assessment_date TEXT;
+        ALTER TABLE packages ADD COLUMN residual_risk_level TEXT CHECK (residual_risk_level IN ('Very Low','Low','Moderate','High','Very High'));
+        ALTER TABLE packages ADD COLUMN mission_criticality TEXT CHECK (mission_criticality IN ('Mission Critical','Mission Essential','Mission Support'));
+        ALTER TABLE packages ADD COLUMN data_classification TEXT CHECK (data_classification IN ('Unclassified','CUI','Secret','Top Secret'));
+        ALTER TABLE packages ADD COLUMN system_owner TEXT;
+        ALTER TABLE packages ADD COLUMN authorizing_official TEXT;
+        ALTER TABLE packages ADD COLUMN isso_name TEXT;
+        ALTER TABLE packages ADD COLUMN security_control_baseline TEXT CHECK (security_control_baseline IN ('Low','Moderate','High','Tailored'));
+        ALTER TABLE packages ADD COLUMN poam_status TEXT CHECK (poam_status IN ('Green','Yellow','Red'));
+        ALTER TABLE packages ADD COLUMN continuous_monitoring_status TEXT CHECK (continuous_monitoring_status IN ('Fully Implemented','Partially Implemented','Not Implemented'));
+      `);
+    }
+
     // Seed a default Admin user if no users exist
     const userCount = (d.prepare("SELECT COUNT(*) as c FROM users").get() as { c: number }).c as number;
     if (userCount === 0) {
@@ -246,6 +364,26 @@ export type PackageRow = {
   description: string;
   created_at: string;
   updated_at: string;
+  team_id?: number | null;
+  // Enhanced ATO fields
+  system_type?: 'Major Application' | 'General Support System' | 'Minor Application' | 'Subsystem' | null;
+  confidentiality_impact?: 'Low' | 'Moderate' | 'High' | null;
+  integrity_impact?: 'Low' | 'Moderate' | 'High' | null;
+  availability_impact?: 'Low' | 'Moderate' | 'High' | null;
+  overall_categorization?: 'Low' | 'Moderate' | 'High' | null;
+  authorization_status?: 'Not Started' | 'In Progress' | 'Authorized' | 'Reauthorization Required' | 'Expired' | 'Denied' | null;
+  authorization_date?: string | null;
+  authorization_expiry?: string | null;
+  risk_assessment_date?: string | null;
+  residual_risk_level?: 'Very Low' | 'Low' | 'Moderate' | 'High' | 'Very High' | null;
+  mission_criticality?: 'Mission Critical' | 'Mission Essential' | 'Mission Support' | null;
+  data_classification?: 'Unclassified' | 'CUI' | 'Secret' | 'Top Secret' | null;
+  system_owner?: string | null;
+  authorizing_official?: string | null;
+  isso_name?: string | null;
+  security_control_baseline?: 'Low' | 'Moderate' | 'High' | 'Tailored' | null;
+  poam_status?: 'Green' | 'Yellow' | 'Red' | null;
+  continuous_monitoring_status?: 'Fully Implemented' | 'Partially Implemented' | 'Not Implemented' | null;
 };
 
 export type StigScanRow = {
@@ -543,18 +681,120 @@ export const Packages = {
   get(id: number): PackageRow | undefined {
     return getDb().prepare("SELECT * FROM packages WHERE id = ?").get(id) as PackageRow | undefined;
   },
-  create(input: { name: string; description?: string; team_id?: number }): PackageRow {
-    const stmt = getDb().prepare("INSERT INTO packages (name, description, team_id) VALUES (?, ?, ?)");
-    const info = stmt.run(input.name, input.description ?? "", input.team_id ?? null);
+  create(input: { 
+    name: string; 
+    description?: string; 
+    team_id?: number;
+    system_type?: string;
+    confidentiality_impact?: string;
+    integrity_impact?: string;
+    availability_impact?: string;
+    overall_categorization?: string;
+    authorization_status?: string;
+    authorization_date?: string;
+    authorization_expiry?: string;
+    risk_assessment_date?: string;
+    residual_risk_level?: string;
+    mission_criticality?: string;
+    data_classification?: string;
+    system_owner?: string;
+    authorizing_official?: string;
+    isso_name?: string;
+    security_control_baseline?: string;
+    poam_status?: string;
+    continuous_monitoring_status?: string;
+  }): PackageRow {
+    const stmt = getDb().prepare(`
+      INSERT INTO packages (
+        name, description, team_id,
+        system_type, confidentiality_impact, integrity_impact, availability_impact,
+        overall_categorization, authorization_status, authorization_date, authorization_expiry,
+        risk_assessment_date, residual_risk_level, mission_criticality, data_classification,
+        system_owner, authorizing_official, isso_name, security_control_baseline,
+        poam_status, continuous_monitoring_status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const info = stmt.run(
+      input.name, 
+      input.description ?? "", 
+      input.team_id ?? null,
+      input.system_type ?? null,
+      input.confidentiality_impact ?? null,
+      input.integrity_impact ?? null,
+      input.availability_impact ?? null,
+      input.overall_categorization ?? null,
+      input.authorization_status ?? 'Not Started',
+      input.authorization_date ?? null,
+      input.authorization_expiry ?? null,
+      input.risk_assessment_date ?? null,
+      input.residual_risk_level ?? null,
+      input.mission_criticality ?? null,
+      input.data_classification ?? null,
+      input.system_owner ?? null,
+      input.authorizing_official ?? null,
+      input.isso_name ?? null,
+      input.security_control_baseline ?? null,
+      input.poam_status ?? null,
+      input.continuous_monitoring_status ?? null
+    );
     return this.get(Number(info.lastInsertRowid))!;
   },
-  update(id: number, input: { name?: string; description?: string; team_id?: number }): PackageRow | undefined {
+  update(id: number, input: { 
+    name?: string; 
+    description?: string; 
+    team_id?: number;
+    system_type?: string;
+    confidentiality_impact?: string;
+    integrity_impact?: string;
+    availability_impact?: string;
+    overall_categorization?: string;
+    authorization_status?: string;
+    authorization_date?: string;
+    authorization_expiry?: string;
+    risk_assessment_date?: string;
+    residual_risk_level?: string;
+    mission_criticality?: string;
+    data_classification?: string;
+    system_owner?: string;
+    authorizing_official?: string;
+    isso_name?: string;
+    security_control_baseline?: string;
+    poam_status?: string;
+    continuous_monitoring_status?: string;
+  }): PackageRow | undefined {
     const current = this.get(id);
     if (!current) return undefined;
-    const name = input.name ?? current.name;
-    const description = input.description ?? current.description;
-    const team_id = input.team_id !== undefined ? input.team_id : (current as { team_id?: number }).team_id;
-    getDb().prepare("UPDATE packages SET name = ?, description = ?, team_id = ? WHERE id = ?").run(name, description, team_id, id);
+    
+    const updates: string[] = [];
+    const values: unknown[] = [];
+    
+    if (input.name !== undefined) { updates.push('name = ?'); values.push(input.name); }
+    if (input.description !== undefined) { updates.push('description = ?'); values.push(input.description); }
+    if (input.team_id !== undefined) { updates.push('team_id = ?'); values.push(input.team_id); }
+    if (input.system_type !== undefined) { updates.push('system_type = ?'); values.push(input.system_type); }
+    if (input.confidentiality_impact !== undefined) { updates.push('confidentiality_impact = ?'); values.push(input.confidentiality_impact); }
+    if (input.integrity_impact !== undefined) { updates.push('integrity_impact = ?'); values.push(input.integrity_impact); }
+    if (input.availability_impact !== undefined) { updates.push('availability_impact = ?'); values.push(input.availability_impact); }
+    if (input.overall_categorization !== undefined) { updates.push('overall_categorization = ?'); values.push(input.overall_categorization); }
+    if (input.authorization_status !== undefined) { updates.push('authorization_status = ?'); values.push(input.authorization_status); }
+    if (input.authorization_date !== undefined) { updates.push('authorization_date = ?'); values.push(input.authorization_date); }
+    if (input.authorization_expiry !== undefined) { updates.push('authorization_expiry = ?'); values.push(input.authorization_expiry); }
+    if (input.risk_assessment_date !== undefined) { updates.push('risk_assessment_date = ?'); values.push(input.risk_assessment_date); }
+    if (input.residual_risk_level !== undefined) { updates.push('residual_risk_level = ?'); values.push(input.residual_risk_level); }
+    if (input.mission_criticality !== undefined) { updates.push('mission_criticality = ?'); values.push(input.mission_criticality); }
+    if (input.data_classification !== undefined) { updates.push('data_classification = ?'); values.push(input.data_classification); }
+    if (input.system_owner !== undefined) { updates.push('system_owner = ?'); values.push(input.system_owner); }
+    if (input.authorizing_official !== undefined) { updates.push('authorizing_official = ?'); values.push(input.authorizing_official); }
+    if (input.isso_name !== undefined) { updates.push('isso_name = ?'); values.push(input.isso_name); }
+    if (input.security_control_baseline !== undefined) { updates.push('security_control_baseline = ?'); values.push(input.security_control_baseline); }
+    if (input.poam_status !== undefined) { updates.push('poam_status = ?'); values.push(input.poam_status); }
+    if (input.continuous_monitoring_status !== undefined) { updates.push('continuous_monitoring_status = ?'); values.push(input.continuous_monitoring_status); }
+    
+    if (updates.length > 0) {
+      values.push(id);
+      getDb().prepare(`UPDATE packages SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    }
+    
     return this.get(id);
   },
   remove(id: number): boolean {
@@ -632,5 +872,185 @@ export const Systems = {
         .prepare("UPDATE systems SET group_id = ? WHERE package_id = ? AND (group_id IS NULL OR group_id = 0)")
         .run(defaultGroupId, packageId);
     }
+  }
+};
+
+// Security Test Plans (STPs)
+export type STPStatus = 'Draft' | 'In_Progress' | 'Under_Review' | 'Approved' | 'Rejected';
+export type STPPriority = 'Low' | 'Medium' | 'High' | 'Critical';
+export type TestCaseStatus = 'Not_Started' | 'In_Progress' | 'Passed' | 'Failed' | 'Blocked';
+
+export type STPRow = {
+  id: number;
+  title: string;
+  description: string;
+  system_id: number;
+  package_id: number;
+  status: STPStatus;
+  priority: STPPriority;
+  assigned_team_id: number | null;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  due_date: string | null;
+};
+
+export type STPTestCaseRow = {
+  id: number;
+  stp_id: number;
+  title: string;
+  description: string;
+  test_procedure: string;
+  expected_result: string;
+  actual_result: string;
+  status: TestCaseStatus;
+  assigned_user_id: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type STPEvidenceRow = {
+  id: number;
+  stp_id: number;
+  test_case_id: number | null;
+  filename: string;
+  original_filename: string;
+  file_size: number;
+  mime_type: string | null;
+  description: string;
+  uploaded_by: number;
+  uploaded_at: string;
+};
+
+export const STPs = {
+  all(): STPRow[] {
+    return getDb().prepare("SELECT * FROM stps ORDER BY created_at DESC").all() as STPRow[];
+  },
+  byPackage(packageId: number): STPRow[] {
+    return getDb().prepare("SELECT * FROM stps WHERE package_id = ? ORDER BY created_at DESC").all(packageId) as STPRow[];
+  },
+  bySystem(systemId: number): STPRow[] {
+    return getDb().prepare("SELECT * FROM stps WHERE system_id = ? ORDER BY created_at DESC").all(systemId) as STPRow[];
+  },
+  get(id: number): STPRow | undefined {
+    return getDb().prepare("SELECT * FROM stps WHERE id = ?").get(id) as STPRow | undefined;
+  },
+  create(input: {
+    title: string;
+    description?: string;
+    system_id: number;
+    package_id: number;
+    priority?: STPPriority;
+    assigned_team_id?: number;
+    created_by: number;
+    due_date?: string;
+  }): STPRow {
+    const stmt = getDb().prepare(`
+      INSERT INTO stps (title, description, system_id, package_id, priority, assigned_team_id, created_by, due_date)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const info = stmt.run(
+      input.title,
+      input.description ?? '',
+      input.system_id,
+      input.package_id,
+      input.priority ?? 'Medium',
+      input.assigned_team_id ?? null,
+      input.created_by,
+      input.due_date ?? null
+    );
+    return this.get(Number(info.lastInsertRowid))!;
+  },
+  update(id: number, input: {
+    title?: string;
+    description?: string;
+    status?: STPStatus;
+    priority?: STPPriority;
+    assigned_team_id?: number | null;
+    due_date?: string | null;
+  }): STPRow | undefined {
+    const current = this.get(id);
+    if (!current) return undefined;
+    
+    const title = input.title ?? current.title;
+    const description = input.description ?? current.description;
+    const status = input.status ?? current.status;
+    const priority = input.priority ?? current.priority;
+    const assigned_team_id = input.assigned_team_id !== undefined ? input.assigned_team_id : current.assigned_team_id;
+    const due_date = input.due_date !== undefined ? input.due_date : current.due_date;
+    
+    getDb().prepare(`
+      UPDATE stps SET title = ?, description = ?, status = ?, priority = ?, assigned_team_id = ?, due_date = ?
+      WHERE id = ?
+    `).run(title, description, status, priority, assigned_team_id, due_date, id);
+    
+    return this.get(id);
+  },
+  remove(id: number): boolean {
+    const info = getDb().prepare("DELETE FROM stps WHERE id = ?").run(id);
+    return info.changes > 0;
+  }
+};
+
+export const STPTestCases = {
+  bySTP(stpId: number): STPTestCaseRow[] {
+    return getDb().prepare("SELECT * FROM stp_test_cases WHERE stp_id = ? ORDER BY created_at ASC").all(stpId) as STPTestCaseRow[];
+  },
+  get(id: number): STPTestCaseRow | undefined {
+    return getDb().prepare("SELECT * FROM stp_test_cases WHERE id = ?").get(id) as STPTestCaseRow | undefined;
+  },
+  create(input: {
+    stp_id: number;
+    title: string;
+    description?: string;
+    test_procedure?: string;
+    expected_result?: string;
+    assigned_user_id?: number;
+  }): STPTestCaseRow {
+    const stmt = getDb().prepare(`
+      INSERT INTO stp_test_cases (stp_id, title, description, test_procedure, expected_result, assigned_user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    const info = stmt.run(
+      input.stp_id,
+      input.title,
+      input.description ?? '',
+      input.test_procedure ?? '',
+      input.expected_result ?? '',
+      input.assigned_user_id ?? null
+    );
+    return this.get(Number(info.lastInsertRowid))!;
+  },
+  update(id: number, input: {
+    title?: string;
+    description?: string;
+    test_procedure?: string;
+    expected_result?: string;
+    actual_result?: string;
+    status?: TestCaseStatus;
+    assigned_user_id?: number | null;
+  }): STPTestCaseRow | undefined {
+    const current = this.get(id);
+    if (!current) return undefined;
+    
+    const title = input.title ?? current.title;
+    const description = input.description ?? current.description;
+    const test_procedure = input.test_procedure ?? current.test_procedure;
+    const expected_result = input.expected_result ?? current.expected_result;
+    const actual_result = input.actual_result ?? current.actual_result;
+    const status = input.status ?? current.status;
+    const assigned_user_id = input.assigned_user_id !== undefined ? input.assigned_user_id : current.assigned_user_id;
+    
+    getDb().prepare(`
+      UPDATE stp_test_cases 
+      SET title = ?, description = ?, test_procedure = ?, expected_result = ?, actual_result = ?, status = ?, assigned_user_id = ?
+      WHERE id = ?
+    `).run(title, description, test_procedure, expected_result, actual_result, status, assigned_user_id, id);
+    
+    return this.get(id);
+  },
+  remove(id: number): boolean {
+    const info = getDb().prepare("DELETE FROM stp_test_cases WHERE id = ?").run(id);
+    return info.changes > 0;
   }
 };

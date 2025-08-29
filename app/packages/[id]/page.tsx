@@ -6,6 +6,7 @@ import GroupsManager, { GroupItem } from "./GroupsManager"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, ShieldAlert, ShieldCheck } from "lucide-react"
 import PackageSystemsTable from "./PackageSystemsTable"
+import PackageATOUpdater from "./PackageATOUpdater"
 
 export const dynamic = "force-dynamic"
 
@@ -175,6 +176,9 @@ export default async function PackageDetailPage({ params }: { params: Promise<{ 
             </CardContent>
           </Card>
         </div>
+
+        {/* ATO Security Details */}
+        <PackageATOUpdater packageData={item} />
 
         {/* Systems in this Package */}
         <PackageSystemsTable pkgId={id} />

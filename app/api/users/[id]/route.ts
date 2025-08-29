@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Users, type Role } from "@/lib/db";
-import { getRequestUser, requireAdmin } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
@@ -33,8 +33,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = getRequestUser(req);
-    requireAdmin(user);
+    await requireAdmin();
     const { id: idStr } = await params;
     const id = Number(idStr);
     if (!Number.isFinite(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
@@ -59,8 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = getRequestUser(req);
-    requireAdmin(user);
+    await requireAdmin();
     const { id: idStr } = await params;
     const id = Number(idStr);
     if (!Number.isFinite(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });

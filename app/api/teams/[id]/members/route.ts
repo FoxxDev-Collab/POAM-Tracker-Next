@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Teams, Users } from "@/lib/db";
-import { getRequestUser } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
+import { SecureErrors, withSecureErrorHandling } from "@/lib/secure-error";
 import { z } from "zod";
 
-export const dynamic = "force-dynamic";
+export const runtime = 'nodejs';
 
 const addMemberSchema = z.object({
   user_id: z.number().int().positive(),
@@ -20,76 +21,47 @@ const canManageTeam = (user: { id: number; role: string }, team: { lead_user_id:
   return canManageTeams(user.role);
 };
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const user = getRequestUser(req);
-    const { id: idStr } = await params;
-    const teamId = Number(idStr);
-    if (!Number.isFinite(teamId)) return NextResponse.json({ error: "Invalid team id" }, { status: 400 });
+export const POST = withSecureErrorHandling(async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  const user = await requireAuth();
+  const { id: idStr } = await params;
+  const teamId = Number(idStr);
+  if (!Number.isFinite(teamId)) return SecureErrors.ValidationError();
 
-    const team = Teams.get(teamId);
-    if (!team) return NextResponse.json({ error: "Team not found" }, { status: 404 });
+  const team = Teams.get(teamId);
+  if (!team) return SecureErrors.NotFound();
 
-    if (!user || !canManageTeam(user, team)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const body = await req.json();
-    const parsed = addMemberSchema.parse(body);
-
-    // Verify user exists
-    const targetUser = Users.get(parsed.user_id);
-    if (!targetUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 400 });
-    }
-
-    const success = Teams.addMember(teamId, parsed.user_id, parsed.role);
-    if (!success) {
-      return NextResponse.json({ error: "User is already a member" }, { status: 400 });
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Bad Request";
-    const status = msg === "Forbidden" ? 403 : 400;
-    return NextResponse.json({ error: msg }, { status });
+  if (!canManageTeam(user, team)) {
+    return SecureErrors.Forbidden();
   }
-}
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const user = getRequestUser(req);
-    const { id: idStr } = await params;
-    const teamId = Number(idStr);
-    if (!Number.isFinite(teamId)) return NextResponse.json({ error: "Invalid team id" }, { status: 400 });
-
-    const team = Teams.get(teamId);
-    if (!team) return NextResponse.json({ error: "Team not found" }, { status: 404 });
-
-    if (!user || !canManageTeam(user, team)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const url = new URL(req.url);
-    const userId = Number(url.searchParams.get('user_id'));
-    if (!Number.isFinite(userId)) {
-      return NextResponse.json({ error: "Invalid user_id parameter" }, { status: 400 });
-    }
-
-    // Don't allow removing the team lead
-    if (userId === team.lead_user_id) {
-      return NextResponse.json({ error: "Cannot remove team lead" }, { status: 400 });
-    }
-
-    const success = Teams.removeMember(teamId, userId);
-    if (!success) {
-      return NextResponse.json({ error: "User is not a member" }, { status: 400 });
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Bad Request";
-    const status = msg === "Forbidden" ? 403 : 400;
-    return NextResponse.json({ error: msg }, { status });
+  const body = await req.json();
+  const validation = addMemberSchema.safeParse(body);
+  if (!validation.success) {
+    return SecureErrors.ValidationError();
   }
-}
+
+  const { user_id, role } = validation.data;
+  
+  const targetUser = Users.get(user_id);
+  if (!targetUser) {
+    return SecureErrors.NotFound();
+  }
+
+  const success = Teams.addMember(teamId, user_id, role);
+  if (!success) {
+    return NextResponse.json({ error: "Failed to add member" }, { status: 400 });
+  }
+
+  return NextResponse.json({ success: true });
+});
+
+export const GET = withSecureErrorHandling(async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  await requireAuth();
+  const { id: idStr } = await params;
+  const teamId = Number(idStr);
+  
+  if (!Number.isFinite(teamId)) return SecureErrors.ValidationError();
+  
+  const members = Teams.getMembers(teamId);
+  return NextResponse.json({ members });
+});
