@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import bcrypt from "bcryptjs";
 
 // Simple singleton for better-sqlite3
 let db: Database.Database | null = null;
@@ -350,8 +351,11 @@ function init() {
     // Seed a default Admin user if no users exist
     const userCount = (d.prepare("SELECT COUNT(*) as c FROM users").get() as { c: number }).c as number;
     if (userCount === 0) {
-      d.prepare("INSERT INTO users (name, email, role, active) VALUES (?, ?, 'Admin', 1)")
-        .run('Administrator', 'admin@dod.gov');
+      // Default password: AdminPass123! (should be changed on first login)
+      const defaultPasswordHash = bcrypt.hashSync('AdminPass123!', 12);
+      d.prepare("INSERT INTO users (name, email, role, active, password_hash) VALUES (?, ?, 'Admin', 1, ?)")
+        .run('Administrator', 'admin@dod.gov', defaultPasswordHash);
+      console.log('Created default admin user - Email: admin@dod.gov, Password: AdminPass123!');
     }
   } catch (error) {
     console.error("Database migration error:", error);
