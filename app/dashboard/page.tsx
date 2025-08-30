@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { AlertTriangle, CheckCircle, Clock, Shield } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { AppShell } from "@/components/layout/app-shell"
+import { MainLayout } from "@/components/layout/main-layout"
 
 type DashboardStats = {
   critical: number;
@@ -50,19 +50,19 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <AppShell>
+      <MainLayout>
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="animate-pulse">
             <div className="h-8 bg-slate-200 rounded w-1/3 mb-2"></div>
             <div className="h-4 bg-slate-200 rounded w-1/2"></div>
           </div>
         </div>
-      </AppShell>
+      </MainLayout>
     );
   }
 
   return (
-    <AppShell>
+    <MainLayout>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Page Title */}
         <div>
@@ -207,6 +207,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-    </AppShell>
+    </MainLayout>
   )
 }

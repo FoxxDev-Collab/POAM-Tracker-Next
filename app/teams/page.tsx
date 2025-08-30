@@ -1,10 +1,10 @@
 import UsersManager from "./UsersManager"
 import TeamsManager from "./TeamsManager"
-import { AppShell } from "@/components/layout/app-shell"
+import { MainLayout } from "@/components/layout/main-layout"
 
 export default function TeamsPage() {
   return (
-    <AppShell>
+    <MainLayout>
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Teams</h1>
@@ -15,6 +15,6 @@ export default function TeamsPage() {
       <TeamsManager />
       <UsersManager />
     </div>
-    </AppShell>
+    </MainLayout>
   )
 }

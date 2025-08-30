@@ -196,6 +196,148 @@ function init() {
     CREATE INDEX IF NOT EXISTS idx_audit_logs_event ON audit_logs(event);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+
+    -- Knowledge Center: Spaces (like Confluence spaces)
+    CREATE TABLE IF NOT EXISTS kc_spaces (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      type TEXT NOT NULL CHECK (type IN ('personal', 'team', 'global')) DEFAULT 'team',
+      visibility TEXT NOT NULL CHECK (visibility IN ('public', 'restricted', 'private')) DEFAULT 'public',
+      created_by INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_kc_spaces_key ON kc_spaces(key);
+    CREATE INDEX IF NOT EXISTS idx_kc_spaces_type ON kc_spaces(type);
+    CREATE INDEX IF NOT EXISTS idx_kc_spaces_visibility ON kc_spaces(visibility);
+    CREATE INDEX IF NOT EXISTS idx_kc_spaces_created_by ON kc_spaces(created_by);
+
+    CREATE TRIGGER IF NOT EXISTS kc_spaces_updated_at
+    AFTER UPDATE ON kc_spaces
+    FOR EACH ROW BEGIN
+      UPDATE kc_spaces SET updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+
+    -- Knowledge Center: Pages (hierarchical structure)
+    CREATE TABLE IF NOT EXISTS kc_pages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      space_id INTEGER NOT NULL,
+      parent_id INTEGER,
+      title TEXT NOT NULL,
+      slug TEXT NOT NULL,
+      content TEXT DEFAULT '',
+      content_type TEXT NOT NULL CHECK (content_type IN ('markdown', 'html', 'rich_text')) DEFAULT 'markdown',
+      status TEXT NOT NULL CHECK (status IN ('draft', 'published', 'archived')) DEFAULT 'draft',
+      version INTEGER NOT NULL DEFAULT 1,
+      created_by INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_by INTEGER NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      published_at TEXT,
+      UNIQUE(space_id, slug),
+      FOREIGN KEY(space_id) REFERENCES kc_spaces(id) ON DELETE CASCADE,
+      FOREIGN KEY(parent_id) REFERENCES kc_pages(id) ON DELETE CASCADE,
+      FOREIGN KEY(created_by) REFERENCES users(id),
+      FOREIGN KEY(updated_by) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_kc_pages_space ON kc_pages(space_id);
+    CREATE INDEX IF NOT EXISTS idx_kc_pages_parent ON kc_pages(parent_id);
+    CREATE INDEX IF NOT EXISTS idx_kc_pages_slug ON kc_pages(slug);
+    CREATE INDEX IF NOT EXISTS idx_kc_pages_status ON kc_pages(status);
+    CREATE INDEX IF NOT EXISTS idx_kc_pages_created_by ON kc_pages(created_by);
+
+    CREATE TRIGGER IF NOT EXISTS kc_pages_updated_at
+    AFTER UPDATE ON kc_pages
+    FOR EACH ROW BEGIN
+      UPDATE kc_pages SET updated_at = datetime('now'), version = version + 1 WHERE id = NEW.id;
+    END;
+
+    -- Knowledge Center: Page Versions (for version history)
+    CREATE TABLE IF NOT EXISTS kc_page_versions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      page_id INTEGER NOT NULL,
+      version INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      content TEXT DEFAULT '',
+      content_type TEXT NOT NULL,
+      created_by INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      comment TEXT DEFAULT '',
+      UNIQUE(page_id, version),
+      FOREIGN KEY(page_id) REFERENCES kc_pages(id) ON DELETE CASCADE,
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_kc_page_versions_page ON kc_page_versions(page_id);
+    CREATE INDEX IF NOT EXISTS idx_kc_page_versions_version ON kc_page_versions(version);
+
+    -- Knowledge Center: Comments
+    CREATE TABLE IF NOT EXISTS kc_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      page_id INTEGER NOT NULL,
+      parent_id INTEGER,
+      content TEXT NOT NULL,
+      created_by INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(page_id) REFERENCES kc_pages(id) ON DELETE CASCADE,
+      FOREIGN KEY(parent_id) REFERENCES kc_comments(id) ON DELETE CASCADE,
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_kc_comments_page ON kc_comments(page_id);
+    CREATE INDEX IF NOT EXISTS idx_kc_comments_parent ON kc_comments(parent_id);
+    CREATE INDEX IF NOT EXISTS idx_kc_comments_created_by ON kc_comments(created_by);
+
+    CREATE TRIGGER IF NOT EXISTS kc_comments_updated_at
+    AFTER UPDATE ON kc_comments
+    FOR EACH ROW BEGIN
+      UPDATE kc_comments SET updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+
+    -- Knowledge Center: Attachments/Files
+    CREATE TABLE IF NOT EXISTS kc_attachments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      page_id INTEGER,
+      space_id INTEGER,
+      filename TEXT NOT NULL,
+      original_filename TEXT NOT NULL,
+      file_size INTEGER NOT NULL,
+      mime_type TEXT,
+      description TEXT DEFAULT '',
+      uploaded_by INTEGER NOT NULL,
+      uploaded_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(page_id) REFERENCES kc_pages(id) ON DELETE CASCADE,
+      FOREIGN KEY(space_id) REFERENCES kc_spaces(id) ON DELETE CASCADE,
+      FOREIGN KEY(uploaded_by) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_kc_attachments_page ON kc_attachments(page_id);
+    CREATE INDEX IF NOT EXISTS idx_kc_attachments_space ON kc_attachments(space_id);
+    CREATE INDEX IF NOT EXISTS idx_kc_attachments_uploaded_by ON kc_attachments(uploaded_by);
+
+    -- Knowledge Center: Space Permissions
+    CREATE TABLE IF NOT EXISTS kc_space_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      space_id INTEGER NOT NULL,
+      user_id INTEGER,
+      team_id INTEGER,
+      permission TEXT NOT NULL CHECK (permission IN ('read', 'write', 'admin')) DEFAULT 'read',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(space_id) REFERENCES kc_spaces(id) ON DELETE CASCADE,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE,
+      CHECK ((user_id IS NOT NULL AND team_id IS NULL) OR (user_id IS NULL AND team_id IS NOT NULL))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_kc_space_permissions_space ON kc_space_permissions(space_id);
+    CREATE INDEX IF NOT EXISTS idx_kc_space_permissions_user ON kc_space_permissions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_kc_space_permissions_team ON kc_space_permissions(team_id);
   `);
   // Users and roles
   d.exec(`
@@ -1056,5 +1198,463 @@ export const STPTestCases = {
   remove(id: number): boolean {
     const info = getDb().prepare("DELETE FROM stp_test_cases WHERE id = ?").run(id);
     return info.changes > 0;
+  }
+};
+
+// Knowledge Center Types and Operations
+export type KCSpaceType = 'personal' | 'team' | 'global';
+export type KCSpaceVisibility = 'public' | 'restricted' | 'private';
+export type KCPageStatus = 'draft' | 'published' | 'archived';
+export type KCContentType = 'markdown' | 'html' | 'rich_text';
+export type KCPermission = 'read' | 'write' | 'admin';
+
+export type KCSpaceRow = {
+  id: number;
+  key: string;
+  name: string;
+  description: string;
+  type: KCSpaceType;
+  visibility: KCSpaceVisibility;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KCPageRow = {
+  id: number;
+  space_id: number;
+  parent_id: number | null;
+  title: string;
+  slug: string;
+  content: string;
+  content_type: KCContentType;
+  status: KCPageStatus;
+  version: number;
+  created_by: number;
+  created_at: string;
+  updated_by: number;
+  updated_at: string;
+  published_at: string | null;
+};
+
+export type KCPageVersionRow = {
+  id: number;
+  page_id: number;
+  version: number;
+  title: string;
+  content: string;
+  content_type: KCContentType;
+  created_by: number;
+  created_at: string;
+  comment: string;
+};
+
+export type KCCommentRow = {
+  id: number;
+  page_id: number;
+  parent_id: number | null;
+  content: string;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KCAttachmentRow = {
+  id: number;
+  page_id: number | null;
+  space_id: number | null;
+  filename: string;
+  original_filename: string;
+  file_size: number;
+  mime_type: string | null;
+  description: string;
+  uploaded_by: number;
+  uploaded_at: string;
+};
+
+export type KCSpacePermissionRow = {
+  id: number;
+  space_id: number;
+  user_id: number | null;
+  team_id: number | null;
+  permission: KCPermission;
+  created_at: string;
+};
+
+export const KCSpaces = {
+  all(): KCSpaceRow[] {
+    return getDb().prepare("SELECT * FROM kc_spaces ORDER BY name ASC").all() as KCSpaceRow[];
+  },
+  get(id: number): KCSpaceRow | undefined {
+    return getDb().prepare("SELECT * FROM kc_spaces WHERE id = ?").get(id) as KCSpaceRow | undefined;
+  },
+  getByKey(key: string): KCSpaceRow | undefined {
+    return getDb().prepare("SELECT * FROM kc_spaces WHERE key = ?").get(key) as KCSpaceRow | undefined;
+  },
+  create(input: {
+    key: string;
+    name: string;
+    description?: string;
+    type?: KCSpaceType;
+    visibility?: KCSpaceVisibility;
+    created_by: number;
+  }): KCSpaceRow {
+    const stmt = getDb().prepare(`
+      INSERT INTO kc_spaces (key, name, description, type, visibility, created_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    const info = stmt.run(
+      input.key,
+      input.name,
+      input.description ?? '',
+      input.type ?? 'team',
+      input.visibility ?? 'public',
+      input.created_by
+    );
+    return this.get(Number(info.lastInsertRowid))!;
+  },
+  update(id: number, input: {
+    name?: string;
+    description?: string;
+    type?: KCSpaceType;
+    visibility?: KCSpaceVisibility;
+  }): KCSpaceRow | undefined {
+    const current = this.get(id);
+    if (!current) return undefined;
+    
+    const updates: string[] = [];
+    const values: unknown[] = [];
+    
+    if (input.name !== undefined) { updates.push('name = ?'); values.push(input.name); }
+    if (input.description !== undefined) { updates.push('description = ?'); values.push(input.description); }
+    if (input.type !== undefined) { updates.push('type = ?'); values.push(input.type); }
+    if (input.visibility !== undefined) { updates.push('visibility = ?'); values.push(input.visibility); }
+    
+    if (updates.length > 0) {
+      values.push(id);
+      getDb().prepare(`UPDATE kc_spaces SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    }
+    
+    return this.get(id);
+  },
+  remove(id: number): boolean {
+    const info = getDb().prepare("DELETE FROM kc_spaces WHERE id = ?").run(id);
+    return info.changes > 0;
+  },
+  getByUser(userId: number): KCSpaceRow[] {
+    return getDb().prepare(`
+      SELECT DISTINCT s.* FROM kc_spaces s
+      LEFT JOIN kc_space_permissions p ON s.id = p.space_id
+      WHERE s.visibility = 'public' 
+         OR s.created_by = ?
+         OR p.user_id = ?
+         OR p.team_id IN (SELECT team_id FROM team_memberships WHERE user_id = ?)
+      ORDER BY s.name ASC
+    `).all(userId, userId, userId) as KCSpaceRow[];
+  }
+};
+
+export const KCPages = {
+  all(): KCPageRow[] {
+    return getDb().prepare("SELECT * FROM kc_pages ORDER BY title ASC").all() as KCPageRow[];
+  },
+  get(id: number): KCPageRow | undefined {
+    return getDb().prepare("SELECT * FROM kc_pages WHERE id = ?").get(id) as KCPageRow | undefined;
+  },
+  getBySpaceAndSlug(spaceId: number, slug: string): KCPageRow | undefined {
+    return getDb().prepare("SELECT * FROM kc_pages WHERE space_id = ? AND slug = ?").get(spaceId, slug) as KCPageRow | undefined;
+  },
+  getBySpace(spaceId: number): KCPageRow[] {
+    return getDb().prepare("SELECT * FROM kc_pages WHERE space_id = ? ORDER BY title ASC").all(spaceId) as KCPageRow[];
+  },
+  getChildren(parentId: number): KCPageRow[] {
+    return getDb().prepare("SELECT * FROM kc_pages WHERE parent_id = ? ORDER BY title ASC").all(parentId) as KCPageRow[];
+  },
+  getRootPages(spaceId: number): KCPageRow[] {
+    return getDb().prepare("SELECT * FROM kc_pages WHERE space_id = ? AND parent_id IS NULL ORDER BY title ASC").all(spaceId) as KCPageRow[];
+  },
+  create(input: {
+    space_id: number;
+    parent_id?: number;
+    title: string;
+    slug: string;
+    content?: string;
+    content_type?: KCContentType;
+    status?: KCPageStatus;
+    created_by: number;
+  }): KCPageRow {
+    const stmt = getDb().prepare(`
+      INSERT INTO kc_pages (space_id, parent_id, title, slug, content, content_type, status, created_by, updated_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const info = stmt.run(
+      input.space_id,
+      input.parent_id ?? null,
+      input.title,
+      input.slug,
+      input.content ?? '',
+      input.content_type ?? 'markdown',
+      input.status ?? 'draft',
+      input.created_by,
+      input.created_by
+    );
+    
+    // Create initial version
+    const pageId = Number(info.lastInsertRowid);
+    KCPageVersions.create({
+      page_id: pageId,
+      version: 1,
+      title: input.title,
+      content: input.content ?? '',
+      content_type: input.content_type ?? 'markdown',
+      created_by: input.created_by,
+      comment: 'Initial version'
+    });
+    
+    return this.get(pageId)!;
+  },
+  update(id: number, input: {
+    title?: string;
+    content?: string;
+    content_type?: KCContentType;
+    status?: KCPageStatus;
+    updated_by: number;
+    version_comment?: string;
+  }): KCPageRow | undefined {
+    const current = this.get(id);
+    if (!current) return undefined;
+    
+    const updates: string[] = [];
+    const values: unknown[] = [];
+    
+    if (input.title !== undefined) { updates.push('title = ?'); values.push(input.title); }
+    if (input.content !== undefined) { updates.push('content = ?'); values.push(input.content); }
+    if (input.content_type !== undefined) { updates.push('content_type = ?'); values.push(input.content_type); }
+    if (input.status !== undefined) { updates.push('status = ?'); values.push(input.status); }
+    updates.push('updated_by = ?'); values.push(input.updated_by);
+    
+    if (input.status === 'published' && current.status !== 'published') {
+      updates.push('published_at = datetime(\'now\')');
+    }
+    
+    if (updates.length > 0) {
+      values.push(id);
+      getDb().prepare(`UPDATE kc_pages SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+      
+      // Create new version if content changed
+      if (input.content !== undefined || input.title !== undefined) {
+        const updated = this.get(id)!;
+        KCPageVersions.create({
+          page_id: id,
+          version: updated.version,
+          title: updated.title,
+          content: updated.content,
+          content_type: updated.content_type,
+          created_by: input.updated_by,
+          comment: input.version_comment ?? 'Updated content'
+        });
+      }
+    }
+    
+    return this.get(id);
+  },
+  remove(id: number): boolean {
+    const info = getDb().prepare("DELETE FROM kc_pages WHERE id = ?").run(id);
+    return info.changes > 0;
+  },
+  search(query: string, spaceId?: number): KCPageRow[] {
+    const sql = spaceId 
+      ? "SELECT * FROM kc_pages WHERE (title LIKE ? OR content LIKE ?) AND space_id = ? ORDER BY title ASC"
+      : "SELECT * FROM kc_pages WHERE title LIKE ? OR content LIKE ? ORDER BY title ASC";
+    const searchTerm = `%${query}%`;
+    return spaceId 
+      ? getDb().prepare(sql).all(searchTerm, searchTerm, spaceId) as KCPageRow[]
+      : getDb().prepare(sql).all(searchTerm, searchTerm) as KCPageRow[];
+  }
+};
+
+export const KCPageVersions = {
+  getByPage(pageId: number): KCPageVersionRow[] {
+    return getDb().prepare("SELECT * FROM kc_page_versions WHERE page_id = ? ORDER BY version DESC").all(pageId) as KCPageVersionRow[];
+  },
+  get(pageId: number, version: number): KCPageVersionRow | undefined {
+    return getDb().prepare("SELECT * FROM kc_page_versions WHERE page_id = ? AND version = ?").get(pageId, version) as KCPageVersionRow | undefined;
+  },
+  create(input: {
+    page_id: number;
+    version: number;
+    title: string;
+    content: string;
+    content_type: KCContentType;
+    created_by: number;
+    comment?: string;
+  }): KCPageVersionRow {
+    const stmt = getDb().prepare(`
+      INSERT INTO kc_page_versions (page_id, version, title, content, content_type, created_by, comment)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    const info = stmt.run(
+      input.page_id,
+      input.version,
+      input.title,
+      input.content,
+      input.content_type,
+      input.created_by,
+      input.comment ?? ''
+    );
+    return this.get(input.page_id, input.version)!;
+  }
+};
+
+export const KCComments = {
+  getByPage(pageId: number): Array<KCCommentRow & { author_name: string; author_email: string }> {
+    return getDb().prepare(`
+      SELECT c.*, u.name as author_name, u.email as author_email
+      FROM kc_comments c
+      JOIN users u ON c.created_by = u.id
+      WHERE c.page_id = ?
+      ORDER BY c.created_at ASC
+    `).all(pageId) as Array<KCCommentRow & { author_name: string; author_email: string }>;
+  },
+  get(id: number): KCCommentRow | undefined {
+    return getDb().prepare("SELECT * FROM kc_comments WHERE id = ?").get(id) as KCCommentRow | undefined;
+  },
+  create(input: {
+    page_id: number;
+    parent_id?: number;
+    content: string;
+    created_by: number;
+  }): KCCommentRow {
+    const stmt = getDb().prepare(`
+      INSERT INTO kc_comments (page_id, parent_id, content, created_by)
+      VALUES (?, ?, ?, ?)
+    `);
+    const info = stmt.run(
+      input.page_id,
+      input.parent_id ?? null,
+      input.content,
+      input.created_by
+    );
+    return this.get(Number(info.lastInsertRowid))!;
+  },
+  update(id: number, input: { content: string }): KCCommentRow | undefined {
+    const current = this.get(id);
+    if (!current) return undefined;
+    
+    getDb().prepare("UPDATE kc_comments SET content = ? WHERE id = ?").run(input.content, id);
+    return this.get(id);
+  },
+  remove(id: number): boolean {
+    const info = getDb().prepare("DELETE FROM kc_comments WHERE id = ?").run(id);
+    return info.changes > 0;
+  }
+};
+
+export const KCAttachments = {
+  getByPage(pageId: number): KCAttachmentRow[] {
+    return getDb().prepare("SELECT * FROM kc_attachments WHERE page_id = ? ORDER BY uploaded_at DESC").all(pageId) as KCAttachmentRow[];
+  },
+  getBySpace(spaceId: number): KCAttachmentRow[] {
+    return getDb().prepare("SELECT * FROM kc_attachments WHERE space_id = ? ORDER BY uploaded_at DESC").all(spaceId) as KCAttachmentRow[];
+  },
+  get(id: number): KCAttachmentRow | undefined {
+    return getDb().prepare("SELECT * FROM kc_attachments WHERE id = ?").get(id) as KCAttachmentRow | undefined;
+  },
+  create(input: {
+    page_id?: number;
+    space_id?: number;
+    filename: string;
+    original_filename: string;
+    file_size: number;
+    mime_type?: string;
+    description?: string;
+    uploaded_by: number;
+  }): KCAttachmentRow {
+    const stmt = getDb().prepare(`
+      INSERT INTO kc_attachments (page_id, space_id, filename, original_filename, file_size, mime_type, description, uploaded_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const info = stmt.run(
+      input.page_id ?? null,
+      input.space_id ?? null,
+      input.filename,
+      input.original_filename,
+      input.file_size,
+      input.mime_type ?? null,
+      input.description ?? '',
+      input.uploaded_by
+    );
+    return this.get(Number(info.lastInsertRowid))!;
+  },
+  remove(id: number): boolean {
+    const info = getDb().prepare("DELETE FROM kc_attachments WHERE id = ?").run(id);
+    return info.changes > 0;
+  }
+};
+
+export const KCSpacePermissions = {
+  getBySpace(spaceId: number): Array<KCSpacePermissionRow & { user_name?: string; team_name?: string }> {
+    return getDb().prepare(`
+      SELECT p.*, u.name as user_name, t.name as team_name
+      FROM kc_space_permissions p
+      LEFT JOIN users u ON p.user_id = u.id
+      LEFT JOIN teams t ON p.team_id = t.id
+      WHERE p.space_id = ?
+      ORDER BY p.permission DESC, u.name ASC, t.name ASC
+    `).all(spaceId) as Array<KCSpacePermissionRow & { user_name?: string; team_name?: string }>;
+  },
+  create(input: {
+    space_id: number;
+    user_id?: number;
+    team_id?: number;
+    permission: KCPermission;
+  }): KCSpacePermissionRow {
+    const stmt = getDb().prepare(`
+      INSERT INTO kc_space_permissions (space_id, user_id, team_id, permission)
+      VALUES (?, ?, ?, ?)
+    `);
+    const info = stmt.run(
+      input.space_id,
+      input.user_id ?? null,
+      input.team_id ?? null,
+      input.permission
+    );
+    return getDb().prepare("SELECT * FROM kc_space_permissions WHERE id = ?").get(Number(info.lastInsertRowid)) as KCSpacePermissionRow;
+  },
+  update(id: number, permission: KCPermission): boolean {
+    const info = getDb().prepare("UPDATE kc_space_permissions SET permission = ? WHERE id = ?").run(permission, id);
+    return info.changes > 0;
+  },
+  remove(id: number): boolean {
+    const info = getDb().prepare("DELETE FROM kc_space_permissions WHERE id = ?").run(id);
+    return info.changes > 0;
+  },
+  checkPermission(spaceId: number, userId: number): KCPermission | null {
+    // Check direct user permission
+    const userPerm = getDb().prepare(`
+      SELECT permission FROM kc_space_permissions 
+      WHERE space_id = ? AND user_id = ?
+      ORDER BY CASE permission WHEN 'admin' THEN 3 WHEN 'write' THEN 2 WHEN 'read' THEN 1 END DESC
+      LIMIT 1
+    `).get(spaceId, userId) as { permission: KCPermission } | undefined;
+    
+    if (userPerm) return userPerm.permission;
+    
+    // Check team permissions
+    const teamPerm = getDb().prepare(`
+      SELECT p.permission FROM kc_space_permissions p
+      JOIN team_memberships tm ON p.team_id = tm.team_id
+      WHERE p.space_id = ? AND tm.user_id = ?
+      ORDER BY CASE p.permission WHEN 'admin' THEN 3 WHEN 'write' THEN 2 WHEN 'read' THEN 1 END DESC
+      LIMIT 1
+    `).get(spaceId, userId) as { permission: KCPermission } | undefined;
+    
+    if (teamPerm) return teamPerm.permission;
+    
+    // Check if space is public
+    const space = KCSpaces.get(spaceId);
+    if (space?.visibility === 'public') return 'read';
+    
+    return null;
   }
 };

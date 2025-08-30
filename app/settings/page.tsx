@@ -5,13 +5,13 @@ import { Settings, Shield, Info, Palette } from "lucide-react";
 import { useThemePalette, ThemePaletteId } from "@/components/ThemePaletteProvider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AppShell } from "@/components/layout/app-shell";
+import { MainLayout } from "@/components/layout/main-layout";
 
 export default function SettingsPage() {
   const { palette, setPalette } = useThemePalette();
 
   return (
-    <AppShell>
+    <MainLayout>
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
@@ -134,6 +134,6 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
     </div>
-    </AppShell>
+    </MainLayout>
   );
 }
