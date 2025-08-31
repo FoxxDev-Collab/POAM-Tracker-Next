@@ -14,7 +14,7 @@ export async function PATCH(
     
     // Build update query dynamically
     const updates: string[] = []
-    const values: any[] = []
+    const values: unknown[] = []
     
     if (status !== undefined) {
       updates.push('status = ?')

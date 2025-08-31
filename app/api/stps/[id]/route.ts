@@ -59,7 +59,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     
     const body = await req.json();
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     
     // Only update fields that are provided
     if (body?.status !== undefined) updateData.status = body.status;

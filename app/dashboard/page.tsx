@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button"
 import { MainLayout } from "@/components/layout/main-layout"
 
 type DashboardStats = {
-  critical: number;
-  high: number;
+  catI: number;
+  catII: number;
   resolvedToday: number;
   pendingReviews: number;
   totalSystems: number;
@@ -77,26 +77,26 @@ export default function DashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-slate-600">
-                Critical Vulnerabilities
+                CAT I Vulnerabilities
               </CardTitle>
               <AlertTriangle className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats?.critical || 0}</div>
-              <p className="text-xs text-slate-500">High severity findings</p>
+              <div className="text-2xl font-bold text-red-600">{stats?.catI || 0}</div>
+              <p className="text-xs text-slate-500">CAT I severity findings</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-slate-600">
-                High Priority
+                CAT II Vulnerabilities
               </CardTitle>
               <AlertTriangle className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats?.high || 0}</div>
-              <p className="text-xs text-slate-500">Medium severity findings</p>
+              <div className="text-2xl font-bold text-orange-600">{stats?.catII || 0}</div>
+              <p className="text-xs text-slate-500">CAT II severity findings</p>
             </CardContent>
           </Card>
 
@@ -144,12 +144,11 @@ export default function DashboardPage() {
               ) : (
                 recentActivity.map((activity, index) => {
                   const getSeverityColor = (severity: string | null) => {
-                    switch (severity?.toLowerCase()) {
-                      case 'high': return 'red';
-                      case 'medium': return 'orange';
-                      case 'low': return 'yellow';
-                      default: return 'gray';
-                    }
+                    const sev = severity?.toLowerCase() || '';
+                    if (sev.includes('cat i')) return 'red';
+                    if (sev.includes('cat ii')) return 'orange';  
+                    if (sev.includes('cat iii')) return 'yellow';
+                    return 'gray';
                   };
                   
                   const getStatusIcon = (status: string | null) => {

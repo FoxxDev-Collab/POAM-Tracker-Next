@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { groupId } = await params
     const { searchParams } = new URL(request.url)
-    const severity = searchParams.get('severity') // e.g., "cat_i,high"
+    const severity = searchParams.get('severity') // e.g., "cat_i,cat_ii"
     
     const db = getDb()
     
@@ -37,9 +37,9 @@ export async function GET(
       GROUP BY f.group_id, f.rule_id, f.rule_title, f.severity, f.status
       ORDER BY 
         CASE 
-          WHEN LOWER(f.severity) LIKE '%cat i%' OR LOWER(f.severity) LIKE '%high%' THEN 1
-          WHEN LOWER(f.severity) LIKE '%cat ii%' OR LOWER(f.severity) LIKE '%medium%' THEN 2
-          WHEN LOWER(f.severity) LIKE '%cat iii%' OR LOWER(f.severity) LIKE '%low%' THEN 3
+          WHEN LOWER(f.severity) LIKE '%cat i%' OR LOWER(f.severity) = 'high' THEN 1
+          WHEN LOWER(f.severity) LIKE '%cat ii%' OR LOWER(f.severity) = 'medium' THEN 2
+          WHEN LOWER(f.severity) LIKE '%cat iii%' OR LOWER(f.severity) = 'low' THEN 3
           ELSE 4
         END,
         f.rule_id

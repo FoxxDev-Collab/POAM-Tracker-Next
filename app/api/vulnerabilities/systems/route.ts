@@ -53,9 +53,9 @@ export async function GET(request: NextRequest) {
       GROUP BY f.group_id, f.rule_id, f.rule_title, f.severity, f.status
       ORDER BY 
         CASE 
-          WHEN LOWER(f.severity) LIKE '%cat i%' OR LOWER(f.severity) LIKE '%high%' THEN 1
-          WHEN LOWER(f.severity) LIKE '%cat ii%' OR LOWER(f.severity) LIKE '%medium%' THEN 2
-          WHEN LOWER(f.severity) LIKE '%cat iii%' OR LOWER(f.severity) LIKE '%low%' THEN 3
+          WHEN LOWER(f.severity) LIKE '%cat i%' OR LOWER(f.severity) = 'high' THEN 1
+          WHEN LOWER(f.severity) LIKE '%cat ii%' OR LOWER(f.severity) = 'medium' THEN 2
+          WHEN LOWER(f.severity) LIKE '%cat iii%' OR LOWER(f.severity) = 'low' THEN 3
           ELSE 4
         END,
         f.rule_id
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
       system_ids: vuln.system_ids ? vuln.system_ids.split(',').map((id: string) => parseInt(id)) : [],
       system_count: vuln.system_count,
       is_shared: vuln.system_count === totalSystems, // True if affects all selected systems
-      is_cat_i: vuln.severity ? vuln.severity.toLowerCase().includes('cat i') || vuln.severity.toLowerCase().includes('high') : false
+      is_cat_i: vuln.severity ? (vuln.severity.toLowerCase().includes('cat i') || vuln.severity.toLowerCase() === 'high') : false
     }))
 
     // Separate shared and unique findings

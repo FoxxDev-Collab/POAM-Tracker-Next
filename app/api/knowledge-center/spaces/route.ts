@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { KCSpaces, getDb } from "@/lib/db";
 import { getAuthenticatedUser } from "@/lib/auth";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const user = await getAuthenticatedUser();
     if (!user?.id) {

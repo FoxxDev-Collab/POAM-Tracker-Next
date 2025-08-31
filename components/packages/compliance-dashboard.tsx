@@ -28,10 +28,9 @@ interface ComplianceMetrics {
   controlsImplemented: number
   controlsTotal: number
   openFindings: number
-  criticalFindings: number
-  highFindings: number
-  mediumFindings: number
-  lowFindings: number
+  catIFindings: number
+  catIIFindings: number
+  catIIIFindings: number
   poamItems: number
   poamOverdue: number
   riskScore: number
@@ -63,10 +62,9 @@ export function ComplianceDashboard({
     controlsImplemented: 0,
     controlsTotal: 0,
     openFindings: 0,
-    criticalFindings: 0,
-    highFindings: 0,
-    mediumFindings: 0,
-    lowFindings: 0,
+    catIFindings: 0,
+    catIIFindings: 0,
+    catIIIFindings: 0,
     poamItems: 0,
     poamOverdue: 0,
     riskScore: 0,
@@ -285,22 +283,18 @@ export function ComplianceDashboard({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold mb-2">{metrics.openFindings}</div>
-            <div className="grid grid-cols-4 gap-1 text-xs">
+            <div className="grid grid-cols-3 gap-1 text-xs">
               <div className="text-center">
-                <div className="font-bold text-red-600">{metrics.criticalFindings}</div>
-                <div className="text-muted-foreground">Crit</div>
+                <div className="font-bold text-red-600">{metrics.catIFindings}</div>
+                <div className="text-muted-foreground">CAT I</div>
               </div>
               <div className="text-center">
-                <div className="font-bold text-orange-600">{metrics.highFindings}</div>
-                <div className="text-muted-foreground">High</div>
+                <div className="font-bold text-orange-600">{metrics.catIIFindings}</div>
+                <div className="text-muted-foreground">CAT II</div>
               </div>
               <div className="text-center">
-                <div className="font-bold text-yellow-600">{metrics.mediumFindings}</div>
-                <div className="text-muted-foreground">Med</div>
-              </div>
-              <div className="text-center">
-                <div className="font-bold text-green-600">{metrics.lowFindings}</div>
-                <div className="text-muted-foreground">Low</div>
+                <div className="font-bold text-yellow-600">{metrics.catIIIFindings}</div>
+                <div className="text-muted-foreground">CAT III</div>
               </div>
             </div>
             {findingsReduction !== 0 && (

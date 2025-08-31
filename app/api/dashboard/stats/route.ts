@@ -5,17 +5,19 @@ export async function GET() {
   try {
     const db = getDb();
     
-    // Get vulnerability counts by severity
-    const criticalCount = db.prepare(`
+    // Get vulnerability counts by STIG severity (handles both CAT format and legacy format)
+    const catICount = db.prepare(`
       SELECT COUNT(*) as count 
       FROM stig_findings 
-      WHERE severity = 'high' AND status IN ('Open', 'NotAFinding', 'Not_Reviewed')
+      WHERE (LOWER(severity) LIKE '%cat i%' OR LOWER(severity) = 'high') 
+      AND status IN ('Open', 'NotAFinding', 'Not_Reviewed')
     `).get() as { count: number };
     
-    const highCount = db.prepare(`
+    const catIICount = db.prepare(`
       SELECT COUNT(*) as count 
       FROM stig_findings 
-      WHERE severity = 'medium' AND status IN ('Open', 'NotAFinding', 'Not_Reviewed')
+      WHERE (LOWER(severity) LIKE '%cat ii%' OR LOWER(severity) = 'medium')
+      AND status IN ('Open', 'NotAFinding', 'Not_Reviewed')  
     `).get() as { count: number };
     
     // Get resolved count (today)
@@ -61,8 +63,8 @@ export async function GET() {
     
     return NextResponse.json({
       stats: {
-        critical: criticalCount.count,
-        high: highCount.count,
+        catI: catICount.count,
+        catII: catIICount.count,
         resolvedToday: resolvedToday.count,
         pendingReviews: pendingReviews.count,
         totalSystems: systemCount.count,

@@ -1493,7 +1493,7 @@ export const KCPageVersions = {
       INSERT INTO kc_page_versions (page_id, version, title, content, content_type, created_by, comment)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    const info = stmt.run(
+    stmt.run(
       input.page_id,
       input.version,
       input.title,
