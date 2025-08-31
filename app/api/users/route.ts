@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Users, type Role } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { 
+  makeBackendRequest, 
+  extractTokenFromRequest, 
+  BackendApiError,
+  createErrorResponse 
+} from "@/lib/backend-api";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
@@ -22,30 +26,47 @@ const createSchema = z.object({
   password: passwordSchema,
 });
 
-export async function GET() {
-  // Everyone can list (Auditor is read-only but allowed to read)
-  const items = Users.all();
-  return NextResponse.json({ items });
+export async function GET(req: NextRequest) {
+  try {
+    const token = extractTokenFromRequest(req);
+    const data = await makeBackendRequest('/users', { token });
+    return NextResponse.json({ items: data });
+  } catch (error) {
+    if (error instanceof BackendApiError) {
+      return createErrorResponse(error);
+    }
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin();
+    const token = extractTokenFromRequest(req);
     const body = await req.json();
     const parsed = createSchema.parse(body);
     const passwordHash = await bcrypt.hash(parsed.password, 12);
-    const created = Users.create({
+    
+    const userData = {
       name: parsed.name,
       email: parsed.email,
-      role: parsed.role as Role,
+      role: parsed.role,
       active: parsed.active ?? true,
       passwordHash,
+    };
+    
+    const created = await makeBackendRequest('/users', {
+      method: 'POST',
+      body: userData,
+      token
     });
+    
     return NextResponse.json(created, { status: 201 });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Bad Request";
-    const status = msg === "Forbidden" ? 403 : 400;
-    return NextResponse.json({ error: msg }, { status });
+  } catch (error) {
+    if (error instanceof BackendApiError) {
+      return createErrorResponse(error);
+    }
+    const msg = error instanceof Error ? error.message : "Bad Request";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 }
 

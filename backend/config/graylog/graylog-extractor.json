@@ -1,0 +1,81 @@
+{
+  "extractors": [
+    {
+      "title": "POAM Tracker Security Events",
+      "extractor_type": "json",
+      "converters": [],
+      "order": 0,
+      "cursor_strategy": "copy",
+      "source_field": "message",
+      "target_field": "",
+      "extractor_config": {
+        "flatten": true,
+        "list_separator": ", ",
+        "kv_separator": "=",
+        "key_prefix": "",
+        "key_separator": "_",
+        "replace_key_whitespace": true,
+        "key_whitespace_replacement": "_"
+      },
+      "condition_type": "none",
+      "condition_value": ""
+    },
+    {
+      "title": "Extract Event Type",
+      "extractor_type": "regex",
+      "converters": [],
+      "order": 1,
+      "cursor_strategy": "copy",
+      "source_field": "full_message",
+      "target_field": "event_type",
+      "extractor_config": {
+        "regex_value": "\"eventType\":\"([^\"]+)\""
+      },
+      "condition_type": "string",
+      "condition_value": "eventType"
+    },
+    {
+      "title": "Extract User Email",
+      "extractor_type": "regex",
+      "converters": [],
+      "order": 2,
+      "cursor_strategy": "copy",
+      "source_field": "full_message",
+      "target_field": "user_email",
+      "extractor_config": {
+        "regex_value": "\"userEmail\":\"([^\"]+)\""
+      },
+      "condition_type": "string",
+      "condition_value": "userEmail"
+    },
+    {
+      "title": "Extract Source IP",
+      "extractor_type": "regex",
+      "converters": [],
+      "order": 3,
+      "cursor_strategy": "copy",
+      "source_field": "full_message",
+      "target_field": "source_ip",
+      "extractor_config": {
+        "regex_value": "\"ipAddress\":\"([^\"]+)\""
+      },
+      "condition_type": "string",
+      "condition_value": "ipAddress"
+    },
+    {
+      "title": "Extract Correlation ID",
+      "extractor_type": "regex",
+      "converters": [],
+      "order": 4,
+      "cursor_strategy": "copy",
+      "source_field": "full_message",
+      "target_field": "correlation_id",
+      "extractor_config": {
+        "regex_value": "\"correlationId\":\"([^\"]+)\""
+      },
+      "condition_type": "string",
+      "condition_value": "correlationId"
+    }
+  ],
+  "version": "4.3.0"
+}

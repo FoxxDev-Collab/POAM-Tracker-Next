@@ -1,0 +1,707 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../../.data/app.sqlite"
+}
+
+// ---
+// Main Models
+// ---
+
+model Package {
+  id                           Int      @id @default(autoincrement())
+  name                         String   @unique
+  description                  String?  @default("")
+  createdAt                    DateTime @default(now()) @map("created_at")
+  updatedAt                    DateTime @updatedAt @map("updated_at")
+  teamId                       Int?     @map("team_id")
+  systemType                   SystemType? @map("system_type")
+  confidentialityImpact        ImpactLevel? @map("confidentiality_impact")
+  integrityImpact              ImpactLevel? @map("integrity_impact")
+  availabilityImpact           ImpactLevel? @map("availability_impact")
+  overallCategorization        ImpactLevel? @map("overall_categorization")
+  authorizationStatus          AuthorizationStatus? @map("authorization_status")
+  authorizationDate            String?  @map("authorization_date") // Using String as Prisma doesn't have a Date-only type
+  authorizationExpiry          String?  @map("authorization_expiry")
+  riskAssessmentDate           String?  @map("risk_assessment_date")
+  residualRiskLevel            ResidualRiskLevel? @map("residual_risk_level")
+  missionCriticality           MissionCriticality? @map("mission_criticality")
+  dataClassification           DataClassification? @map("data_classification")
+  systemOwner                  String?  @map("system_owner")
+  authorizingOfficial          String?  @map("authorizing_official")
+  issoName                     String?  @map("isso_name")
+  securityControlBaseline      SecurityControlBaseline? @map("security_control_baseline")
+  poamStatus                   PoamStatus? @map("poam_status")
+  continuousMonitoringStatus   ContinuousMonitoringStatus? @map("continuous_monitoring_status")
+
+  team   Team?    @relation(fields: [teamId], references: [id])
+  groups Group[]
+  systems System[]
+  stps   Stp[]
+  poams  Poam[]
+
+  @@map("packages")
+}
+
+model Group {
+  id          Int      @id @default(autoincrement())
+  packageId   Int      @map("package_id")
+  name        String
+  description String?  @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  package Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  systems System[]
+  poams   Poam[]
+
+  @@unique([packageId, name])
+  @@map("groups")
+}
+
+model System {
+  id          Int      @id @default(autoincrement())
+  packageId   Int      @map("package_id")
+  groupId     Int?     @map("group_id")
+  name        String
+  description String?  @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  package      Package       @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  group        Group?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  stigScans    StigScan[]
+  stigFindings StigFinding[]
+  stps         Stp[]
+
+  @@index([packageId])
+  @@index([groupId])
+  @@map("systems")
+}
+
+// ---
+// User & Team Models
+// ---
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  role         UserRole
+  passwordHash String?  @map("password_hash")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  ledTeams             Team[]                 @relation("TeamLead")
+  teamMemberships      TeamMembership[]
+  stpsCreated          Stp[]                  @relation("StpCreatedBy")
+  stpTestCasesAssigned StpTestCase[]          @relation("TestCaseAssignedTo")
+  stpEvidenceUploaded  StpEvidence[]          @relation("EvidenceUploadedBy")
+  poamsCreated         Poam[]                 @relation("PoamCreatedBy")
+  poamMilestonesAssigned PoamMilestone[]
+  poamComments           PoamComment[]
+  auditLogs            AuditLog[]
+  kcSpacesCreated      KcSpace[]              @relation("KcSpaceCreatedBy")
+  kcPagesCreated       KcPage[]               @relation("KcPageCreatedBy")
+  kcPagesUpdated       KcPage[]               @relation("KcPageUpdatedBy")
+  kcPageVersions       KcPageVersion[]
+  kcComments           KcComment[]
+  kcAttachments        KcAttachment[]
+  kcSpacePermissions   KcSpacePermission[]
+
+  @@map("users")
+}
+
+model Team {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  leadUserId  Int      @map("lead_user_id")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  lead               User                @relation("TeamLead", fields: [leadUserId], references: [id])
+  memberships        TeamMembership[]
+  packages           Package[]
+  stpsAssigned       Stp[]
+  poamsAssigned      Poam[]
+  kcSpacePermissions KcSpacePermission[]
+
+  @@map("teams")
+}
+
+model TeamMembership {
+  userId  Int                 @map("user_id")
+  teamId  Int                 @map("team_id")
+  role    TeamMembershipRole  @default(Member)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([userId, teamId])
+  @@map("team_memberships")
+}
+
+// ---
+// STIG Models
+// ---
+
+model StigScan {
+  id          Int      @id @default(autoincrement())
+  systemId    Int      @map("system_id")
+  title       String?
+  checklistId String?  @map("checklist_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  system       System        @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  stigFindings StigFinding[]
+
+  @@map("stig_scans")
+}
+
+model StigFinding {
+  id            Int      @id @default(autoincrement())
+  systemId      Int      @map("system_id")
+  scanId        Int      @map("scan_id")
+  groupId       String?  @map("group_id")
+  ruleId        String   @map("rule_id")
+  ruleVersion   String?  @map("rule_version")
+  ruleTitle     String?  @map("rule_title")
+  severity      String?
+  status        String?
+  findingDetails String?  @map("finding_details")
+  checkContent  String?  @map("check_content")
+  fixText       String?  @map("fix_text")
+  cci           String?
+  firstSeen     DateTime @default(now()) @map("first_seen")
+  lastSeen      DateTime @updatedAt @map("last_seen")
+
+  system System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  scan   StigScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@unique([systemId, ruleId])
+  @@index([systemId])
+  @@index([severity])
+  @@index([status])
+  @@map("stig_findings")
+}
+
+// ---
+// Security Test Plan (STP) Models
+// ---
+
+model Stp {
+  id             Int          @id @default(autoincrement())
+  title          String
+  description    String?      @default("")
+  systemId       Int          @map("system_id")
+  packageId      Int          @map("package_id")
+  status         StpStatus    @default(Draft)
+  priority       StpPriority  @default(Medium)
+  assignedTeamId Int?         @map("assigned_team_id")
+  createdBy      Int          @map("created_by")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  dueDate        String?      @map("due_date")
+
+  system         System        @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  package        Package       @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  assignedTeam   Team?         @relation(fields: [assignedTeamId], references: [id], onDelete: SetNull)
+  creator        User          @relation("StpCreatedBy", fields: [createdBy], references: [id])
+  testCases      StpTestCase[]
+  evidence       StpEvidence[]
+  poams          PoamStp[]
+
+  @@index([systemId])
+  @@index([packageId])
+  @@index([status])
+  @@index([assignedTeamId])
+  @@map("stps")
+}
+
+model StpTestCase {
+  id             Int              @id @default(autoincrement())
+  stpId          Int              @map("stp_id")
+  title          String
+  description    String?          @default("")
+  testProcedure  String?          @default("") @map("test_procedure")
+  expectedResult String?          @default("") @map("expected_result")
+  actualResult   String?          @default("") @map("actual_result")
+  status         StpTestCaseStatus @default(Not_Started)
+  assignedUserId Int?             @map("assigned_user_id")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  stp           Stp    @relation(fields: [stpId], references: [id], onDelete: Cascade)
+  assignedUser  User?  @relation("TestCaseAssignedTo", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  evidence      StpEvidence[]
+
+  @@index([stpId])
+  @@index([status])
+  @@map("stp_test_cases")
+}
+
+model StpEvidence {
+  id               Int      @id @default(autoincrement())
+  stpId            Int      @map("stp_id")
+  testCaseId       Int?     @map("test_case_id")
+  filename         String
+  originalFilename String   @map("original_filename")
+  fileSize         Int      @map("file_size")
+  mimeType         String?  @map("mime_type")
+  description      String?  @default("")
+  uploadedBy       Int      @map("uploaded_by")
+  uploadedAt       DateTime @default(now()) @map("uploaded_at")
+
+  stp        Stp          @relation(fields: [stpId], references: [id], onDelete: Cascade)
+  testCase   StpTestCase? @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  uploader   User         @relation("EvidenceUploadedBy", fields: [uploadedBy], references: [id])
+
+  @@index([stpId])
+  @@index([testCaseId])
+  @@map("stp_evidence")
+}
+
+// ---
+// POAM (Plan of Action & Milestones) Models
+// ---
+
+model Poam {
+  id                    Int       @id @default(autoincrement())
+  packageId             Int       @map("package_id")
+  groupId               Int?      @map("group_id")
+  poamNumber            String    @unique @map("poam_number")
+  title                 String
+  weaknessDescription   String?   @map("weakness_description")
+  nistControlId         String?   @map("nist_control_id")
+  severity              PoamSeverity @default(Medium)
+  status                PoamStatus @default(Draft)
+  priority              PoamPriority @default(Medium)
+  residualRiskLevel     ResidualRiskLevel? @map("residual_risk_level")
+  targetCompletionDate  String?   @map("target_completion_date")
+  actualCompletionDate  String?   @map("actual_completion_date")
+  estimatedCost         Float?    @map("estimated_cost")
+  actualCost            Float?    @map("actual_cost")
+  pocName               String?   @map("poc_name")
+  pocEmail              String?   @map("poc_email")
+  pocPhone              String?   @map("poc_phone")
+  assignedTeamId        Int?      @map("assigned_team_id")
+  createdBy             Int       @map("created_by")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  package      Package         @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  group        Group?          @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  assignedTeam Team?           @relation(fields: [assignedTeamId], references: [id], onDelete: SetNull)
+  creator      User            @relation("PoamCreatedBy", fields: [createdBy], references: [id])
+  stps         PoamStp[]
+  milestones   PoamMilestone[]
+  comments     PoamComment[]
+
+  @@index([packageId])
+  @@index([groupId])
+  @@index([status])
+  @@index([severity])
+  @@index([assignedTeamId])
+  @@index([poamNumber])
+  @@map("poams")
+}
+
+model PoamStp {
+  id                     Int      @id @default(autoincrement())
+  poamId                 Int      @map("poam_id")
+  stpId                  Int      @map("stp_id")
+  contributionPercentage Float?   @default(100) @map("contribution_percentage")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  poam Poam @relation(fields: [poamId], references: [id], onDelete: Cascade)
+  stp  Stp  @relation(fields: [stpId], references: [id], onDelete: Cascade)
+
+  @@unique([poamId, stpId])
+  @@index([poamId])
+  @@index([stpId])
+  @@map("poam_stps")
+}
+
+model PoamMilestone {
+  id                    Int                 @id @default(autoincrement())
+  poamId                Int                 @map("poam_id")
+  title                 String
+  description           String?             @default("")
+  targetDate            String?             @map("target_date")
+  actualDate            String?             @map("actual_date")
+  status                PoamMilestoneStatus @default(Pending)
+  milestoneType         PoamMilestoneType?  @default(Implementation) @map("milestone_type")
+  deliverables          String?             @default("")
+  successCriteria       String?             @default("") @map("success_criteria")
+  assignedUserId        Int?                @map("assigned_user_id")
+  completionPercentage  Float?              @default(0) @map("completion_percentage")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+
+  poam         Poam  @relation(fields: [poamId], references: [id], onDelete: Cascade)
+  assignedUser User? @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+
+  @@index([poamId])
+  @@index([status])
+  @@index([assignedUserId])
+  @@index([targetDate])
+  @@map("poam_milestones")
+}
+
+model PoamComment {
+  id           Int             @id @default(autoincrement())
+  poamId       Int             @map("poam_id")
+  milestoneId  Int?            @map("milestone_id") 
+  comment      String
+  commentType  PoamCommentType @default(General) @map("comment_type")
+  createdBy    Int             @map("created_by")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  poam    Poam @relation(fields: [poamId], references: [id], onDelete: Cascade)
+  creator User @relation(fields: [createdBy], references: [id])
+  
+  @@index([poamId])
+  @@index([milestoneId])
+  @@index([createdBy])
+  @@map("poam_comments")
+}
+
+// ---
+// Audit & Knowledge Center Models
+// ---
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  event     String
+  timestamp DateTime @default(now())
+  data      String?
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    Int?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([event])
+  @@index([timestamp])
+  @@index([userId])
+  @@map("audit_logs")
+}
+
+model KcSpace {
+  id          Int            @id @default(autoincrement())
+  key         String         @unique
+  name        String
+  description String?        @default("")
+  type        KcSpaceType    @default(team)
+  visibility  KcVisibility   @default(public)
+  createdBy   Int            @map("created_by")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  creator     User                @relation("KcSpaceCreatedBy", fields: [createdBy], references: [id])
+  pages       KcPage[]
+  attachments KcAttachment[]
+  permissions KcSpacePermission[]
+
+  @@index([key])
+  @@index([type])
+  @@index([visibility])
+  @@index([createdBy])
+  @@map("kc_spaces")
+}
+
+model KcPage {
+  id           Int           @id @default(autoincrement())
+  spaceId      Int           @map("space_id")
+  parentId     Int?
+  title        String
+  slug         String
+  content      String?       @default("")
+  contentType  KcContentType @default(markdown) @map("content_type")
+  status       KcPageStatus  @default(draft)
+  version      Int           @default(1)
+  createdBy    Int           @map("created_by")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedBy    Int           @map("updated_by")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  publishedAt  DateTime?     @map("published_at")
+
+  space        KcSpace         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  parent       KcPage?         @relation("PageHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children     KcPage[]        @relation("PageHierarchy")
+  creator      User            @relation("KcPageCreatedBy", fields: [createdBy], references: [id])
+  updater      User            @relation("KcPageUpdatedBy", fields: [updatedBy], references: [id])
+  versions     KcPageVersion[]
+  comments     KcComment[]
+  attachments  KcAttachment[]
+
+  @@unique([spaceId, slug])
+  @@index([spaceId])
+  @@index([parentId])
+  @@index([slug])
+  @@index([status])
+  @@index([createdBy])
+  @@map("kc_pages")
+}
+
+model KcPageVersion {
+  id          Int         @id @default(autoincrement())
+  pageId      Int         @map("page_id")
+  version     Int
+  title       String
+  content     String?     @default("")
+  contentType String      @map("content_type") 
+  createdBy   Int         @map("created_by")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  comment     String?     @default("")
+
+  page    KcPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  creator User   @relation(fields: [createdBy], references: [id])
+
+  @@unique([pageId, version])
+  @@index([pageId])
+  @@index([version])
+  @@map("kc_page_versions")
+}
+
+model KcComment {
+  id        Int      @id @default(autoincrement())
+  pageId    Int      @map("page_id")
+  parentId  Int?
+  content   String
+  createdBy Int      @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  page        KcPage     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  creator     User       @relation(fields: [createdBy], references: [id])
+  parent      KcComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     KcComment[] @relation("CommentReplies")
+
+  @@index([pageId])
+  @@index([parentId])
+  @@index([createdBy])
+  @@map("kc_comments")
+}
+
+model KcAttachment {
+  id               Int      @id @default(autoincrement())
+  pageId           Int?     @map("page_id")
+  spaceId          Int?     @map("space_id")
+  filename         String
+  originalFilename String   @map("original_filename")
+  fileSize         Int      @map("file_size")
+  mimeType         String?  @map("mime_type")
+  description      String?  @default("")
+  uploadedBy       Int      @map("uploaded_by")
+  uploadedAt       DateTime @default(now()) @map("uploaded_at")
+
+  page    KcPage?  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  space   KcSpace? @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  uploader User    @relation(fields: [uploadedBy], references: [id])
+
+  @@index([pageId])
+  @@index([spaceId])
+  @@index([uploadedBy])
+  @@map("kc_attachments")
+}
+
+model KcSpacePermission {
+  id         Int              @id @default(autoincrement())
+  spaceId    Int              @map("space_id")
+  userId     Int?
+  teamId     Int?
+  permission KcPermissionLevel @default(read)
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  space KcSpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user  User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team  Team?   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([spaceId])
+  @@index([userId])
+  @@index([teamId])
+  @@map("kc_space_permissions")
+}
+
+// ---
+// ENUMS
+// ---
+
+enum SystemType {
+  Major_Application
+  General_Support_System
+  Minor_Application
+  Subsystem
+}
+
+enum ImpactLevel {
+  Low
+  Moderate
+  High
+}
+
+enum AuthorizationStatus {
+  Not_Started
+  In_Progress
+  Authorized
+  Reauthorization_Required
+  Expired
+  Denied
+}
+
+enum ResidualRiskLevel {
+  Very_Low
+  Low
+  Moderate
+  High
+  Very_High
+}
+
+enum MissionCriticality {
+  Mission_Critical
+  Mission_Essential
+  Mission_Support
+}
+
+enum DataClassification {
+  Unclassified
+  CUI
+  Secret
+  Top_Secret
+}
+
+enum SecurityControlBaseline {
+  Low
+  Moderate
+  High
+  Tailored
+}
+
+enum PoamStatus {
+  Draft
+  Open
+  In_Progress
+  Completed
+  Closed
+  Cancelled
+}
+
+enum ContinuousMonitoringStatus {
+  Fully_Implemented
+  Partially_Implemented
+  Not_Implemented
+}
+
+enum UserRole {
+  Admin
+  ISSM
+  ISSO
+  SysAdmin
+  ISSE
+  Auditor
+}
+
+enum TeamMembershipRole {
+  Lead
+  Member
+}
+
+enum StpStatus {
+  Draft
+  In_Progress
+  Under_Review
+  Approved
+  Rejected
+}
+
+enum StpPriority {
+  Low
+  Medium
+  High
+  Critical
+}
+
+enum StpTestCaseStatus {
+  Not_Started
+  In_Progress
+  Passed
+  Failed
+  Blocked
+}
+
+enum KcSpaceType {
+  personal
+  team
+  global
+}
+
+enum KcVisibility {
+  public
+  restricted
+  private
+}
+
+enum KcContentType {
+  markdown
+  html
+  rich_text
+}
+
+enum KcPageStatus {
+  draft
+  published
+  archived
+}
+
+enum KcPermissionLevel {
+  read
+  write
+  admin
+}
+
+enum PoamSeverity {
+  Critical
+  High
+  Medium
+  Low
+}
+
+enum PoamPriority {
+  Low
+  Medium
+  High
+  Critical
+}
+
+enum PoamMilestoneStatus {
+  Pending
+  In_Progress
+  Completed
+  Delayed
+  Cancelled
+}
+
+enum PoamMilestoneType {
+  Planning
+  Design
+  Implementation
+  Testing
+  Documentation
+  Review
+  Deployment
+}
+
+enum PoamCommentType {
+  General
+  Status_Update
+  Risk_Assessment
+  Technical_Note
+  Management_Decision
+}

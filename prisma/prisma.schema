@@ -41,6 +41,7 @@ model Package {
   groups Group[]
   systems System[]
   stps   Stp[]
+  poams  Poam[]
 
   @@map("packages")
 }
@@ -54,6 +55,7 @@ model Group {
 
   package Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
   systems System[]
+  poams   Poam[]
 
   @@unique([packageId, name])
   @@map("groups")
@@ -97,6 +99,9 @@ model User {
   stpsCreated          Stp[]                  @relation("StpCreatedBy")
   stpTestCasesAssigned StpTestCase[]          @relation("TestCaseAssignedTo")
   stpEvidenceUploaded  StpEvidence[]          @relation("EvidenceUploadedBy")
+  poamsCreated         Poam[]                 @relation("PoamCreatedBy")
+  poamMilestonesAssigned PoamMilestone[]
+  poamComments           PoamComment[]
   auditLogs            AuditLog[]
   kcSpacesCreated      KcSpace[]              @relation("KcSpaceCreatedBy")
   kcPagesCreated       KcPage[]               @relation("KcPageCreatedBy")
@@ -122,6 +127,7 @@ model Team {
   memberships        TeamMembership[]
   packages           Package[]
   stpsAssigned       Stp[]
+  poamsAssigned      Poam[]
   kcSpacePermissions KcSpacePermission[]
 
   @@map("teams")
@@ -208,6 +214,7 @@ model Stp {
   creator        User          @relation("StpCreatedBy", fields: [createdBy], references: [id])
   testCases      StpTestCase[]
   evidence       StpEvidence[]
+  poams          PoamStp[]
 
   @@index([systemId])
   @@index([packageId])
@@ -257,6 +264,112 @@ model StpEvidence {
   @@index([stpId])
   @@index([testCaseId])
   @@map("stp_evidence")
+}
+
+// ---
+// POAM (Plan of Action & Milestones) Models
+// ---
+
+model Poam {
+  id                    Int       @id @default(autoincrement())
+  packageId             Int       @map("package_id")
+  groupId               Int?      @map("group_id")
+  poamNumber            String    @unique @map("poam_number")
+  title                 String
+  weaknessDescription   String?   @map("weakness_description")
+  nistControlId         String?   @map("nist_control_id")
+  severity              PoamSeverity @default(Medium)
+  status                PoamStatus @default(Draft)
+  priority              PoamPriority @default(Medium)
+  residualRiskLevel     ResidualRiskLevel? @map("residual_risk_level")
+  targetCompletionDate  String?   @map("target_completion_date")
+  actualCompletionDate  String?   @map("actual_completion_date")
+  estimatedCost         Float?    @map("estimated_cost")
+  actualCost            Float?    @map("actual_cost")
+  pocName               String?   @map("poc_name")
+  pocEmail              String?   @map("poc_email")
+  pocPhone              String?   @map("poc_phone")
+  assignedTeamId        Int?      @map("assigned_team_id")
+  createdBy             Int       @map("created_by")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  package      Package         @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  group        Group?          @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  assignedTeam Team?           @relation(fields: [assignedTeamId], references: [id], onDelete: SetNull)
+  creator      User            @relation("PoamCreatedBy", fields: [createdBy], references: [id])
+  stps         PoamStp[]
+  milestones   PoamMilestone[]
+  comments     PoamComment[]
+
+  @@index([packageId])
+  @@index([groupId])
+  @@index([status])
+  @@index([severity])
+  @@index([assignedTeamId])
+  @@index([poamNumber])
+  @@map("poams")
+}
+
+model PoamStp {
+  id                     Int      @id @default(autoincrement())
+  poamId                 Int      @map("poam_id")
+  stpId                  Int      @map("stp_id")
+  contributionPercentage Float?   @default(100) @map("contribution_percentage")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  poam Poam @relation(fields: [poamId], references: [id], onDelete: Cascade)
+  stp  Stp  @relation(fields: [stpId], references: [id], onDelete: Cascade)
+
+  @@unique([poamId, stpId])
+  @@index([poamId])
+  @@index([stpId])
+  @@map("poam_stps")
+}
+
+model PoamMilestone {
+  id                    Int                 @id @default(autoincrement())
+  poamId                Int                 @map("poam_id")
+  title                 String
+  description           String?             @default("")
+  targetDate            String?             @map("target_date")
+  actualDate            String?             @map("actual_date")
+  status                PoamMilestoneStatus @default(Pending)
+  milestoneType         PoamMilestoneType?  @default(Implementation) @map("milestone_type")
+  deliverables          String?             @default("")
+  successCriteria       String?             @default("") @map("success_criteria")
+  assignedUserId        Int?                @map("assigned_user_id")
+  completionPercentage  Float?              @default(0) @map("completion_percentage")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+
+  poam         Poam  @relation(fields: [poamId], references: [id], onDelete: Cascade)
+  assignedUser User? @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+
+  @@index([poamId])
+  @@index([status])
+  @@index([assignedUserId])
+  @@index([targetDate])
+  @@map("poam_milestones")
+}
+
+model PoamComment {
+  id           Int             @id @default(autoincrement())
+  poamId       Int             @map("poam_id")
+  milestoneId  Int?            @map("milestone_id") 
+  comment      String
+  commentType  PoamCommentType @default(General) @map("comment_type")
+  createdBy    Int             @map("created_by")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  poam    Poam @relation(fields: [poamId], references: [id], onDelete: Cascade)
+  creator User @relation(fields: [createdBy], references: [id])
+  
+  @@index([poamId])
+  @@index([milestoneId])
+  @@index([createdBy])
+  @@map("poam_comments")
 }
 
 // ---
@@ -343,7 +456,7 @@ model KcPageVersion {
   version     Int
   title       String
   content     String?     @default("")
-  contentType String      @map("content_type") // Not an enum as it should match the page's type at the time
+  contentType String      @map("content_type") 
   createdBy   Int         @map("created_by")
   createdAt   DateTime    @default(now()) @map("created_at")
   comment     String?     @default("")
@@ -472,9 +585,12 @@ enum SecurityControlBaseline {
 }
 
 enum PoamStatus {
-  Green
-  Yellow
-  Red
+  Draft
+  Open
+  In_Progress
+  Completed
+  Closed
+  Cancelled
 }
 
 enum ContinuousMonitoringStatus {
@@ -548,4 +664,44 @@ enum KcPermissionLevel {
   read
   write
   admin
+}
+
+enum PoamSeverity {
+  Critical
+  High
+  Medium
+  Low
+}
+
+enum PoamPriority {
+  Low
+  Medium
+  High
+  Critical
+}
+
+enum PoamMilestoneStatus {
+  Pending
+  In_Progress
+  Completed
+  Delayed
+  Cancelled
+}
+
+enum PoamMilestoneType {
+  Planning
+  Design
+  Implementation
+  Testing
+  Documentation
+  Review
+  Deployment
+}
+
+enum PoamCommentType {
+  General
+  Status_Update
+  Risk_Assessment
+  Technical_Note
+  Management_Decision
 }

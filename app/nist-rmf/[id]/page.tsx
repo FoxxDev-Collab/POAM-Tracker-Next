@@ -15,9 +15,9 @@ import {
   AlertCircle,
   ShieldAlert,
 } from "lucide-react"
-import { SystemBoundary } from "@/components/packages/system-boundary"
-import { ControlImplementation } from "@/components/packages/control-implementation"
-import { RiskManagement } from "@/components/packages/risk-management"
+import { SystemBoundary } from "@/app/vulnerability-center/packages/components/system-boundary"
+import { ControlImplementation } from "@/app/vulnerability-center/packages/components/control-implementation"
+import { RiskManagement } from "@/app/vulnerability-center/packages/components/risk-management"
 
 export const dynamic = "force-dynamic"
 

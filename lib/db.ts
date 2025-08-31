@@ -181,6 +181,120 @@ function init() {
     CREATE INDEX IF NOT EXISTS idx_stp_evidence_stp ON stp_evidence(stp_id);
     CREATE INDEX IF NOT EXISTS idx_stp_evidence_test_case ON stp_evidence(test_case_id);
 
+    -- POAM (Plan of Action & Milestones) tables
+    CREATE TABLE IF NOT EXISTS poams (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      package_id INTEGER NOT NULL,
+      group_id INTEGER,
+      poam_number TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      weakness_description TEXT,
+      nist_control_id TEXT,
+      severity TEXT NOT NULL CHECK (severity IN ('Critical','High','Medium','Low')) DEFAULT 'Medium',
+      status TEXT NOT NULL CHECK (status IN ('Draft','Open','In_Progress','Completed','Closed','Cancelled')) DEFAULT 'Draft',
+      priority TEXT NOT NULL CHECK (priority IN ('Low','Medium','High','Critical')) DEFAULT 'Medium',
+      residual_risk_level TEXT CHECK (residual_risk_level IN ('Very Low','Low','Moderate','High','Very High')),
+      target_completion_date TEXT,
+      actual_completion_date TEXT,
+      estimated_cost REAL,
+      actual_cost REAL,
+      poc_name TEXT,
+      poc_email TEXT,
+      poc_phone TEXT,
+      assigned_team_id INTEGER,
+      created_by INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(package_id) REFERENCES packages(id) ON DELETE CASCADE,
+      FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE SET NULL,
+      FOREIGN KEY(assigned_team_id) REFERENCES teams(id) ON DELETE SET NULL,
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_poams_package ON poams(package_id);
+    CREATE INDEX IF NOT EXISTS idx_poams_group ON poams(group_id);
+    CREATE INDEX IF NOT EXISTS idx_poams_status ON poams(status);
+    CREATE INDEX IF NOT EXISTS idx_poams_severity ON poams(severity);
+    CREATE INDEX IF NOT EXISTS idx_poams_team ON poams(assigned_team_id);
+    CREATE INDEX IF NOT EXISTS idx_poams_poam_number ON poams(poam_number);
+
+    CREATE TRIGGER IF NOT EXISTS poams_updated_at
+    AFTER UPDATE ON poams
+    FOR EACH ROW BEGIN
+      UPDATE poams SET updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+
+    -- POAM-STP associations
+    CREATE TABLE IF NOT EXISTS poam_stps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      poam_id INTEGER NOT NULL,
+      stp_id INTEGER NOT NULL,
+      contribution_percentage REAL CHECK (contribution_percentage >= 0 AND contribution_percentage <= 100) DEFAULT 100,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(poam_id, stp_id),
+      FOREIGN KEY(poam_id) REFERENCES poams(id) ON DELETE CASCADE,
+      FOREIGN KEY(stp_id) REFERENCES stps(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_poam_stps_poam ON poam_stps(poam_id);
+    CREATE INDEX IF NOT EXISTS idx_poam_stps_stp ON poam_stps(stp_id);
+
+    -- POAM Milestones
+    CREATE TABLE IF NOT EXISTS poam_milestones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      poam_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      target_date TEXT,
+      actual_date TEXT,
+      status TEXT NOT NULL CHECK (status IN ('Pending','In_Progress','Completed','Delayed','Cancelled')) DEFAULT 'Pending',
+      milestone_type TEXT CHECK (milestone_type IN ('Planning','Design','Implementation','Testing','Documentation','Review','Deployment')) DEFAULT 'Implementation',
+      deliverables TEXT DEFAULT '',
+      success_criteria TEXT DEFAULT '',
+      assigned_user_id INTEGER,
+      completion_percentage REAL CHECK (completion_percentage >= 0 AND completion_percentage <= 100) DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(poam_id) REFERENCES poams(id) ON DELETE CASCADE,
+      FOREIGN KEY(assigned_user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_poam_milestones_poam ON poam_milestones(poam_id);
+    CREATE INDEX IF NOT EXISTS idx_poam_milestones_status ON poam_milestones(status);
+    CREATE INDEX IF NOT EXISTS idx_poam_milestones_assigned_user ON poam_milestones(assigned_user_id);
+    CREATE INDEX IF NOT EXISTS idx_poam_milestones_target_date ON poam_milestones(target_date);
+
+    CREATE TRIGGER IF NOT EXISTS poam_milestones_updated_at
+    AFTER UPDATE ON poam_milestones
+    FOR EACH ROW BEGIN
+      UPDATE poam_milestones SET updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+
+    -- POAM Comments/Notes
+    CREATE TABLE IF NOT EXISTS poam_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      poam_id INTEGER NOT NULL,
+      milestone_id INTEGER,
+      comment TEXT NOT NULL,
+      comment_type TEXT CHECK (comment_type IN ('General','Status_Update','Risk_Assessment','Technical_Note','Management_Decision')) DEFAULT 'General',
+      created_by INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(poam_id) REFERENCES poams(id) ON DELETE CASCADE,
+      FOREIGN KEY(milestone_id) REFERENCES poam_milestones(id) ON DELETE CASCADE,
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_poam_comments_poam ON poam_comments(poam_id);
+    CREATE INDEX IF NOT EXISTS idx_poam_comments_milestone ON poam_comments(milestone_id);
+    CREATE INDEX IF NOT EXISTS idx_poam_comments_created_by ON poam_comments(created_by);
+
+    CREATE TRIGGER IF NOT EXISTS poam_comments_updated_at
+    AFTER UPDATE ON poam_comments
+    FOR EACH ROW BEGIN
+      UPDATE poam_comments SET updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+
     -- Audit Logs for security events
     CREATE TABLE IF NOT EXISTS audit_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1656,5 +1770,392 @@ export const KCSpacePermissions = {
     if (space?.visibility === 'public') return 'read';
     
     return null;
+  }
+};
+
+// POAM Types and Operations
+export type PoamSeverity = 'Critical' | 'High' | 'Medium' | 'Low';
+export type PoamStatus = 'Draft' | 'Open' | 'In_Progress' | 'Completed' | 'Closed' | 'Cancelled';
+export type MilestoneStatus = 'Pending' | 'In_Progress' | 'Completed' | 'Delayed' | 'Cancelled';
+export type MilestoneType = 'Planning' | 'Design' | 'Implementation' | 'Testing' | 'Documentation' | 'Review' | 'Deployment';
+export type CommentType = 'General' | 'Status_Update' | 'Risk_Assessment' | 'Technical_Note' | 'Management_Decision';
+
+export type PoamRow = {
+  id: number;
+  package_id: number;
+  group_id: number | null;
+  poam_number: string;
+  title: string;
+  weakness_description: string | null;
+  nist_control_id: string | null;
+  severity: PoamSeverity;
+  status: PoamStatus;
+  priority: STPPriority;
+  residual_risk_level: string | null;
+  target_completion_date: string | null;
+  actual_completion_date: string | null;
+  estimated_cost: number | null;
+  actual_cost: number | null;
+  poc_name: string | null;
+  poc_email: string | null;
+  poc_phone: string | null;
+  assigned_team_id: number | null;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PoamStpRow = {
+  id: number;
+  poam_id: number;
+  stp_id: number;
+  contribution_percentage: number;
+  created_at: string;
+};
+
+export type PoamMilestoneRow = {
+  id: number;
+  poam_id: number;
+  title: string;
+  description: string;
+  target_date: string | null;
+  actual_date: string | null;
+  status: MilestoneStatus;
+  milestone_type: MilestoneType;
+  deliverables: string;
+  success_criteria: string;
+  assigned_user_id: number | null;
+  completion_percentage: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PoamCommentRow = {
+  id: number;
+  poam_id: number;
+  milestone_id: number | null;
+  comment: string;
+  comment_type: CommentType;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export const POAMs = {
+  all(): PoamRow[] {
+    return getDb().prepare("SELECT * FROM poams ORDER BY created_at DESC").all() as PoamRow[];
+  },
+  byPackage(packageId: number): PoamRow[] {
+    return getDb().prepare("SELECT * FROM poams WHERE package_id = ? ORDER BY created_at DESC").all(packageId) as PoamRow[];
+  },
+  byGroup(groupId: number): PoamRow[] {
+    return getDb().prepare("SELECT * FROM poams WHERE group_id = ? ORDER BY created_at DESC").all(groupId) as PoamRow[];
+  },
+  get(id: number): PoamRow | undefined {
+    return getDb().prepare("SELECT * FROM poams WHERE id = ?").get(id) as PoamRow | undefined;
+  },
+  getByPoamNumber(poamNumber: string): PoamRow | undefined {
+    return getDb().prepare("SELECT * FROM poams WHERE poam_number = ?").get(poamNumber) as PoamRow | undefined;
+  },
+  create(input: {
+    package_id: number;
+    group_id?: number;
+    poam_number: string;
+    title: string;
+    weakness_description?: string;
+    nist_control_id?: string;
+    severity?: PoamSeverity;
+    priority?: STPPriority;
+    residual_risk_level?: string;
+    target_completion_date?: string;
+    estimated_cost?: number;
+    poc_name?: string;
+    poc_email?: string;
+    poc_phone?: string;
+    assigned_team_id?: number;
+    created_by: number;
+  }): PoamRow {
+    const stmt = getDb().prepare(`
+      INSERT INTO poams (
+        package_id, group_id, poam_number, title, weakness_description, nist_control_id,
+        severity, priority, residual_risk_level, target_completion_date, estimated_cost,
+        poc_name, poc_email, poc_phone, assigned_team_id, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const info = stmt.run(
+      input.package_id,
+      input.group_id ?? null,
+      input.poam_number,
+      input.title,
+      input.weakness_description ?? null,
+      input.nist_control_id ?? null,
+      input.severity ?? 'Medium',
+      input.priority ?? 'Medium',
+      input.residual_risk_level ?? null,
+      input.target_completion_date ?? null,
+      input.estimated_cost ?? null,
+      input.poc_name ?? null,
+      input.poc_email ?? null,
+      input.poc_phone ?? null,
+      input.assigned_team_id ?? null,
+      input.created_by
+    );
+    return this.get(Number(info.lastInsertRowid))!;
+  },
+  update(id: number, input: {
+    title?: string;
+    weakness_description?: string;
+    nist_control_id?: string;
+    severity?: PoamSeverity;
+    status?: PoamStatus;
+    priority?: STPPriority;
+    residual_risk_level?: string;
+    target_completion_date?: string;
+    actual_completion_date?: string;
+    estimated_cost?: number;
+    actual_cost?: number;
+    poc_name?: string;
+    poc_email?: string;
+    poc_phone?: string;
+    assigned_team_id?: number | null;
+  }): PoamRow | undefined {
+    const current = this.get(id);
+    if (!current) return undefined;
+    
+    const updates: string[] = [];
+    const values: unknown[] = [];
+    
+    if (input.title !== undefined) { updates.push('title = ?'); values.push(input.title); }
+    if (input.weakness_description !== undefined) { updates.push('weakness_description = ?'); values.push(input.weakness_description); }
+    if (input.nist_control_id !== undefined) { updates.push('nist_control_id = ?'); values.push(input.nist_control_id); }
+    if (input.severity !== undefined) { updates.push('severity = ?'); values.push(input.severity); }
+    if (input.status !== undefined) { updates.push('status = ?'); values.push(input.status); }
+    if (input.priority !== undefined) { updates.push('priority = ?'); values.push(input.priority); }
+    if (input.residual_risk_level !== undefined) { updates.push('residual_risk_level = ?'); values.push(input.residual_risk_level); }
+    if (input.target_completion_date !== undefined) { updates.push('target_completion_date = ?'); values.push(input.target_completion_date); }
+    if (input.actual_completion_date !== undefined) { updates.push('actual_completion_date = ?'); values.push(input.actual_completion_date); }
+    if (input.estimated_cost !== undefined) { updates.push('estimated_cost = ?'); values.push(input.estimated_cost); }
+    if (input.actual_cost !== undefined) { updates.push('actual_cost = ?'); values.push(input.actual_cost); }
+    if (input.poc_name !== undefined) { updates.push('poc_name = ?'); values.push(input.poc_name); }
+    if (input.poc_email !== undefined) { updates.push('poc_email = ?'); values.push(input.poc_email); }
+    if (input.poc_phone !== undefined) { updates.push('poc_phone = ?'); values.push(input.poc_phone); }
+    if (input.assigned_team_id !== undefined) { updates.push('assigned_team_id = ?'); values.push(input.assigned_team_id); }
+    
+    if (updates.length > 0) {
+      values.push(id);
+      getDb().prepare(`UPDATE poams SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    }
+    
+    return this.get(id);
+  },
+  remove(id: number): boolean {
+    const info = getDb().prepare("DELETE FROM poams WHERE id = ?").run(id);
+    return info.changes > 0;
+  },
+  generatePoamNumber(packageId: number): string {
+    // Get package name for prefix
+    const pkg = Packages.get(packageId);
+    const prefix = pkg?.name.substring(0, 3).toUpperCase() || 'PKG';
+    
+    // Get next sequential number for this package
+    const count = getDb().prepare("SELECT COUNT(*) as count FROM poams WHERE package_id = ?").get(packageId) as { count: number };
+    const nextNumber = (count.count + 1).toString().padStart(3, '0');
+    
+    return `${prefix}-POAM-${nextNumber}`;
+  }
+};
+
+export const PoamStps = {
+  byPoam(poamId: number): Array<PoamStpRow & { stp_title: string; stp_status: STPStatus }> {
+    return getDb().prepare(`
+      SELECT ps.*, s.title as stp_title, s.status as stp_status 
+      FROM poam_stps ps
+      JOIN stps s ON ps.stp_id = s.id
+      WHERE ps.poam_id = ?
+      ORDER BY ps.created_at ASC
+    `).all(poamId) as Array<PoamStpRow & { stp_title: string; stp_status: STPStatus }>;
+  },
+  byStp(stpId: number): Array<PoamStpRow & { poam_title: string; poam_number: string }> {
+    return getDb().prepare(`
+      SELECT ps.*, p.title as poam_title, p.poam_number
+      FROM poam_stps ps
+      JOIN poams p ON ps.poam_id = p.id
+      WHERE ps.stp_id = ?
+      ORDER BY ps.created_at ASC
+    `).all(stpId) as Array<PoamStpRow & { poam_title: string; poam_number: string }>;
+  },
+  get(poamId: number, stpId: number): PoamStpRow | undefined {
+    return getDb().prepare("SELECT * FROM poam_stps WHERE poam_id = ? AND stp_id = ?").get(poamId, stpId) as PoamStpRow | undefined;
+  },
+  create(input: {
+    poam_id: number;
+    stp_id: number;
+    contribution_percentage?: number;
+  }): PoamStpRow {
+    const stmt = getDb().prepare(`
+      INSERT INTO poam_stps (poam_id, stp_id, contribution_percentage)
+      VALUES (?, ?, ?)
+    `);
+    stmt.run(
+      input.poam_id,
+      input.stp_id,
+      input.contribution_percentage ?? 100
+    );
+    return this.get(input.poam_id, input.stp_id)!;
+  },
+  update(poamId: number, stpId: number, contributionPercentage: number): PoamStpRow | undefined {
+    const current = this.get(poamId, stpId);
+    if (!current) return undefined;
+    
+    getDb().prepare("UPDATE poam_stps SET contribution_percentage = ? WHERE poam_id = ? AND stp_id = ?")
+      .run(contributionPercentage, poamId, stpId);
+    
+    return this.get(poamId, stpId);
+  },
+  remove(poamId: number, stpId: number): boolean {
+    const info = getDb().prepare("DELETE FROM poam_stps WHERE poam_id = ? AND stp_id = ?").run(poamId, stpId);
+    return info.changes > 0;
+  }
+};
+
+export const PoamMilestones = {
+  byPoam(poamId: number): PoamMilestoneRow[] {
+    return getDb().prepare("SELECT * FROM poam_milestones WHERE poam_id = ? ORDER BY target_date ASC, created_at ASC").all(poamId) as PoamMilestoneRow[];
+  },
+  get(id: number): PoamMilestoneRow | undefined {
+    return getDb().prepare("SELECT * FROM poam_milestones WHERE id = ?").get(id) as PoamMilestoneRow | undefined;
+  },
+  create(input: {
+    poam_id: number;
+    title: string;
+    description?: string;
+    target_date?: string;
+    milestone_type?: MilestoneType;
+    deliverables?: string;
+    success_criteria?: string;
+    assigned_user_id?: number;
+  }): PoamMilestoneRow {
+    const stmt = getDb().prepare(`
+      INSERT INTO poam_milestones (
+        poam_id, title, description, target_date, milestone_type,
+        deliverables, success_criteria, assigned_user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const info = stmt.run(
+      input.poam_id,
+      input.title,
+      input.description ?? '',
+      input.target_date ?? null,
+      input.milestone_type ?? 'Implementation',
+      input.deliverables ?? '',
+      input.success_criteria ?? '',
+      input.assigned_user_id ?? null
+    );
+    return this.get(Number(info.lastInsertRowid))!;
+  },
+  update(id: number, input: {
+    title?: string;
+    description?: string;
+    target_date?: string;
+    actual_date?: string;
+    status?: MilestoneStatus;
+    milestone_type?: MilestoneType;
+    deliverables?: string;
+    success_criteria?: string;
+    assigned_user_id?: number | null;
+    completion_percentage?: number;
+  }): PoamMilestoneRow | undefined {
+    const current = this.get(id);
+    if (!current) return undefined;
+    
+    const updates: string[] = [];
+    const values: unknown[] = [];
+    
+    if (input.title !== undefined) { updates.push('title = ?'); values.push(input.title); }
+    if (input.description !== undefined) { updates.push('description = ?'); values.push(input.description); }
+    if (input.target_date !== undefined) { updates.push('target_date = ?'); values.push(input.target_date); }
+    if (input.actual_date !== undefined) { updates.push('actual_date = ?'); values.push(input.actual_date); }
+    if (input.status !== undefined) { updates.push('status = ?'); values.push(input.status); }
+    if (input.milestone_type !== undefined) { updates.push('milestone_type = ?'); values.push(input.milestone_type); }
+    if (input.deliverables !== undefined) { updates.push('deliverables = ?'); values.push(input.deliverables); }
+    if (input.success_criteria !== undefined) { updates.push('success_criteria = ?'); values.push(input.success_criteria); }
+    if (input.assigned_user_id !== undefined) { updates.push('assigned_user_id = ?'); values.push(input.assigned_user_id); }
+    if (input.completion_percentage !== undefined) { updates.push('completion_percentage = ?'); values.push(input.completion_percentage); }
+    
+    if (updates.length > 0) {
+      values.push(id);
+      getDb().prepare(`UPDATE poam_milestones SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    }
+    
+    return this.get(id);
+  },
+  remove(id: number): boolean {
+    const info = getDb().prepare("DELETE FROM poam_milestones WHERE id = ?").run(id);
+    return info.changes > 0;
+  }
+};
+
+export const PoamComments = {
+  byPoam(poamId: number): Array<PoamCommentRow & { author_name: string; author_email: string }> {
+    return getDb().prepare(`
+      SELECT pc.*, u.name as author_name, u.email as author_email
+      FROM poam_comments pc
+      JOIN users u ON pc.created_by = u.id
+      WHERE pc.poam_id = ?
+      ORDER BY pc.created_at DESC
+    `).all(poamId) as Array<PoamCommentRow & { author_name: string; author_email: string }>;
+  },
+  byMilestone(milestoneId: number): Array<PoamCommentRow & { author_name: string; author_email: string }> {
+    return getDb().prepare(`
+      SELECT pc.*, u.name as author_name, u.email as author_email
+      FROM poam_comments pc
+      JOIN users u ON pc.created_by = u.id
+      WHERE pc.milestone_id = ?
+      ORDER BY pc.created_at DESC
+    `).all(milestoneId) as Array<PoamCommentRow & { author_name: string; author_email: string }>;
+  },
+  get(id: number): PoamCommentRow | undefined {
+    return getDb().prepare("SELECT * FROM poam_comments WHERE id = ?").get(id) as PoamCommentRow | undefined;
+  },
+  create(input: {
+    poam_id: number;
+    milestone_id?: number;
+    comment: string;
+    comment_type?: CommentType;
+    created_by: number;
+  }): PoamCommentRow {
+    const stmt = getDb().prepare(`
+      INSERT INTO poam_comments (poam_id, milestone_id, comment, comment_type, created_by)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    const info = stmt.run(
+      input.poam_id,
+      input.milestone_id ?? null,
+      input.comment,
+      input.comment_type ?? 'General',
+      input.created_by
+    );
+    return this.get(Number(info.lastInsertRowid))!;
+  },
+  update(id: number, input: { comment: string; comment_type?: CommentType }): PoamCommentRow | undefined {
+    const current = this.get(id);
+    if (!current) return undefined;
+    
+    const updates: string[] = ['comment = ?'];
+    const values: unknown[] = [input.comment];
+    
+    if (input.comment_type !== undefined) {
+      updates.push('comment_type = ?');
+      values.push(input.comment_type);
+    }
+    
+    values.push(id);
+    getDb().prepare(`UPDATE poam_comments SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    
+    return this.get(id);
+  },
+  remove(id: number): boolean {
+    const info = getDb().prepare("DELETE FROM poam_comments WHERE id = ?").run(id);
+    return info.changes > 0;
   }
 };

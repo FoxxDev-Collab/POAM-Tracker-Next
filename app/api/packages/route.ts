@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Packages } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
-import { validateCSRF } from "@/lib/csrf";
-import { SecureErrors, withSecureErrorHandling } from "@/lib/secure-error";
+import { 
+  makeBackendRequest, 
+  extractTokenFromRequest, 
+  BackendApiError,
+  createErrorResponse 
+} from "@/lib/backend-api";
 import { z } from "zod";
 
 // Force Node.js runtime to use filesystem and database operations
@@ -33,34 +35,42 @@ const createPackageSchema = z.object({
   csrfToken: z.string().optional(),
 });
 
-export const GET = withSecureErrorHandling(async () => {
-  await requireAuth();
-  const items = Packages.all();
-  return NextResponse.json({ items });
-});
+export async function GET(req: NextRequest) {
+  try {
+    const token = extractTokenFromRequest(req);
+    const data = await makeBackendRequest('/packages', { token });
+    return NextResponse.json({ items: data });
+  } catch (error) {
+    if (error instanceof BackendApiError) {
+      return createErrorResponse(error);
+    }
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
 
-export const POST = withSecureErrorHandling(async (req: NextRequest) => {
-  // Require authentication
-  await requireAuth();
-  
-  // Validate CSRF token
-  const csrfValidation = await validateCSRF(req);
-  if (!csrfValidation.isValid) {
-    return SecureErrors.CSRFError();
+export async function POST(req: NextRequest) {
+  try {
+    const token = extractTokenFromRequest(req);
+    const body = await req.json();
+    const validation = createPackageSchema.safeParse(body);
+    
+    if (!validation.success) {
+      return NextResponse.json({ error: "Validation error" }, { status: 400 });
+    }
+    
+    const { csrfToken: _token, ...packageData } = validation.data;
+    
+    const created = await makeBackendRequest('/packages', {
+      method: 'POST',
+      body: packageData,
+      token
+    });
+    
+    return NextResponse.json({ item: created }, { status: 201 });
+  } catch (error) {
+    if (error instanceof BackendApiError) {
+      return createErrorResponse(error);
+    }
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
-  
-  // Parse and validate request body
-  const body = await req.json();
-  const validation = createPackageSchema.safeParse(body);
-  
-  if (!validation.success) {
-    return SecureErrors.ValidationError();
-  }
-  
-  const { csrfToken: _token, ...packageData } = validation.data;
-  void _token; // Acknowledge token was validated but not used
-  
-  // Create package
-  const created = Packages.create(packageData);
-  return NextResponse.json({ item: created }, { status: 201 });
-});
+}
