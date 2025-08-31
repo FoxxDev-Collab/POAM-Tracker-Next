@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Package, FileText, BookCheck, Shield } from "lucide-react"
+import { Package, FileCheck, Activity, AlertTriangle, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 type SidebarItem = {
@@ -12,20 +12,30 @@ type SidebarItem = {
   description?: string
 }
 
-const vulnerabilityCenterItems: SidebarItem[] = [
+const nistRmfItems: SidebarItem[] = [
   { 
-    href: "/vulnerability-center/packages", 
-    label: "Vulnerabilities", 
+    href: "/nist-rmf/packages", 
+    label: "ATO Packages", 
     icon: Package,
   },
   { 
-    href: "/vulnerability-center/stps", 
-    label: "STPs", 
-    icon: FileText,
+    href: "/nist-rmf/controls", 
+    label: "Control Catalog", 
+    icon: FileCheck,
+  },
+  { 
+    href: "/nist-rmf/assessments", 
+    label: "Assessments", 
+    icon: Activity,
+  },
+  { 
+    href: "/nist-rmf/risks", 
+    label: "Risk Register", 
+    icon: AlertTriangle,
   },
 ]
 
-export function VulnerabilityCenterSidebar() {
+export function NistRmfSidebar() {
   const pathname = usePathname()
 
   return (
@@ -34,14 +44,14 @@ export function VulnerabilityCenterSidebar() {
         {/* Sidebar Header */}
         <div className="flex h-14 items-center border-b border-border px-4">
           <div className="flex items-center space-x-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <span className="font-semibold">Vulnerability Center</span>
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <span className="font-semibold">NIST RMF</span>
           </div>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 p-2">
-          {vulnerabilityCenterItems.map((item) => {
+          {nistRmfItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href || pathname?.startsWith(item.href + "/")
             

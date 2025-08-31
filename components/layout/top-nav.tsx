@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Shield, MessageSquare, BookOpen, Sun, Moon, LayoutDashboard, Users, User, LogOut, Settings } from "lucide-react"
+import { Shield, MessageSquare, BookOpen, Sun, Moon, LayoutDashboard, Users, User, LogOut, Settings, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useThemePalette } from "@/components/ThemePaletteProvider"
 
@@ -19,6 +19,12 @@ const topNavItems: TopNavItem[] = [
     label: "Vulnerability Center", 
     icon: Shield,
     pattern: "/vulnerability-center"
+  },
+  { 
+    href: "/nist-rmf", 
+    label: "NIST RMF", 
+    icon: ShieldCheck,
+    pattern: "/nist-rmf"
   },
   { 
     href: "/forum", 

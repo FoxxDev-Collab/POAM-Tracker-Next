@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation"
 import { ReactNode } from "react"
 import { TopNav } from "./top-nav"
 import { VulnerabilityCenterSidebar } from "./vulnerability-center-sidebar"
+import { NistRmfSidebar } from "./nist-rmf-sidebar"
 
 interface MainLayoutProps {
   children: ReactNode
@@ -14,9 +15,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Determine which sidebar to show based on current path
   const showVulnerabilityCenterSidebar = pathname?.startsWith("/vulnerability-center")
-
-  // For now, we'll only implement the Vulnerability Center sidebar
-  // Forum and Knowledge Center sidebars can be added later
+  const showNistRmfSidebar = pathname?.startsWith("/nist-rmf")
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -25,6 +24,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <div className="flex flex-1">
         {/* Contextual Sidebar */}
         {showVulnerabilityCenterSidebar && <VulnerabilityCenterSidebar />}
+        {showNistRmfSidebar && <NistRmfSidebar />}
         
         {/* Main Content */}
         <main className="flex-1 overflow-auto">
