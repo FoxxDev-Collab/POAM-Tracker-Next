@@ -228,4 +228,90 @@ export class StpsService {
       where: { id },
     });
   }
+
+  // Evidence management
+  async getTestCaseEvidence(testCaseId: number) {
+    const evidence = await this.prisma.stpEvidence.findMany({
+      where: { testCaseId },
+      include: {
+        uploader: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        uploadedAt: 'desc',
+      },
+    });
+
+    return { items: evidence };
+  }
+
+  async uploadTestCaseEvidence(
+    testCaseId: number, 
+    filename: string, 
+    originalFilename: string,
+    fileSize: number,
+    mimeType: string,
+    description: string,
+    uploadedBy: number
+  ) {
+    const evidence = await this.prisma.stpEvidence.create({
+      data: {
+        testCaseId,
+        filename,
+        originalFilename,
+        fileSize,
+        mimeType,
+        description,
+        uploadedBy,
+        stp: {
+          connect: {
+            id: (await this.prisma.stpTestCase.findUnique({
+              where: { id: testCaseId },
+              select: { stpId: true }
+            }))?.stpId
+          }
+        }
+      },
+      include: {
+        uploader: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return { item: evidence };
+  }
+
+  // Comments management (using existing schema if available)
+  async getTestCaseComments(testCaseId: number) {
+    // For now, return empty array since we might not have a comments table
+    // This can be implemented when the comments schema is added
+    return { items: [] };
+  }
+
+  async addTestCaseComment(testCaseId: number, content: string, createdBy: number) {
+    // For now, return a mock comment
+    // This can be implemented when the comments schema is added
+    const mockComment = {
+      id: Date.now(),
+      content,
+      createdAt: new Date().toISOString(),
+      createdBy: {
+        id: createdBy,
+        name: 'Current User',
+        email: 'user@example.com'
+      }
+    };
+
+    return { item: mockComment };
+  }
 }

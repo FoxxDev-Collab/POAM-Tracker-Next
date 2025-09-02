@@ -57,4 +57,40 @@ export class StpsController {
   deleteTestCase(@Param('testCaseId', ParseIntPipe) id: number) {
     return this.stpsService.deleteTestCase(id);
   }
+
+  @Get('test-cases/:testCaseId/evidence')
+  getTestCaseEvidence(@Param('testCaseId', ParseIntPipe) testCaseId: number) {
+    return this.stpsService.getTestCaseEvidence(testCaseId);
+  }
+
+  @Post('test-cases/:testCaseId/evidence')
+  uploadTestCaseEvidence(
+    @Param('testCaseId', ParseIntPipe) testCaseId: number,
+    @Body() uploadData: any // This will be handled by multer middleware
+  ) {
+    // For now, return a mock response
+    // This should be implemented with proper file upload handling
+    return this.stpsService.uploadTestCaseEvidence(
+      testCaseId,
+      'mock-filename.jpg',
+      'original-filename.jpg',
+      1024,
+      'image/jpeg',
+      'Test evidence',
+      1 // TODO: Get from auth
+    );
+  }
+
+  @Get('test-cases/:testCaseId/comments')
+  getTestCaseComments(@Param('testCaseId', ParseIntPipe) testCaseId: number) {
+    return this.stpsService.getTestCaseComments(testCaseId);
+  }
+
+  @Post('test-cases/:testCaseId/comments')
+  addTestCaseComment(
+    @Param('testCaseId', ParseIntPipe) testCaseId: number,
+    @Body() commentData: { content: string }
+  ) {
+    return this.stpsService.addTestCaseComment(testCaseId, commentData.content, 1); // TODO: Get from auth
+  }
 }
