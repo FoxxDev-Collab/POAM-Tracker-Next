@@ -1,76 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
-import { 
-  makeBackendRequest, 
-  extractTokenFromRequest, 
-  BackendApiError,
-  createErrorResponse 
-} from "@/lib/backend-api";
-import { z } from "zod";
+import { cookies } from "next/headers";
 
-// Force Node.js runtime to use filesystem and database operations
-export const runtime = 'nodejs';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
-const createPackageSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name too long"),
-  description: z.string().max(1000, "Description too long").optional(),
-  system_type: z.enum(["Major Application", "General Support System", "Minor Application", "Subsystem"]).optional(),
-  confidentiality_impact: z.enum(["Low", "Moderate", "High"]).optional(),
-  integrity_impact: z.enum(["Low", "Moderate", "High"]).optional(),
-  availability_impact: z.enum(["Low", "Moderate", "High"]).optional(),
-  overall_categorization: z.enum(["Low", "Moderate", "High"]).optional(),
-  authorization_status: z.enum(["Not Started", "In Progress", "Authorized", "Reauthorization Required", "Expired", "Denied"]).optional(),
-  authorization_date: z.string().optional(),
-  authorization_expiry: z.string().optional(),
-  risk_assessment_date: z.string().optional(),
-  residual_risk_level: z.enum(["Very Low", "Low", "Moderate", "High", "Very High"]).optional(),
-  mission_criticality: z.enum(["Mission Critical", "Mission Essential", "Mission Support"]).optional(),
-  data_classification: z.enum(["Unclassified", "CUI", "Secret", "Top Secret"]).optional(),
-  system_owner: z.string().optional(),
-  authorizing_official: z.string().optional(),
-  isso_name: z.string().optional(),
-  security_control_baseline: z.enum(["Low", "Moderate", "High", "Tailored"]).optional(),
-  poam_status: z.enum(["Green", "Yellow", "Red"]).optional(),
-  continuous_monitoring_status: z.enum(["Fully Implemented", "Partially Implemented", "Not Implemented"]).optional(),
-  team_id: z.number().optional(),
-  csrfToken: z.string().optional(),
-});
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token');
+  
+  return token ? {
+    'Authorization': `Bearer ${token.value}`,
+    'Content-Type': 'application/json'
+  } : {
+    'Content-Type': 'application/json'
+  };
+}
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const token = extractTokenFromRequest(req);
-    const data = await makeBackendRequest('/packages', { token });
-    return NextResponse.json({ items: data });
-  } catch (error) {
-    if (error instanceof BackendApiError) {
-      return createErrorResponse(error);
+    const headers = await getAuthHeaders();
+    
+    const response = await fetch(`${BACKEND_URL}/packages`, {
+      method: 'GET',
+      headers,
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to fetch packages' }, { status: response.status });
     }
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Packages fetch error:', error);
+    return NextResponse.json({ error: "Failed to fetch packages" }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const token = extractTokenFromRequest(req);
+    const headers = await getAuthHeaders();
     const body = await req.json();
-    const validation = createPackageSchema.safeParse(body);
     
-    if (!validation.success) {
-      return NextResponse.json({ error: "Validation error" }, { status: 400 });
-    }
-    
-    const { csrfToken: _token, ...packageData } = validation.data;
-    
-    const created = await makeBackendRequest('/packages', {
+    const response = await fetch(`${BACKEND_URL}/packages`, {
       method: 'POST',
-      body: packageData,
-      token
+      headers,
+      body: JSON.stringify(body)
     });
     
-    return NextResponse.json({ item: created }, { status: 201 });
-  } catch (error) {
-    if (error instanceof BackendApiError) {
-      return createErrorResponse(error);
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to create package' }, { status: response.status });
     }
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Package creation error:', error);
+    return NextResponse.json({ error: "Failed to create package" }, { status: 500 });
   }
 }

@@ -37,14 +37,20 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       })
 
+      console.log('Response status:', response.status, response.ok)
       const result = await response.json()
+      console.log('Login response:', result)
 
-      if (response.ok) {
+      if (response.ok && result.success) {
         // Check for redirect parameter
         const urlParams = new URLSearchParams(window.location.search)
         const redirect = urlParams.get('redirect') || '/dashboard'
-        router.push(redirect)
+        console.log('Redirecting to:', redirect)
+        
+        // Use window.location for more reliable redirect
+        window.location.href = redirect
       } else {
+        console.error('Login failed:', result)
         setError(result.error || 'Authentication failed')
       }
     } catch {

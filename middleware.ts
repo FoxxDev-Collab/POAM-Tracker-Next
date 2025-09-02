@@ -54,10 +54,13 @@ export async function middleware(request: NextRequest) {
       
       const session = await getIronSession<SessionData>(request, response, sessionOptions)
       
-      // For API routes, let the route handlers do detailed auth checks
+      // For API routes, allow JWT token auth without session requirement
       if (pathname.startsWith('/api/')) {
-        // Just check if there's any session - detailed checks in route handlers
-        if (!session.isLoggedIn) {
+        // Check for JWT token in cookies or session
+        const cookieStore = request.cookies;
+        const token = cookieStore.get('token');
+        
+        if (!session.isLoggedIn && !token) {
           return new NextResponse("Unauthorized", { status: 401 })
         }
       } else {

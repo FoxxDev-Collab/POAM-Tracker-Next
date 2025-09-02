@@ -1,110 +1,68 @@
 import { NextRequest, NextResponse } from "next/server";
-import { 
-  makeBackendRequest, 
-  extractTokenFromRequest, 
-  BackendApiError,
-  createErrorResponse 
-} from "@/lib/backend-api";
-import { z } from "zod";
-import bcrypt from "bcryptjs";
+import { cookies } from "next/headers";
 
-export const dynamic = "force-dynamic";
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
-const passwordSchema = z
-  .string()
-  .min(12, "Password must be at least 12 characters")
-  .refine((v) => /[A-Z]/.test(v), "Must include at least one uppercase letter")
-  .refine((v) => /[a-z]/.test(v), "Must include at least one lowercase letter")
-  .refine((v) => /\d/.test(v), "Must include at least one number")
-  .refine((v) => /[^A-Za-z0-9]/.test(v), "Must include at least one special character");
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token');
+  
+  return token ? {
+    'Authorization': `Bearer ${token.value}`,
+    'Content-Type': 'application/json'
+  } : {
+    'Content-Type': 'application/json'
+  };
+}
 
-const updateSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  email: z.string().email().max(320).optional(),
-  role: z.enum(["Admin", "ISSM", "ISSO", "SysAdmin", "ISSE", "Auditor"]).optional(),
-  active: z.boolean().optional(),
-  password: passwordSchema.optional(),
-});
-
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id: idStr } = await params;
-    const id = Number(idStr);
-    if (!Number.isFinite(id)) {
-      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-    }
+    const headers = await getAuthHeaders();
     
-    const token = extractTokenFromRequest(req);
-    const user = await makeBackendRequest(`/users/${id}`, { token });
-    return NextResponse.json(user);
-  } catch (error) {
-    if (error instanceof BackendApiError) {
-      return createErrorResponse(error);
+    const response = await fetch(`${BACKEND_URL}/users/${params.id}`, {
+      method: 'GET',
+      headers,
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to fetch user' }, { status: response.status });
     }
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('User fetch error:', error);
+    return NextResponse.json({ error: "Failed to fetch user" }, { status: 500 });
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id: idStr } = await params;
-    const id = Number(idStr);
-    if (!Number.isFinite(id)) {
-      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-    }
-    
-    const token = extractTokenFromRequest(req);
+    const headers = await getAuthHeaders();
     const body = await req.json();
-    const parsed = updateSchema.parse(body);
     
-    const updateData: any = {
-      name: parsed.name,
-      email: parsed.email,
-      role: parsed.role,
-      active: parsed.active,
-    };
-    
-    // Handle password separately if needed
-    if (parsed.password) {
-      updateData.passwordHash = await bcrypt.hash(parsed.password, 12);
-    }
-    
-    const updated = await makeBackendRequest(`/users/${id}`, {
-      method: 'PATCH',
-      body: updateData,
-      token
+    const response = await fetch(`${BACKEND_URL}/users/${params.id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(body)
     });
     
-    return NextResponse.json(updated);
-  } catch (error) {
-    if (error instanceof BackendApiError) {
-      return createErrorResponse(error);
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to update user' }, { status: response.status });
     }
-    const msg = error instanceof Error ? error.message : "Bad Request";
-    return NextResponse.json({ error: msg }, { status: 400 });
-  }
-}
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id: idStr } = await params;
-    const id = Number(idStr);
-    if (!Number.isFinite(id)) {
-      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-    }
-    
-    const token = extractTokenFromRequest(req);
-    const result = await makeBackendRequest(`/users/${id}`, {
-      method: 'DELETE',
-      token
-    });
-    
-    return NextResponse.json(result || { ok: true });
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
-    if (error instanceof BackendApiError) {
-      return createErrorResponse(error);
-    }
-    const msg = error instanceof Error ? error.message : "Bad Request";
-    return NextResponse.json({ error: msg }, { status: 400 });
+    console.error('User update error:', error);
+    return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
   }
 }

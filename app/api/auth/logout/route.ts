@@ -1,17 +1,13 @@
-import { NextResponse } from "next/server"
-import { logout } from "@/lib/auth"
-
-export const runtime = 'nodejs';
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function POST() {
   try {
-    await logout()
+    (await cookies()).delete("token");
     
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Logout error:", error)
-    
-    // Still return success even if there's an error to ensure logout
-    return NextResponse.json({ success: true })
+    console.error('Logout error:', error);
+    return NextResponse.json({ error: "Logout failed" }, { status: 500 });
   }
 }

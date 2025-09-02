@@ -11,6 +11,11 @@ import { SystemsModule } from './systems/systems.module';
 import { LoggerModule } from './logging/logger.module';
 import { LoggingMiddleware } from './middleware/logging.middleware';
 import { AuditInterceptor } from './interceptors/audit.interceptor';
+import { StpsModule } from './stps/stps.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { PoamsModule } from './poams/poams.module';
+import { TeamsModule } from './teams/teams.module';
+import { VulnerabilitiesModule } from './vulnerabilities/vulnerabilities.module';
 
 @Module({
   imports: [
@@ -20,7 +25,7 @@ import { AuditInterceptor } from './interceptors/audit.interceptor';
     UsersModule, 
     PackagesModule, 
     GroupsModule, 
-    SystemsModule
+    SystemsModule, StpsModule, DashboardModule, PoamsModule, TeamsModule, VulnerabilitiesModule
   ],
   controllers: [AppController],
   providers: [

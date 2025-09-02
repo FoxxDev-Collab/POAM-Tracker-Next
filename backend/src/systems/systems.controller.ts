@@ -8,8 +8,11 @@ import {
   Delete, 
   UseGuards,
   ParseIntPipe,
-  Query
+  Query,
+  UseInterceptors,
+  UploadedFile
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { SystemsService } from './systems.service';
 import type { CreateSystemDto, UpdateSystemDto } from './systems.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -54,5 +57,25 @@ export class SystemsController {
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.systemsService.remove(id);
+  }
+
+  // STIG-related endpoints
+  @Get(':id/stig/findings')
+  getStigFindings(@Param('id', ParseIntPipe) id: number) {
+    return this.systemsService.getStigFindings(id);
+  }
+
+  @Get(':id/stig/scans')
+  getStigScans(@Param('id', ParseIntPipe) id: number) {
+    return this.systemsService.getStigScans(id);
+  }
+
+  @Post(':id/stig/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  uploadStigFile(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: any
+  ) {
+    return this.systemsService.uploadStigFile(id, file);
   }
 }

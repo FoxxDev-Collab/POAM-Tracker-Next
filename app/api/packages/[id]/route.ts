@@ -1,75 +1,87 @@
 import { NextRequest, NextResponse } from "next/server";
-import { 
-  makeBackendRequest, 
-  extractTokenFromRequest, 
-  BackendApiError,
-  createErrorResponse 
-} from "@/lib/backend-api";
+import { cookies } from "next/headers";
+
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token');
+  
+  return token ? {
+    'Authorization': `Bearer ${token.value}`,
+    'Content-Type': 'application/json'
+  } : {
+    'Content-Type': 'application/json'
+  };
+}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id: pid } = await params;
-    const id = Number(pid);
-    if (!Number.isFinite(id)) {
-      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-    }
+    const { id } = await params;
+    const headers = await getAuthHeaders();
     
-    const token = extractTokenFromRequest(req);
-    const item = await makeBackendRequest(`/packages/${id}`, { token });
-    return NextResponse.json({ item });
-  } catch (error) {
-    if (error instanceof BackendApiError) {
-      return createErrorResponse(error);
+    const response = await fetch(`${BACKEND_URL}/packages/${id}`, {
+      method: 'GET',
+      headers,
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to fetch package' }, { status: response.status });
     }
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Package fetch error:', error);
+    return NextResponse.json({ error: "Failed to fetch package" }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id: pid } = await params;
-    const id = Number(pid);
-    if (!Number.isFinite(id)) {
-      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-    }
-    
-    const token = extractTokenFromRequest(req);
+    const { id } = await params;
+    const headers = await getAuthHeaders();
     const body = await req.json();
     
-    const updated = await makeBackendRequest(`/packages/${id}`, {
+    const response = await fetch(`${BACKEND_URL}/packages/${id}`, {
       method: 'PATCH',
-      body: body,
-      token
+      headers,
+      body: JSON.stringify(body)
     });
     
-    return NextResponse.json({ item: updated });
-  } catch (error) {
-    if (error instanceof BackendApiError) {
-      return createErrorResponse(error);
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to update package' }, { status: response.status });
     }
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Package update error:', error);
+    return NextResponse.json({ error: "Failed to update package" }, { status: 500 });
   }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id: pid } = await params;
-    const id = Number(pid);
-    if (!Number.isFinite(id)) {
-      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-    }
+    const { id } = await params;
+    const headers = await getAuthHeaders();
     
-    const token = extractTokenFromRequest(req);
-    const result = await makeBackendRequest(`/packages/${id}`, {
+    const response = await fetch(`${BACKEND_URL}/packages/${id}`, {
       method: 'DELETE',
-      token
+      headers,
     });
     
-    return NextResponse.json(result || { ok: true });
-  } catch (error) {
-    if (error instanceof BackendApiError) {
-      return createErrorResponse(error);
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to delete package' }, { status: response.status });
     }
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Package deletion error:', error);
+    return NextResponse.json({ error: "Failed to delete package" }, { status: 500 });
   }
 }

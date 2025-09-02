@@ -1,102 +1,96 @@
 import { NextRequest, NextResponse } from "next/server";
-import { STPs } from "@/lib/db";
+import { cookies } from "next/headers";
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params;
-    const stpId = Number(id);
-    if (!Number.isFinite(stpId)) {
-      return NextResponse.json({ error: "Invalid STP ID" }, { status: 400 });
-    }
-    
-    const stp = STPs.get(stpId);
-    if (!stp) {
-      return NextResponse.json({ error: "STP not found" }, { status: 404 });
-    }
-    
-    return NextResponse.json({ item: stp });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Failed to get STP";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token');
+  
+  return token ? {
+    'Authorization': `Bearer ${token.value}`,
+    'Content-Type': 'application/json'
+  } : {
+    'Content-Type': 'application/json'
+  };
 }
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = await params;
-    const stpId = Number(id);
-    if (!Number.isFinite(stpId)) {
-      return NextResponse.json({ error: "Invalid STP ID" }, { status: 400 });
-    }
+    const headers = await getAuthHeaders();
+    const resolvedParams = await params;
     
-    const body = await req.json();
-    const updated = STPs.update(stpId, {
-      title: body?.title,
-      description: body?.description,
-      status: body?.status,
-      priority: body?.priority,
-      assigned_team_id: body?.assigned_team_id,
-      due_date: body?.due_date
+    const response = await fetch(`${BACKEND_URL}/stps/${resolvedParams.id}`, {
+      method: 'GET',
+      headers,
     });
     
-    if (!updated) {
-      return NextResponse.json({ error: "STP not found" }, { status: 404 });
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to fetch STP' }, { status: response.status });
     }
-    
-    return NextResponse.json({ item: updated });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Failed to update STP";
-    return NextResponse.json({ error: message }, { status: 500 });
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('STP fetch error:', error);
+    return NextResponse.json({ error: "Failed to fetch STP" }, { status: 500 });
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = await params;
-    const stpId = Number(id);
-    if (!Number.isFinite(stpId)) {
-      return NextResponse.json({ error: "Invalid STP ID" }, { status: 400 });
-    }
-    
+    const headers = await getAuthHeaders();
+    const resolvedParams = await params;
     const body = await req.json();
-    const updateData: Record<string, unknown> = {};
     
-    // Only update fields that are provided
-    if (body?.status !== undefined) updateData.status = body.status;
-    if (body?.priority !== undefined) updateData.priority = body.priority;
-    if (body?.title !== undefined) updateData.title = body.title;
-    if (body?.description !== undefined) updateData.description = body.description;
-    if (body?.due_date !== undefined) updateData.due_date = body.due_date;
+    const response = await fetch(`${BACKEND_URL}/stps/${resolvedParams.id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(body)
+    });
     
-    const updated = STPs.update(stpId, updateData);
-    
-    if (!updated) {
-      return NextResponse.json({ error: "STP not found" }, { status: 404 });
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to update STP' }, { status: response.status });
     }
-    
-    return NextResponse.json({ item: updated });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Failed to update STP";
-    return NextResponse.json({ error: message }, { status: 500 });
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('STP update error:', error);
+    return NextResponse.json({ error: "Failed to update STP" }, { status: 500 });
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = await params;
-    const stpId = Number(id);
-    if (!Number.isFinite(stpId)) {
-      return NextResponse.json({ error: "Invalid STP ID" }, { status: 400 });
-    }
+    const headers = await getAuthHeaders();
+    const resolvedParams = await params;
     
-    const success = STPs.remove(stpId);
-    if (!success) {
-      return NextResponse.json({ error: "STP not found" }, { status: 404 });
-    }
+    const response = await fetch(`${BACKEND_URL}/stps/${resolvedParams.id}`, {
+      method: 'DELETE',
+      headers,
+    });
     
-    return NextResponse.json({ success: true });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Failed to delete STP";
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to delete STP' }, { status: response.status });
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('STP deletion error:', error);
+    return NextResponse.json({ error: "Failed to delete STP" }, { status: 500 });
   }
 }

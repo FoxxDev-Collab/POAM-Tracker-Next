@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:../../.data/app.sqlite"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ---
@@ -62,12 +62,14 @@ model Group {
 }
 
 model System {
-  id          Int      @id @default(autoincrement())
-  packageId   Int      @map("package_id")
-  groupId     Int?     @map("group_id")
-  name        String
-  description String?  @default("")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id              Int      @id @default(autoincrement())
+  packageId       Int      @map("package_id")
+  groupId         Int?     @map("group_id")
+  name            String
+  description     String?  @default("")
+  ipAddress       String?  @map("ip_address")
+  operatingSystem String?  @map("operating_system")
+  createdAt       DateTime @default(now()) @map("created_at")
 
   package      Package       @relation(fields: [packageId], references: [id], onDelete: Cascade)
   group        Group?        @relation(fields: [groupId], references: [id], onDelete: SetNull)

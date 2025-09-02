@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { 
-  makeBackendRequest, 
-  BackendApiError,
-  createErrorResponse 
-} from "@/lib/backend-api";
 import { cookies } from "next/headers";
 import { z } from "zod";
-
-export const runtime = 'nodejs';
+import { getIronSession } from "iron-session";
+import type { SessionData } from "@/lib/session";
 
 const loginSchema = z.object({
   email: z.string().email().min(1).max(255),
   password: z.string().min(1).max(255),
 })
+
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,43 +22,82 @@ export async function POST(req: NextRequest) {
 
     const { email, password } = validation.data;
     
-    // Get client IP and User-Agent for logging
     const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
     const userAgent = req.headers.get('user-agent') || 'unknown';
     
-    const response = await makeBackendRequest('/auth/login', {
+    const response = await fetch(`${BACKEND_URL}/auth/login`, {
       method: 'POST',
-      body: { 
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
         email, 
         password,
         ipAddress,
         userAgent
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Authentication failed' }, { status: 401 });
+    }
+
+    const data = await response.json();
+    
+    const res = NextResponse.json({ 
+      success: true,
+      user: data.user || {
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        role: data.role
       }
     });
     
-    // Set the JWT token in httpOnly cookie
-    if (response.access_token) {
-      (await cookies()).set("token", response.access_token, {
+    // Set JWT token
+    if (data.access_token) {
+      (await cookies()).set("token", data.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 60 * 60 * 24, // 24 hours
+        maxAge: 60 * 60 * 24,
       });
     }
     
-    return NextResponse.json({ 
-      success: true,
-      user: response.user || {
-        id: response.id,
-        email: response.email,
-        name: response.name,
-        role: response.role
-      }
-    });
-  } catch (error) {
-    if (error instanceof BackendApiError) {
-      return createErrorResponse(error, 401);
+    // Create iron-session for middleware authentication
+    const sessionOptions = {
+      password: process.env.SESSION_SECRET || "complex_password_at_least_32_characters_long_for_production_use_only",
+      cookieName: "poam-session",
+      cookieOptions: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict" as const,
+        maxAge: 8 * 60 * 60,
+        path: "/",
+      },
+    };
+    
+    try {
+      const session = await getIronSession<SessionData>(req, res, sessionOptions);
+      const user = data.user || data;
+      session.userId = user.id;
+      session.userEmail = user.email;
+      session.userName = user.name;
+      session.userRole = user.role;
+      session.isLoggedIn = true;
+      session.loginTime = Date.now();
+      session.lastActivity = Date.now();
+      session.ipAddress = ipAddress;
+      session.userAgent = userAgent;
+      await session.save();
+    } catch (sessionError) {
+      console.error('Failed to save session:', sessionError);
     }
+    
+    return res;
+  } catch (error) {
+    console.error('Login error:', error);
     return NextResponse.json({ error: "Authentication failed" }, { status: 500 });
   }
 }

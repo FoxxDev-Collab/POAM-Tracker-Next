@@ -1,87 +1,96 @@
 import { NextRequest, NextResponse } from "next/server";
-import { 
-  makeBackendRequest, 
-  extractTokenFromRequest, 
-  BackendApiError,
-  createErrorResponse 
-} from "@/lib/backend-api";
-import { z } from "zod";
+import { cookies } from "next/headers";
 
-export const dynamic = "force-dynamic";
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
-const updateSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  description: z.string().optional(),
-  group_id: z.number().optional(),
-});
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token');
+  
+  return token ? {
+    'Authorization': `Bearer ${token.value}`,
+    'Content-Type': 'application/json'
+  } : {
+    'Content-Type': 'application/json'
+  };
+}
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id: pid } = await params;
-    const id = Number(pid);
-    if (!Number.isFinite(id)) {
-      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-    }
+    const headers = await getAuthHeaders();
+    const resolvedParams = await params;
     
-    const token = extractTokenFromRequest(req);
-    const item = await makeBackendRequest(`/systems/${id}`, { token });
-    return NextResponse.json({ item });
-  } catch (error) {
-    if (error instanceof BackendApiError) {
-      return createErrorResponse(error);
+    const response = await fetch(`${BACKEND_URL}/systems/${resolvedParams.id}`, {
+      method: 'GET',
+      headers,
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to fetch system' }, { status: response.status });
     }
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('System fetch error:', error);
+    return NextResponse.json({ error: "Failed to fetch system" }, { status: 500 });
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id: pid } = await params;
-    const id = Number(pid);
-    if (!Number.isFinite(id)) {
-      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-    }
-    
-    const token = extractTokenFromRequest(req);
+    const headers = await getAuthHeaders();
+    const resolvedParams = await params;
     const body = await req.json();
-    const parsed = updateSchema.parse(body);
     
-    const updated = await makeBackendRequest(`/systems/${id}`, {
+    const response = await fetch(`${BACKEND_URL}/systems/${resolvedParams.id}`, {
       method: 'PATCH',
-      body: parsed,
-      token
+      headers,
+      body: JSON.stringify(body)
     });
     
-    return NextResponse.json({ item: updated });
-  } catch (error) {
-    if (error instanceof BackendApiError) {
-      return createErrorResponse(error);
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to update system' }, { status: response.status });
     }
-    const msg = error instanceof Error ? error.message : "Bad Request";
-    return NextResponse.json({ error: msg }, { status: 400 });
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('System update error:', error);
+    return NextResponse.json({ error: "Failed to update system" }, { status: 500 });
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id: pid } = await params;
-    const id = Number(pid);
-    if (!Number.isFinite(id)) {
-      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-    }
+    const headers = await getAuthHeaders();
+    const resolvedParams = await params;
     
-    const token = extractTokenFromRequest(req);
-    const result = await makeBackendRequest(`/systems/${id}`, {
+    const response = await fetch(`${BACKEND_URL}/systems/${resolvedParams.id}`, {
       method: 'DELETE',
-      token
+      headers,
     });
     
-    return NextResponse.json(result || { ok: true });
-  } catch (error) {
-    if (error instanceof BackendApiError) {
-      return createErrorResponse(error);
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to delete system' }, { status: response.status });
     }
-    const msg = error instanceof Error ? error.message : "Bad Request";
-    return NextResponse.json({ error: msg }, { status: 400 });
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('System delete error:', error);
+    return NextResponse.json({ error: "Failed to delete system" }, { status: 500 });
   }
 }

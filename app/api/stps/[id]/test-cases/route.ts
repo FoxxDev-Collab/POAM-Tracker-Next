@@ -1,49 +1,70 @@
 import { NextRequest, NextResponse } from "next/server";
-import { STPTestCases } from "@/lib/db";
+import { cookies } from "next/headers";
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token');
+  
+  return token ? {
+    'Authorization': `Bearer ${token.value}`,
+    'Content-Type': 'application/json'
+  } : {
+    'Content-Type': 'application/json'
+  };
+}
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = await params;
-    const stpId = Number(id);
-    if (!Number.isFinite(stpId)) {
-      return NextResponse.json({ error: "Invalid STP ID" }, { status: 400 });
-    }
+    const headers = await getAuthHeaders();
+    const resolvedParams = await params;
     
-    const items = STPTestCases.bySTP(stpId);
-    return NextResponse.json({ items });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Failed to list test cases";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const response = await fetch(`${BACKEND_URL}/stps/${resolvedParams.id}/test-cases`, {
+      method: 'GET',
+      headers,
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to fetch test cases' }, { status: response.status });
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Test cases fetch error:', error);
+    return NextResponse.json({ error: "Failed to fetch test cases" }, { status: 500 });
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = await params;
-    const stpId = Number(id);
-    if (!Number.isFinite(stpId)) {
-      return NextResponse.json({ error: "Invalid STP ID" }, { status: 400 });
-    }
-    
+    const headers = await getAuthHeaders();
+    const resolvedParams = await params;
     const body = await req.json();
-    const title = String(body?.title ?? "").trim();
     
-    if (!title) {
-      return NextResponse.json({ error: "Title is required" }, { status: 400 });
-    }
-    
-    const created = STPTestCases.create({
-      stp_id: stpId,
-      title,
-      description: body?.description,
-      test_procedure: body?.test_procedure,
-      expected_result: body?.expected_result,
-      assigned_user_id: body?.assigned_user_id ? Number(body.assigned_user_id) : undefined
+    const response = await fetch(`${BACKEND_URL}/stps/${resolvedParams.id}/test-cases`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
     });
     
-    return NextResponse.json({ item: created }, { status: 201 });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Failed to create test case";
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to create test case' }, { status: response.status });
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Test case creation error:', error);
+    return NextResponse.json({ error: "Failed to create test case" }, { status: 500 });
   }
 }

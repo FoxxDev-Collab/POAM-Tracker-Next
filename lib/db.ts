@@ -43,6 +43,24 @@ function init() {
       UPDATE packages SET updated_at = datetime('now') WHERE id = NEW.id;
     END;
 
+    -- Create users table early since many tables reference it
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      role TEXT NOT NULL CHECK (role IN ('Admin','ISSM','ISSO','SysAdmin','ISSE','Auditor')),
+      password_hash TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TRIGGER IF NOT EXISTS users_updated_at
+    AFTER UPDATE ON users
+    FOR EACH ROW BEGIN
+      UPDATE users SET updated_at = datetime('now') WHERE id = NEW.id;
+    END;
+
     -- Create groups table before systems since systems references it
     CREATE TABLE IF NOT EXISTS groups (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -453,25 +471,7 @@ function init() {
     CREATE INDEX IF NOT EXISTS idx_kc_space_permissions_user ON kc_space_permissions(user_id);
     CREATE INDEX IF NOT EXISTS idx_kc_space_permissions_team ON kc_space_permissions(team_id);
   `);
-  // Users and roles
-  d.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      role TEXT NOT NULL CHECK (role IN ('Admin','ISSM','ISSO','SysAdmin','ISSE','Auditor')),
-      password_hash TEXT,
-      active INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TRIGGER IF NOT EXISTS users_updated_at
-    AFTER UPDATE ON users
-    FOR EACH ROW BEGIN
-      UPDATE users SET updated_at = datetime('now') WHERE id = NEW.id;
-    END;
-  `);
+  // Users table already created earlier
   // Migration: add groups table and group_id to systems if they don't exist
   try {
     // Check if groups table exists

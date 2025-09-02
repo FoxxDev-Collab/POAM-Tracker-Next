@@ -1,103 +1,70 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token');
+  
+  return token ? {
+    'Authorization': `Bearer ${token.value}`,
+    'Content-Type': 'application/json'
+  } : {
+    'Content-Type': 'application/json'
+  };
+}
 
 export async function PATCH(
-  request: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
-    const body = await request.json()
-    const { status, actual_result, assigned_user_id } = body
+    const headers = await getAuthHeaders();
+    const resolvedParams = await params;
+    const body = await req.json();
     
-    const db = getDb()
+    const response = await fetch(`${BACKEND_URL}/stps/test-cases/${resolvedParams.id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(body)
+    });
     
-    // Build update query dynamically
-    const updates: string[] = []
-    const values: unknown[] = []
-    
-    if (status !== undefined) {
-      updates.push('status = ?')
-      values.push(status)
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to update test case' }, { status: response.status });
     }
-    
-    if (actual_result !== undefined) {
-      updates.push('actual_result = ?')
-      values.push(actual_result)
-    }
-    
-    if (assigned_user_id !== undefined) {
-      updates.push('assigned_user_id = ?')
-      values.push(assigned_user_id)
-    }
-    
-    if (updates.length === 0) {
-      return NextResponse.json(
-        { error: 'No fields to update' },
-        { status: 400 }
-      )
-    }
-    
-    // Add updated_at
-    updates.push('updated_at = datetime("now")')
-    
-    // Add test case ID to values array
-    values.push(Number(id))
-    
-    // Update the test case
-    const result = db.prepare(`
-      UPDATE stp_test_cases 
-      SET ${updates.join(', ')}
-      WHERE id = ?
-    `).run(...values)
-    
-    if (result.changes === 0) {
-      return NextResponse.json(
-        { error: 'Test case not found' },
-        { status: 404 }
-      )
-    }
-    
-    // Get the updated test case
-    const updatedTestCase = db.prepare(`
-      SELECT * FROM stp_test_cases WHERE id = ?
-    `).get(Number(id))
-    
-    return NextResponse.json({ testCase: updatedTestCase })
+
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error updating test case:', error)
-    return NextResponse.json(
-      { error: 'Failed to update test case' },
-      { status: 500 }
-    )
+    console.error('Test case update error:', error);
+    return NextResponse.json({ error: "Failed to update test case" }, { status: 500 });
   }
 }
 
 export async function DELETE(
-  request: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
-    const db = getDb()
+    const headers = await getAuthHeaders();
+    const resolvedParams = await params;
     
-    const result = db.prepare(`
-      DELETE FROM stp_test_cases WHERE id = ?
-    `).run(Number(id))
+    const response = await fetch(`${BACKEND_URL}/stps/test-cases/${resolvedParams.id}`, {
+      method: 'DELETE',
+      headers,
+    });
     
-    if (result.changes === 0) {
-      return NextResponse.json(
-        { error: 'Test case not found' },
-        { status: 404 }
-      )
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to delete test case' }, { status: response.status });
     }
-    
-    return NextResponse.json({ success: true })
+
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error deleting test case:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete test case' },
-      { status: 500 }
-    )
+    console.error('Test case deletion error:', error);
+    return NextResponse.json({ error: "Failed to delete test case" }, { status: 500 });
   }
 }

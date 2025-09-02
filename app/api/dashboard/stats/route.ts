@@ -1,79 +1,38 @@
-import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+
+async function getAuthHeaders() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token');
+  
+  return token ? {
+    'Authorization': `Bearer ${token.value}`,
+    'Content-Type': 'application/json'
+  } : {
+    'Content-Type': 'application/json'
+  };
+}
 
 export async function GET() {
   try {
-    const db = getDb();
+    const headers = await getAuthHeaders();
     
-    // Get vulnerability counts by STIG severity (handles both CAT format and legacy format)
-    const catICount = db.prepare(`
-      SELECT COUNT(*) as count 
-      FROM stig_findings 
-      WHERE (LOWER(severity) LIKE '%cat i%' OR LOWER(severity) = 'high') 
-      AND status IN ('Open', 'NotAFinding', 'Not_Reviewed')
-    `).get() as { count: number };
-    
-    const catIICount = db.prepare(`
-      SELECT COUNT(*) as count 
-      FROM stig_findings 
-      WHERE (LOWER(severity) LIKE '%cat ii%' OR LOWER(severity) = 'medium')
-      AND status IN ('Open', 'NotAFinding', 'Not_Reviewed')  
-    `).get() as { count: number };
-    
-    // Get resolved count (today)
-    const resolvedToday = db.prepare(`
-      SELECT COUNT(*) as count 
-      FROM stig_findings 
-      WHERE status = 'NotAFinding' 
-      AND DATE(last_seen) = DATE('now')
-    `).get() as { count: number };
-    
-    // Get pending reviews (findings that need review)
-    const pendingReviews = db.prepare(`
-      SELECT COUNT(*) as count 
-      FROM stig_findings 
-      WHERE status = 'Not_Reviewed'
-    `).get() as { count: number };
-    
-    // Get recent activity (last 10 findings)
-    const recentFindings = db.prepare(`
-      SELECT 
-        sf.rule_title,
-        sf.severity,
-        sf.status,
-        sf.last_seen,
-        s.name as system_name,
-        sf.rule_id
-      FROM stig_findings sf
-      JOIN systems s ON sf.system_id = s.id
-      ORDER BY sf.last_seen DESC
-      LIMIT 10
-    `).all() as Array<{
-      rule_title: string | null;
-      severity: string | null;
-      status: string | null;
-      last_seen: string;
-      system_name: string;
-      rule_id: string;
-    }>;
-    
-    // Get total systems and packages count
-    const systemCount = db.prepare("SELECT COUNT(*) as count FROM systems").get() as { count: number };
-    const packageCount = db.prepare("SELECT COUNT(*) as count FROM packages").get() as { count: number };
-    
-    return NextResponse.json({
-      stats: {
-        catI: catICount.count,
-        catII: catIICount.count,
-        resolvedToday: resolvedToday.count,
-        pendingReviews: pendingReviews.count,
-        totalSystems: systemCount.count,
-        totalPackages: packageCount.count
-      },
-      recentActivity: recentFindings
+    const response = await fetch(`${BACKEND_URL}/dashboard/stats`, {
+      method: 'GET',
+      headers,
     });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Failed to get dashboard stats";
-    return NextResponse.json({ error: message }, { status: 500 });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json({ error: error.message || 'Failed to fetch dashboard stats' }, { status: response.status });
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Dashboard stats fetch error:', error);
+    return NextResponse.json({ error: "Failed to fetch dashboard stats" }, { status: 500 });
   }
 }
