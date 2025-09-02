@@ -1,6 +1,11 @@
-import { NextRequest, NextResponse } from "next/server"
-import { authenticate } from "@/lib/auth"
-import { z } from "zod"
+import { NextRequest, NextResponse } from "next/server";
+import { 
+  makeBackendRequest, 
+  BackendApiError,
+  createErrorResponse 
+} from "@/lib/backend-api";
+import { cookies } from "next/headers";
+import { z } from "zod";
 
 export const runtime = 'nodejs';
 
@@ -11,49 +16,52 @@ const loginSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const body = await req.json();
+    const validation = loginSchema.safeParse(body);
     
-    // Validate input
-    const validation = loginSchema.safeParse(body)
     if (!validation.success) {
-      return NextResponse.json(
-        { error: "Invalid input" }, 
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "Invalid input" }, { status: 400 });
     }
 
-    const { email, password } = validation.data
+    const { email, password } = validation.data;
     
     // Get client IP and User-Agent for logging
-    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
-    const userAgent = req.headers.get('user-agent') || 'unknown'
+    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const userAgent = req.headers.get('user-agent') || 'unknown';
     
-    // Authenticate user
-    const result = await authenticate(email, password, ipAddress, userAgent)
+    const response = await makeBackendRequest('/auth/login', {
+      method: 'POST',
+      body: { 
+        email, 
+        password,
+        ipAddress,
+        userAgent
+      }
+    });
     
-    if (result.success) {
-      return NextResponse.json({ 
-        success: true,
-        user: {
-          id: result.user.id,
-          email: result.user.email,
-          name: result.user.name,
-          role: result.user.role
-        }
-      })
-    } else {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 401 }
-      )
+    // Set the JWT token in httpOnly cookie
+    if (response.access_token) {
+      (await cookies()).set("token", response.access_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24, // 24 hours
+      });
     }
-  } catch (error) {
-    console.error("Login error:", error)
     
-    // Don't expose internal errors
-    return NextResponse.json(
-      { error: "Authentication failed" },
-      { status: 500 }
-    )
+    return NextResponse.json({ 
+      success: true,
+      user: response.user || {
+        id: response.id,
+        email: response.email,
+        name: response.name,
+        role: response.role
+      }
+    });
+  } catch (error) {
+    if (error instanceof BackendApiError) {
+      return createErrorResponse(error, 401);
+    }
+    return NextResponse.json({ error: "Authentication failed" }, { status: 500 });
   }
 }
