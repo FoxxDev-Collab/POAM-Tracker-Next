@@ -1,16 +1,16 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Body, 
-  Patch, 
-  Param, 
-  Delete, 
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
   UseGuards,
   ParseIntPipe,
   Query,
   UseInterceptors,
-  UploadedFile
+  UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SystemsService } from './systems.service';
@@ -30,7 +30,7 @@ export class SystemsController {
   @Get()
   findAll(
     @Query('packageId') packageId?: string,
-    @Query('groupId') groupId?: string
+    @Query('groupId') groupId?: string,
   ) {
     if (packageId) {
       return this.systemsService.findByPackage(parseInt(packageId));
@@ -48,8 +48,8 @@ export class SystemsController {
 
   @Patch(':id')
   update(
-    @Param('id', ParseIntPipe) id: number, 
-    @Body() updateSystemDto: UpdateSystemDto
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateSystemDto: UpdateSystemDto,
   ) {
     return this.systemsService.update(id, updateSystemDto);
   }
@@ -74,7 +74,7 @@ export class SystemsController {
   @UseInterceptors(FileInterceptor('file'))
   uploadStigFile(
     @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file: any
+    @UploadedFile() file: any,
   ) {
     return this.systemsService.uploadStigFile(id, file);
   }

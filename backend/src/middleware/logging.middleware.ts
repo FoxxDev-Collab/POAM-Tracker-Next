@@ -14,7 +14,7 @@ export class LoggingMiddleware implements NestMiddleware {
   use(req: RequestWithCorrelation, res: Response, next: NextFunction) {
     const correlationId = this.logger.generateCorrelationId();
     const startTime = Date.now();
-    
+
     req.correlationId = correlationId;
     req.startTime = startTime;
 
@@ -25,7 +25,7 @@ export class LoggingMiddleware implements NestMiddleware {
     this.logger.log(
       `Incoming ${req.method} ${req.originalUrl}`,
       'HTTP',
-      correlationId
+      correlationId,
     );
 
     // Log request details for security monitoring
@@ -41,24 +41,23 @@ export class LoggingMiddleware implements NestMiddleware {
         correlationId,
         details: {
           query: req.query,
-          params: req.params
-        }
+          params: req.params,
+        },
       });
     }
 
     // Override res.json to log responses
     const originalJson = res.json;
-    res.json = function(body) {
+    res.json = function (body) {
       const duration = Date.now() - startTime;
-      
+
       // Log response
-      const logger = (req as any).logger || 
-        new AppLoggerService(); // Fallback, though this shouldn't happen
-      
+      const logger = (req as any).logger || new AppLoggerService(); // Fallback, though this shouldn't happen
+
       logger.log(
         `Response ${res.statusCode} ${req.method} ${req.originalUrl} - ${duration}ms`,
         'HTTP',
-        correlationId
+        correlationId,
       );
 
       // Log errors
@@ -67,7 +66,7 @@ export class LoggingMiddleware implements NestMiddleware {
           `HTTP Error ${res.statusCode}: ${req.method} ${req.originalUrl}`,
           JSON.stringify(body),
           'HTTP',
-          correlationId
+          correlationId,
         );
       }
 
@@ -85,16 +84,16 @@ export class LoggingMiddleware implements NestMiddleware {
       '/systems/',
       '/groups/',
       '/poams/',
-      '/stps/'
+      '/stps/',
     ];
-    
-    return sensitivePatterns.some(pattern => url.includes(pattern));
+
+    return sensitivePatterns.some((pattern) => url.includes(pattern));
   }
 
   private getClientIp(req: Request): string {
     return (
-      req.headers['x-forwarded-for'] as string ||
-      req.headers['x-real-ip'] as string ||
+      (req.headers['x-forwarded-for'] as string) ||
+      (req.headers['x-real-ip'] as string) ||
       req.connection.remoteAddress ||
       req.socket.remoteAddress ||
       'unknown'

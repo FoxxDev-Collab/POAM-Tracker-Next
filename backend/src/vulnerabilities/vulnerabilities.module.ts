@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
-import { VulnerabilitiesController, SystemsStigController } from './vulnerabilities.controller';
+import {
+  VulnerabilitiesController,
+  SystemsStigController,
+} from './vulnerabilities.controller';
 import { VulnerabilitiesService } from './vulnerabilities.service';
 import { PrismaModule } from '../prisma/prisma.module';
 

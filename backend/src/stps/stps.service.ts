@@ -8,7 +8,7 @@ export class StpsService {
 
   async findAll(packageId?: number, systemId?: number) {
     const where: Prisma.StpWhereInput = {};
-    
+
     if (packageId) {
       where.packageId = packageId;
     }
@@ -100,19 +100,19 @@ export class StpsService {
       priority: data.priority || 'Medium',
       dueDate: data.due_date,
       system: {
-        connect: { id: data.system_id }
+        connect: { id: data.system_id },
       },
       package: {
-        connect: { id: data.package_id }
+        connect: { id: data.package_id },
       },
       creator: {
-        connect: { id: data.created_by }
+        connect: { id: data.created_by },
       },
       ...(data.assigned_team_id && {
         assignedTeam: {
-          connect: { id: data.assigned_team_id }
-        }
-      })
+          connect: { id: data.assigned_team_id },
+        },
+      }),
     };
 
     const stp = await this.prisma.stp.create({
@@ -183,7 +183,10 @@ export class StpsService {
     return { items: testCases };
   }
 
-  async createTestCase(stpId: number, data: Omit<Prisma.StpTestCaseCreateInput, 'stp'>) {
+  async createTestCase(
+    stpId: number,
+    data: Omit<Prisma.StpTestCaseCreateInput, 'stp'>,
+  ) {
     const testCase = await this.prisma.stpTestCase.create({
       data: {
         ...data,
@@ -251,16 +254,26 @@ export class StpsService {
   }
 
   async uploadTestCaseEvidence(
-    testCaseId: number, 
-    filename: string, 
+    testCaseId: number,
+    filename: string,
     originalFilename: string,
     fileSize: number,
     mimeType: string,
     description: string,
-    uploadedBy: number
+    uploadedBy: number,
   ) {
+    const testCase = await this.prisma.stpTestCase.findUnique({
+      where: { id: testCaseId },
+      select: { stpId: true },
+    });
+
+    if (!testCase) {
+      throw new Error('Test case not found');
+    }
+
     const evidence = await this.prisma.stpEvidence.create({
       data: {
+        stpId: testCase.stpId,
         testCaseId,
         filename,
         originalFilename,
@@ -268,14 +281,6 @@ export class StpsService {
         mimeType,
         description,
         uploadedBy,
-        stp: {
-          connect: {
-            id: (await this.prisma.stpTestCase.findUnique({
-              where: { id: testCaseId },
-              select: { stpId: true }
-            }))?.stpId
-          }
-        }
       },
       include: {
         uploader: {
@@ -298,7 +303,11 @@ export class StpsService {
     return { items: [] };
   }
 
-  async addTestCaseComment(testCaseId: number, content: string, createdBy: number) {
+  async addTestCaseComment(
+    testCaseId: number,
+    content: string,
+    createdBy: number,
+  ) {
     // For now, return a mock comment
     // This can be implemented when the comments schema is added
     const mockComment = {
@@ -308,8 +317,8 @@ export class StpsService {
       createdBy: {
         id: createdBy,
         name: 'Current User',
-        email: 'user@example.com'
-      }
+        email: 'user@example.com',
+      },
     };
 
     return { item: mockComment };

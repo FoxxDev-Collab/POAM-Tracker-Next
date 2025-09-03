@@ -1,6 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import type { Package, SystemType, ImpactLevel, AuthorizationStatus, ResidualRiskLevel, MissionCriticality, DataClassification, SecurityControlBaseline, PoamStatus, ContinuousMonitoringStatus } from '@prisma/client';
+import type {
+  Package,
+  SystemType,
+  ImpactLevel,
+  AuthorizationStatus,
+  ResidualRiskLevel,
+  MissionCriticality,
+  DataClassification,
+  SecurityControlBaseline,
+  PoamStatus,
+  ContinuousMonitoringStatus,
+} from '@prisma/client';
 
 export interface CreatePackageDto {
   name: string;
@@ -58,7 +69,7 @@ export class PackagesService {
     const packageItem = await this.prisma.package.create({
       data: createPackageDto,
     });
-    
+
     return { item: packageItem };
   }
 
@@ -78,7 +89,7 @@ export class PackagesService {
         },
       },
     });
-    
+
     return { items: packages };
   }
 
@@ -95,21 +106,24 @@ export class PackagesService {
     });
   }
 
-  async update(id: number, updatePackageDto: UpdatePackageDto): Promise<{ item: Package }> {
+  async update(
+    id: number,
+    updatePackageDto: UpdatePackageDto,
+  ): Promise<{ item: Package }> {
     // Filter out read-only and relation fields that shouldn't be updated
-    const { 
+    const {
       // Remove read-only fields
-      id: _id, 
-      createdAt: _createdAt, 
+      id: _id,
+      createdAt: _createdAt,
       updatedAt: _updatedAt,
-      // Remove relation fields 
+      // Remove relation fields
       team: _team,
       groups: _groups,
       systems: _systems,
       stps: _stps,
       poams: _poams,
       // Keep only updateable fields
-      ...validUpdateData 
+      ...validUpdateData
     } = updatePackageDto as any;
 
     // Convert enum string values to match Prisma schema format
@@ -126,16 +140,21 @@ export class PackagesService {
         poams: true,
       },
     });
-    
+
     return { item: packageItem };
   }
 
   private normalizeEnumFields(data: any): any {
     const normalized = { ...data };
-    
+
     // Convert ImpactLevel enums (LOW/MODERATE/HIGH -> Low/Moderate/High)
-    const impactFields = ['confidentialityImpact', 'integrityImpact', 'availabilityImpact', 'overallCategorization'];
-    impactFields.forEach(field => {
+    const impactFields = [
+      'confidentialityImpact',
+      'integrityImpact',
+      'availabilityImpact',
+      'overallCategorization',
+    ];
+    impactFields.forEach((field) => {
       if (normalized[field]) {
         normalized[field] = this.normalizeImpactLevel(normalized[field]);
       }
@@ -143,16 +162,20 @@ export class PackagesService {
 
     // Convert AuthorizationStatus enum
     if (normalized.authorizationStatus) {
-      normalized.authorizationStatus = this.normalizeAuthorizationStatus(normalized.authorizationStatus);
+      normalized.authorizationStatus = this.normalizeAuthorizationStatus(
+        normalized.authorizationStatus,
+      );
     }
 
     // Convert other enum fields as needed
     if (normalized.systemType) {
       normalized.systemType = this.normalizeSystemType(normalized.systemType);
     }
-    
+
     if (normalized.residualRiskLevel) {
-      normalized.residualRiskLevel = this.normalizeResidualRiskLevel(normalized.residualRiskLevel);
+      normalized.residualRiskLevel = this.normalizeResidualRiskLevel(
+        normalized.residualRiskLevel,
+      );
     }
 
     return normalized;
@@ -160,41 +183,61 @@ export class PackagesService {
 
   private normalizeImpactLevel(value: string): string {
     switch (value?.toUpperCase()) {
-      case 'LOW': return 'Low';
-      case 'MODERATE': return 'Moderate';
-      case 'HIGH': return 'High';
-      default: return value;
+      case 'LOW':
+        return 'Low';
+      case 'MODERATE':
+        return 'Moderate';
+      case 'HIGH':
+        return 'High';
+      default:
+        return value;
     }
   }
 
   private normalizeAuthorizationStatus(value: string): string {
     switch (value) {
-      case 'NOT_STARTED': return 'Not_Started';
-      case 'IN_PROGRESS': return 'In_Progress';
-      case 'AUTHORIZED': return 'Authorized';
-      case 'REAUTHORIZATION_REQUIRED': return 'Reauthorization_Required';
-      default: return value;
+      case 'NOT_STARTED':
+        return 'Not_Started';
+      case 'IN_PROGRESS':
+        return 'In_Progress';
+      case 'AUTHORIZED':
+        return 'Authorized';
+      case 'REAUTHORIZATION_REQUIRED':
+        return 'Reauthorization_Required';
+      default:
+        return value;
     }
   }
 
   private normalizeSystemType(value: string): string {
     switch (value) {
-      case 'MAJOR_APPLICATION': return 'Major_Application';
-      case 'GENERAL_SUPPORT_SYSTEM': return 'General_Support_System';
-      case 'MINOR_APPLICATION': return 'Minor_Application';
-      case 'SUBSYSTEM': return 'Subsystem';
-      default: return value;
+      case 'MAJOR_APPLICATION':
+        return 'Major_Application';
+      case 'GENERAL_SUPPORT_SYSTEM':
+        return 'General_Support_System';
+      case 'MINOR_APPLICATION':
+        return 'Minor_Application';
+      case 'SUBSYSTEM':
+        return 'Subsystem';
+      default:
+        return value;
     }
   }
 
   private normalizeResidualRiskLevel(value: string): string {
     switch (value?.toUpperCase()) {
-      case 'VERY_LOW': return 'Very_Low';
-      case 'LOW': return 'Low';
-      case 'MODERATE': return 'Moderate';
-      case 'HIGH': return 'High';
-      case 'VERY_HIGH': return 'Very_High';
-      default: return value;
+      case 'VERY_LOW':
+        return 'Very_Low';
+      case 'LOW':
+        return 'Low';
+      case 'MODERATE':
+        return 'Moderate';
+      case 'HIGH':
+        return 'High';
+      case 'VERY_HIGH':
+        return 'Very_High';
+      default:
+        return value;
     }
   }
 

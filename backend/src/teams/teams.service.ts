@@ -146,7 +146,11 @@ export class TeamsService {
     });
   }
 
-  async addMember(teamId: number, userId: number, role: 'Lead' | 'Member' = 'Member') {
+  async addMember(
+    teamId: number,
+    userId: number,
+    role: 'Lead' | 'Member' = 'Member',
+  ) {
     return this.prisma.teamMembership.create({
       data: {
         teamId,

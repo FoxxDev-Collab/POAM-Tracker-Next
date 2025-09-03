@@ -9,7 +9,9 @@ describe('VulnerabilitiesController', () => {
       controllers: [VulnerabilitiesController],
     }).compile();
 
-    controller = module.get<VulnerabilitiesController>(VulnerabilitiesController);
+    controller = module.get<VulnerabilitiesController>(
+      VulnerabilitiesController,
+    );
   });
 
   it('should be defined', () => {

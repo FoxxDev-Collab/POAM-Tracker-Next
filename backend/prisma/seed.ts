@@ -4,20 +4,25 @@ import * as bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@poamtracker.mil';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const adminName = process.env.ADMIN_NAME || 'System Administrator';
+  
   // Check if admin user exists
   const existingAdmin = await prisma.user.findUnique({
-    where: { email: 'admin@poamtracker.mil' }
+    where: { email: adminEmail }
   });
   
-  const adminPassword = await bcrypt.hash('admin123', 10);
+  const hashedPassword = await bcrypt.hash(adminPassword, 10);
   
   let admin;
   if (existingAdmin) {
     // Update existing admin user
     admin = await prisma.user.update({
-      where: { email: 'admin@poamtracker.mil' },
+      where: { email: adminEmail },
       data: {
-        passwordHash: adminPassword,
+        name: adminName,
+        passwordHash: hashedPassword,
         active: true,
       },
     });
@@ -26,10 +31,10 @@ async function main() {
     // Create new admin user
     admin = await prisma.user.create({
       data: {
-        email: 'admin@poamtracker.mil',
-        name: 'System Administrator',
+        email: adminEmail,
+        name: adminName,
         role: 'Admin',
-        passwordHash: adminPassword,
+        passwordHash: hashedPassword,
         active: true,
       },
     });
@@ -38,7 +43,7 @@ async function main() {
 
   console.log('Seed data created:');
   console.log('- Admin user:', admin.email);
-  console.log('  Password: admin123');
+  console.log('  Password:', adminPassword);
 }
 
 main()

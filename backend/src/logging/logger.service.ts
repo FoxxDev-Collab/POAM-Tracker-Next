@@ -4,7 +4,14 @@ import DailyRotateFile from 'winston-daily-rotate-file';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface SecurityEvent {
-  eventType: 'AUTH_SUCCESS' | 'AUTH_FAILURE' | 'ACCESS_DENIED' | 'DATA_ACCESS' | 'DATA_MODIFICATION' | 'SYSTEM_ERROR' | 'ADMIN_ACTION';
+  eventType:
+    | 'AUTH_SUCCESS'
+    | 'AUTH_FAILURE'
+    | 'ACCESS_DENIED'
+    | 'DATA_ACCESS'
+    | 'DATA_MODIFICATION'
+    | 'SYSTEM_ERROR'
+    | 'ADMIN_ACTION';
   userId?: number;
   userEmail?: string;
   ipAddress?: string;
@@ -40,36 +47,38 @@ export class AppLoggerService implements LoggerService {
       level: process.env.LOG_LEVEL || 'info',
       format: winston.format.combine(
         winston.format.timestamp({
-          format: 'YYYY-MM-DD HH:mm:ss.SSS'
+          format: 'YYYY-MM-DD HH:mm:ss.SSS',
         }),
         winston.format.errors({ stack: true }),
         winston.format.json(),
-        winston.format.printf(({ timestamp, level, message, correlationId, ...meta }) => {
-          const logEntry = {
-            timestamp,
-            level: level.toUpperCase(),
-            message,
-            correlationId: correlationId || 'N/A',
-            ...meta
-          };
-          return JSON.stringify(logEntry);
-        })
+        winston.format.printf(
+          ({ timestamp, level, message, correlationId, ...meta }) => {
+            const logEntry = {
+              timestamp,
+              level: level.toUpperCase(),
+              message,
+              correlationId: correlationId || 'N/A',
+              ...meta,
+            };
+            return JSON.stringify(logEntry);
+          },
+        ),
       ),
       transports: [
         new winston.transports.Console({
           format: winston.format.combine(
             winston.format.colorize(),
-            winston.format.simple()
-          )
+            winston.format.simple(),
+          ),
         }),
         new DailyRotateFile({
           filename: 'logs/application-%DATE%.log',
           datePattern: 'YYYY-MM-DD',
           maxSize: '20m',
           maxFiles: '30d',
-          auditFile: 'logs/audit-application.json'
-        })
-      ]
+          auditFile: 'logs/audit-application.json',
+        }),
+      ],
     });
 
     // Security events logger (for compliance)
@@ -77,7 +86,7 @@ export class AppLoggerService implements LoggerService {
       level: 'info',
       format: winston.format.combine(
         winston.format.timestamp({
-          format: 'YYYY-MM-DD HH:mm:ss.SSS'
+          format: 'YYYY-MM-DD HH:mm:ss.SSS',
         }),
         winston.format.json(),
         winston.format.printf(({ timestamp, level, message, ...meta }) => {
@@ -86,10 +95,10 @@ export class AppLoggerService implements LoggerService {
             level: 'SECURITY',
             message,
             classification: 'FOUO', // For Official Use Only
-            ...meta
+            ...meta,
           };
           return JSON.stringify(logEntry);
-        })
+        }),
       ),
       transports: [
         new DailyRotateFile({
@@ -97,9 +106,9 @@ export class AppLoggerService implements LoggerService {
           datePattern: 'YYYY-MM-DD',
           maxSize: '20m',
           maxFiles: '2555d', // 7 years retention for DOD compliance
-          auditFile: 'logs/audit-security.json'
-        })
-      ]
+          auditFile: 'logs/audit-security.json',
+        }),
+      ],
     });
 
     // Audit trail logger (for data modifications)
@@ -107,7 +116,7 @@ export class AppLoggerService implements LoggerService {
       level: 'info',
       format: winston.format.combine(
         winston.format.timestamp({
-          format: 'YYYY-MM-DD HH:mm:ss.SSS'
+          format: 'YYYY-MM-DD HH:mm:ss.SSS',
         }),
         winston.format.json(),
         winston.format.printf(({ timestamp, level, message, ...meta }) => {
@@ -116,10 +125,10 @@ export class AppLoggerService implements LoggerService {
             level: 'AUDIT',
             message,
             classification: 'FOUO',
-            ...meta
+            ...meta,
           };
           return JSON.stringify(logEntry);
-        })
+        }),
       ),
       transports: [
         new DailyRotateFile({
@@ -127,9 +136,9 @@ export class AppLoggerService implements LoggerService {
           datePattern: 'YYYY-MM-DD',
           maxSize: '20m',
           maxFiles: '2555d', // 7 years retention
-          auditFile: 'logs/audit-trail.json'
-        })
-      ]
+          auditFile: 'logs/audit-trail.json',
+        }),
+      ],
     });
   }
 
@@ -141,7 +150,12 @@ export class AppLoggerService implements LoggerService {
     this.logger.info(message, { context, correlationId });
   }
 
-  error(message: string, trace?: string, context?: string, correlationId?: string) {
+  error(
+    message: string,
+    trace?: string,
+    context?: string,
+    correlationId?: string,
+  ) {
     this.logger.error(message, { trace, context, correlationId });
   }
 
@@ -171,7 +185,7 @@ export class AppLoggerService implements LoggerService {
       action: event.action || 'unknown',
       details: event.details || {},
       correlationId: event.correlationId || this.generateCorrelationId(),
-      severity: this.getEventSeverity(event.eventType)
+      severity: this.getEventSeverity(event.eventType),
     };
 
     this.securityLogger.info('Security Event', securityLog);
@@ -180,7 +194,7 @@ export class AppLoggerService implements LoggerService {
     this.logger.warn(`SECURITY: ${event.eventType}`, {
       userId: event.userId,
       resource: event.resource,
-      correlationId: securityLog.correlationId
+      correlationId: securityLog.correlationId,
     });
   }
 
@@ -198,7 +212,7 @@ export class AppLoggerService implements LoggerService {
       userAgent: event.userAgent || 'unknown',
       oldValues: event.oldValues || null,
       newValues: event.newValues || null,
-      correlationId: event.correlationId || this.generateCorrelationId()
+      correlationId: event.correlationId || this.generateCorrelationId(),
     };
 
     this.auditLogger.info('Data Modification', auditLog);
@@ -207,11 +221,13 @@ export class AppLoggerService implements LoggerService {
     this.logger.info(`AUDIT: ${event.action} on ${event.resource}`, {
       userId: event.userId,
       resourceId: event.resourceId,
-      correlationId: auditLog.correlationId
+      correlationId: auditLog.correlationId,
     });
   }
 
-  protected getEventSeverity(eventType: SecurityEvent['eventType']): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+  protected getEventSeverity(
+    eventType: SecurityEvent['eventType'],
+  ): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
     switch (eventType) {
       case 'AUTH_FAILURE':
       case 'ACCESS_DENIED':

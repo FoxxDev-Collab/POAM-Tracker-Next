@@ -24,10 +24,7 @@ export class VulnerabilitiesService {
           },
         },
       },
-      orderBy: [
-        { severity: 'desc' },
-        { lastSeen: 'desc' },
-      ],
+      orderBy: [{ severity: 'desc' }, { lastSeen: 'desc' }],
     });
   }
 
@@ -59,10 +56,7 @@ export class VulnerabilitiesService {
           },
         },
       },
-      orderBy: [
-        { severity: 'desc' },
-        { lastSeen: 'desc' },
-      ],
+      orderBy: [{ severity: 'desc' }, { lastSeen: 'desc' }],
     });
   }
 
@@ -112,10 +106,7 @@ export class VulnerabilitiesService {
           },
         },
       },
-      orderBy: [
-        { severity: 'desc' },
-        { lastSeen: 'desc' },
-      ],
+      orderBy: [{ severity: 'desc' }, { lastSeen: 'desc' }],
     });
   }
 
@@ -202,7 +193,10 @@ export class VulnerabilitiesService {
     });
   }
 
-  async createScan(systemId: number, data: { title?: string; checklistId?: string }) {
+  async createScan(
+    systemId: number,
+    data: { title?: string; checklistId?: string },
+  ) {
     return this.prisma.stigScan.create({
       data: {
         systemId,
@@ -231,10 +225,7 @@ export class VulnerabilitiesService {
           },
         },
         stigFindings: {
-          orderBy: [
-            { severity: 'desc' },
-            { ruleId: 'asc' },
-          ],
+          orderBy: [{ severity: 'desc' }, { ruleId: 'asc' }],
         },
       },
     });
@@ -242,7 +233,7 @@ export class VulnerabilitiesService {
 
   // Bulk create findings from STIG scan
   async createFindings(scanId: number, systemId: number, findings: any[]) {
-    const findingsData = findings.map(finding => ({
+    const findingsData = findings.map((finding) => ({
       systemId,
       scanId,
       groupId: finding.groupId || finding.group_id,
@@ -315,19 +306,30 @@ export class VulnerabilitiesService {
 
     // Calculate metrics
     const totalFindings = findings.length;
-    const openFindings = findings.filter(f => f.status === 'Open').length;
-    const closedFindings = findings.filter(f => f.status === 'NotAFinding').length;
-    const notApplicableFindings = findings.filter(f => f.status === 'Not_Applicable').length;
-    
-    const highSeverity = findings.filter(f => f.severity === 'high').length;
-    const mediumSeverity = findings.filter(f => f.severity === 'medium').length;
-    const lowSeverity = findings.filter(f => f.severity === 'low').length;
-    
-    const systemsWithFindings = systems.filter(s => s._count.stigFindings > 0).length;
-    
-    const complianceRate = totalFindings > 0 
-      ? Math.round(((closedFindings + notApplicableFindings) / totalFindings) * 100)
-      : 0;
+    const openFindings = findings.filter((f) => f.status === 'Open').length;
+    const closedFindings = findings.filter(
+      (f) => f.status === 'NotAFinding',
+    ).length;
+    const notApplicableFindings = findings.filter(
+      (f) => f.status === 'Not_Applicable',
+    ).length;
+
+    const highSeverity = findings.filter((f) => f.severity === 'high').length;
+    const mediumSeverity = findings.filter(
+      (f) => f.severity === 'medium',
+    ).length;
+    const lowSeverity = findings.filter((f) => f.severity === 'low').length;
+
+    const systemsWithFindings = systems.filter(
+      (s) => s._count.stigFindings > 0,
+    ).length;
+
+    const complianceRate =
+      totalFindings > 0
+        ? Math.round(
+            ((closedFindings + notApplicableFindings) / totalFindings) * 100,
+          )
+        : 0;
 
     return {
       totalFindings,
@@ -340,7 +342,7 @@ export class VulnerabilitiesService {
       systemsWithFindings,
       totalSystems: systems.length,
       lastScanDate: latestScan?.createdAt || null,
-      systems: systems.map(system => ({
+      systems: systems.map((system) => ({
         id: system.id,
         name: system.name,
         findingsCount: system._count.stigFindings,

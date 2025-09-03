@@ -21,7 +21,7 @@ export class GroupsService {
     const group = await this.prisma.group.create({
       data: createGroupDto,
     });
-    
+
     return { item: group };
   }
 
@@ -53,7 +53,7 @@ export class GroupsService {
         },
       },
     });
-    
+
     return { items: groups };
   }
 

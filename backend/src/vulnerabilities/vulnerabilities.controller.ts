@@ -1,11 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Query,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { VulnerabilitiesService } from './vulnerabilities.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('vulnerabilities')
 @UseGuards(JwtAuthGuard)
 export class VulnerabilitiesController {
-  constructor(private readonly vulnerabilitiesService: VulnerabilitiesService) {}
+  constructor(
+    private readonly vulnerabilitiesService: VulnerabilitiesService,
+  ) {}
 
   @Get()
   findAll(
@@ -55,7 +67,9 @@ export class VulnerabilitiesController {
 @Controller('systems')
 @UseGuards(JwtAuthGuard)
 export class SystemsStigController {
-  constructor(private readonly vulnerabilitiesService: VulnerabilitiesService) {}
+  constructor(
+    private readonly vulnerabilitiesService: VulnerabilitiesService,
+  ) {}
 
   @Get(':id/stig/scans')
   findScans(@Param('id', ParseIntPipe) systemId: number) {
@@ -65,7 +79,7 @@ export class SystemsStigController {
   @Post(':id/stig/scans')
   createScan(
     @Param('id', ParseIntPipe) systemId: number,
-    @Body() createScanDto: { title?: string; checklistId?: string }
+    @Body() createScanDto: { title?: string; checklistId?: string },
   ) {
     return this.vulnerabilitiesService.createScan(systemId, createScanDto);
   }
@@ -78,18 +92,24 @@ export class SystemsStigController {
   @Post(':id/cklb')
   async uploadCklb(
     @Param('id', ParseIntPipe) systemId: number,
-    @Body() body: { data: any }
+    @Body() body: { data: any },
   ) {
     // Create a new scan
     const scan = await this.vulnerabilitiesService.createScan(systemId, {
-      title: body.data.title || `STIG Scan - ${new Date().toISOString().split('T')[0]}`,
+      title:
+        body.data.title ||
+        `STIG Scan - ${new Date().toISOString().split('T')[0]}`,
       checklistId: body.data.checklistId,
     });
 
     // Extract findings from CKLB data
     const findings = body.data.findings || body.data.vulns || [];
-    
+
     // Create findings in bulk
-    return this.vulnerabilitiesService.createFindings(scan.id, systemId, findings);
+    return this.vulnerabilitiesService.createFindings(
+      scan.id,
+      systemId,
+      findings,
+    );
   }
 }

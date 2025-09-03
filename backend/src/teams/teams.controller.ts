@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -41,7 +51,7 @@ export class TeamsController {
   @Post(':id/members')
   addMember(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { userId: number; role?: 'Lead' | 'Member' }
+    @Body() body: { userId: number; role?: 'Lead' | 'Member' },
   ) {
     return this.teamsService.addMember(id, body.userId, body.role);
   }
@@ -50,7 +60,7 @@ export class TeamsController {
   updateMember(
     @Param('id', ParseIntPipe) id: number,
     @Param('userId', ParseIntPipe) userId: number,
-    @Body() body: { role: 'Lead' | 'Member' }
+    @Body() body: { role: 'Lead' | 'Member' },
   ) {
     return this.teamsService.updateMember(id, userId, body.role);
   }
@@ -58,7 +68,7 @@ export class TeamsController {
   @Delete(':id/members/:userId')
   removeMember(
     @Param('id', ParseIntPipe) id: number,
-    @Param('userId', ParseIntPipe) userId: number
+    @Param('userId', ParseIntPipe) userId: number,
   ) {
     return this.teamsService.removeMember(id, userId);
   }

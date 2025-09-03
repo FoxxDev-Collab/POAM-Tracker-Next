@@ -1,13 +1,13 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Body, 
-  Patch, 
-  Param, 
-  Delete, 
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
   UseGuards,
-  ParseIntPipe 
+  ParseIntPipe,
 } from '@nestjs/common';
 import { PackagesService } from './packages.service';
 import type { CreatePackageDto, UpdatePackageDto } from './packages.service';
@@ -38,8 +38,8 @@ export class PackagesController {
   @Patch(':id')
   @Audit({ action: 'UPDATE', resource: 'PACKAGE', sensitiveData: true })
   update(
-    @Param('id', ParseIntPipe) id: number, 
-    @Body() updatePackageDto: UpdatePackageDto
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updatePackageDto: UpdatePackageDto,
   ) {
     return this.packagesService.update(id, updatePackageDto);
   }

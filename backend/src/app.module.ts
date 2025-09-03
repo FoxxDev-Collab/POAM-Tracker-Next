@@ -20,12 +20,17 @@ import { VulnerabilitiesModule } from './vulnerabilities/vulnerabilities.module'
 @Module({
   imports: [
     LoggerModule,
-    PrismaModule, 
-    AuthModule, 
-    UsersModule, 
-    PackagesModule, 
-    GroupsModule, 
-    SystemsModule, StpsModule, DashboardModule, PoamsModule, TeamsModule, VulnerabilitiesModule
+    PrismaModule,
+    AuthModule,
+    UsersModule,
+    PackagesModule,
+    GroupsModule,
+    SystemsModule,
+    StpsModule,
+    DashboardModule,
+    PoamsModule,
+    TeamsModule,
+    VulnerabilitiesModule,
   ],
   controllers: [AppController],
   providers: [

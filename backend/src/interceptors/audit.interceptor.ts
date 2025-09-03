@@ -71,7 +71,7 @@ export class AuditInterceptor implements NestInterceptor {
               'Failed to save audit log to database',
               error.stack,
               'AuditInterceptor',
-              correlationId
+              correlationId,
             );
           }
         }

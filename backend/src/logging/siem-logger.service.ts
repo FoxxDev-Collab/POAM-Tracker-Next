@@ -64,7 +64,11 @@ export class SiemLoggerService extends AppLoggerService {
 
   private initializeSiemTransports() {
     // Initialize Splunk logger
-    if (this.siemConfig.splunk?.enabled && this.siemConfig.splunk.url && this.siemConfig.splunk.token) {
+    if (
+      this.siemConfig.splunk?.enabled &&
+      this.siemConfig.splunk.url &&
+      this.siemConfig.splunk.token
+    ) {
       this.splunkLogger = winston.createLogger({
         transports: [
           new SplunkLogger({
@@ -86,7 +90,7 @@ export class SiemLoggerService extends AppLoggerService {
               host: process.env.HOSTNAME || 'unknown',
               ...meta,
             });
-          })
+          }),
         ),
       });
     }
@@ -164,40 +168,42 @@ export class SiemLoggerService extends AppLoggerService {
       event_type: 'security',
       event_category: 'authentication',
       event_action: event.eventType,
-      event_outcome: event.eventType.includes('SUCCESS') ? 'success' : 'failure',
-      
+      event_outcome: event.eventType.includes('SUCCESS')
+        ? 'success'
+        : 'failure',
+
       // Temporal fields
       '@timestamp': new Date().toISOString(),
       event_time: new Date().toISOString(),
-      
+
       // Source fields
       source_ip: event.ipAddress || 'unknown',
       source_user_agent: event.userAgent || 'unknown',
-      
+
       // User fields
       user_id: event.userId || null,
       user_email: event.userEmail || 'unknown',
-      
+
       // Resource fields
       resource_name: event.resource || 'unknown',
       resource_action: event.action || 'unknown',
-      
+
       // Correlation
       correlation_id: event.correlationId,
-      
+
       // Security specific
       security_event_type: event.eventType,
       severity: this.getEventSeverity(event.eventType),
       classification: 'FOUO',
-      
+
       // Application context
       application: 'poam-tracker',
       environment: process.env.NODE_ENV || 'development',
       version: process.env.APP_VERSION || '1.0.0',
-      
+
       // Additional details
       details: event.details || {},
-      
+
       // Compliance tags
       tags: ['security', 'dod-compliance', 'audit-trail'],
     };
@@ -210,40 +216,40 @@ export class SiemLoggerService extends AppLoggerService {
       event_category: 'data_modification',
       event_action: event.action,
       event_outcome: 'success',
-      
+
       // Temporal fields
       '@timestamp': new Date().toISOString(),
       event_time: new Date().toISOString(),
-      
+
       // Source fields
       source_ip: event.ipAddress || 'unknown',
       source_user_agent: event.userAgent || 'unknown',
-      
+
       // User fields
       user_id: event.userId,
       user_email: event.userEmail,
-      
+
       // Resource fields
       resource_type: event.resource,
       resource_id: event.resourceId,
       resource_action: event.action,
-      
+
       // Data change tracking
       data_before: event.oldValues ? JSON.stringify(event.oldValues) : null,
       data_after: event.newValues ? JSON.stringify(event.newValues) : null,
-      
+
       // Correlation
       correlation_id: event.correlationId,
-      
+
       // Application context
       application: 'poam-tracker',
       environment: process.env.NODE_ENV || 'development',
       version: process.env.APP_VERSION || '1.0.0',
-      
+
       // Compliance fields
       classification: 'FOUO',
       retention_period: '7_years',
-      
+
       // Tags for filtering
       tags: ['audit', 'data-modification', 'dod-compliance'],
     };
@@ -251,25 +257,37 @@ export class SiemLoggerService extends AppLoggerService {
 
   private flattenForGraylog(obj: any, prefix = ''): any {
     const flattened: any = {};
-    
+
     for (const key in obj) {
-      if (obj[key] !== null && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
-        Object.assign(flattened, this.flattenForGraylog(obj[key], `${prefix}${key}_`));
+      if (
+        obj[key] !== null &&
+        typeof obj[key] === 'object' &&
+        !Array.isArray(obj[key])
+      ) {
+        Object.assign(
+          flattened,
+          this.flattenForGraylog(obj[key], `${prefix}${key}_`),
+        );
       } else {
         flattened[`${prefix}${key}`] = obj[key];
       }
     }
-    
+
     return flattened;
   }
 
   private mapSeverityToSyslogLevel(severity: string): number {
     switch (severity) {
-      case 'CRITICAL': return 2; // Critical
-      case 'HIGH': return 3;     // Error
-      case 'MEDIUM': return 4;   // Warning
-      case 'LOW': return 6;      // Info
-      default: return 6;         // Info
+      case 'CRITICAL':
+        return 2; // Critical
+      case 'HIGH':
+        return 3; // Error
+      case 'MEDIUM':
+        return 4; // Warning
+      case 'LOW':
+        return 6; // Info
+      default:
+        return 6; // Info
     }
   }
 
@@ -287,7 +305,11 @@ export class SiemLoggerService extends AppLoggerService {
         });
         results.splunk = true;
       } catch (error) {
-        this.error('Splunk connectivity test failed', error.stack, 'SiemLogger');
+        this.error(
+          'Splunk connectivity test failed',
+          error.stack,
+          'SiemLogger',
+        );
       }
     }
 
@@ -306,7 +328,11 @@ export class SiemLoggerService extends AppLoggerService {
         });
         results.graylog = true;
       } catch (error) {
-        this.error('Graylog connectivity test failed', error.stack, 'SiemLogger');
+        this.error(
+          'Graylog connectivity test failed',
+          error.stack,
+          'SiemLogger',
+        );
       }
     }
 

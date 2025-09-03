@@ -8,7 +8,7 @@ export class PoamsService {
 
   async findAll(packageId?: number, groupId?: number) {
     const where: Prisma.PoamWhereInput = {};
-    
+
     if (packageId) {
       where.packageId = packageId;
     }
@@ -165,7 +165,10 @@ export class PoamsService {
     });
   }
 
-  async createMilestone(poamId: number, data: Omit<Prisma.PoamMilestoneCreateInput, 'poam'>) {
+  async createMilestone(
+    poamId: number,
+    data: Omit<Prisma.PoamMilestoneCreateInput, 'poam'>,
+  ) {
     return this.prisma.poamMilestone.create({
       data: {
         ...data,
@@ -226,7 +229,10 @@ export class PoamsService {
     });
   }
 
-  async createComment(poamId: number, data: Omit<Prisma.PoamCommentCreateInput, 'poam'>) {
+  async createComment(
+    poamId: number,
+    data: Omit<Prisma.PoamCommentCreateInput, 'poam'>,
+  ) {
     return this.prisma.poamComment.create({
       data: {
         ...data,

@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { PoamsService } from './poams.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -45,12 +56,18 @@ export class PoamsController {
   }
 
   @Post(':id/milestones')
-  createMilestone(@Param('id', ParseIntPipe) id: number, @Body() createMilestoneDto: any) {
+  createMilestone(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createMilestoneDto: any,
+  ) {
     return this.poamsService.createMilestone(id, createMilestoneDto);
   }
 
   @Patch('milestones/:milestoneId')
-  updateMilestone(@Param('milestoneId', ParseIntPipe) id: number, @Body() updateMilestoneDto: any) {
+  updateMilestone(
+    @Param('milestoneId', ParseIntPipe) id: number,
+    @Body() updateMilestoneDto: any,
+  ) {
     return this.poamsService.updateMilestone(id, updateMilestoneDto);
   }
 
@@ -59,14 +76,17 @@ export class PoamsController {
     return this.poamsService.deleteMilestone(id);
   }
 
-  // Comments endpoints  
+  // Comments endpoints
   @Get(':id/comments')
   findComments(@Param('id', ParseIntPipe) id: number) {
     return this.poamsService.findComments(id);
   }
 
   @Post(':id/comments')
-  createComment(@Param('id', ParseIntPipe) id: number, @Body() createCommentDto: any) {
+  createComment(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createCommentDto: any,
+  ) {
     return this.poamsService.createComment(id, createCommentDto);
   }
 }

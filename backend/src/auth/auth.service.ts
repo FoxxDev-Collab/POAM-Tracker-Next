@@ -26,7 +26,11 @@ export class AuthService {
 
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
-    if (user && user.passwordHash && await bcrypt.compare(password, user.passwordHash)) {
+    if (
+      user &&
+      user.passwordHash &&
+      (await bcrypt.compare(password, user.passwordHash))
+    ) {
       const { passwordHash, ...result } = user;
       return result;
     }
@@ -35,7 +39,7 @@ export class AuthService {
 
   async login(loginDto: LoginDto, ipAddress?: string, userAgent?: string) {
     const correlationId = this.logger.generateCorrelationId();
-    
+
     try {
       const user = await this.validateUser(loginDto.email, loginDto.password);
       if (!user) {
@@ -48,7 +52,7 @@ export class AuthService {
           resource: '/auth/login',
           action: 'LOGIN_ATTEMPT',
           correlationId,
-          details: { reason: 'Invalid credentials' }
+          details: { reason: 'Invalid credentials' },
         });
         throw new UnauthorizedException('Invalid credentials');
       }
@@ -62,9 +66,9 @@ export class AuthService {
         userAgent,
         resource: '/auth/login',
         action: 'LOGIN_SUCCESS',
-        correlationId
+        correlationId,
       });
-      
+
       const payload = { email: user.email, sub: user.id, role: user.role };
       return {
         access_token: this.jwtService.sign(payload),
@@ -80,12 +84,12 @@ export class AuthService {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      
+
       this.logger.error(
         'Login system error',
         error.stack,
         'AuthService',
-        correlationId
+        correlationId,
       );
       throw new UnauthorizedException('Authentication failed');
     }

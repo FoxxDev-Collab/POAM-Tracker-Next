@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { StpsService } from './stps.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -44,12 +55,18 @@ export class StpsController {
   }
 
   @Post(':id/test-cases')
-  createTestCase(@Param('id', ParseIntPipe) id: number, @Body() createTestCaseDto: any) {
+  createTestCase(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createTestCaseDto: any,
+  ) {
     return this.stpsService.createTestCase(id, createTestCaseDto);
   }
 
   @Patch('test-cases/:testCaseId')
-  updateTestCase(@Param('testCaseId', ParseIntPipe) id: number, @Body() updateTestCaseDto: any) {
+  updateTestCase(
+    @Param('testCaseId', ParseIntPipe) id: number,
+    @Body() updateTestCaseDto: any,
+  ) {
     return this.stpsService.updateTestCase(id, updateTestCaseDto);
   }
 
@@ -66,7 +83,7 @@ export class StpsController {
   @Post('test-cases/:testCaseId/evidence')
   uploadTestCaseEvidence(
     @Param('testCaseId', ParseIntPipe) testCaseId: number,
-    @Body() uploadData: any // This will be handled by multer middleware
+    @Body() uploadData: any, // This will be handled by multer middleware
   ) {
     // For now, return a mock response
     // This should be implemented with proper file upload handling
@@ -77,7 +94,7 @@ export class StpsController {
       1024,
       'image/jpeg',
       'Test evidence',
-      1 // TODO: Get from auth
+      1, // TODO: Get from auth
     );
   }
 
@@ -89,8 +106,12 @@ export class StpsController {
   @Post('test-cases/:testCaseId/comments')
   addTestCaseComment(
     @Param('testCaseId', ParseIntPipe) testCaseId: number,
-    @Body() commentData: { content: string }
+    @Body() commentData: { content: string },
   ) {
-    return this.stpsService.addTestCaseComment(testCaseId, commentData.content, 1); // TODO: Get from auth
+    return this.stpsService.addTestCaseComment(
+      testCaseId,
+      commentData.content,
+      1,
+    ); // TODO: Get from auth
   }
 }
