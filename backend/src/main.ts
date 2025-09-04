@@ -4,11 +4,16 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppLoggerService } from './logging/logger.service';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
+
+  // Increase payload size limits for large file uploads (e.g., Nessus files)
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ limit: '50mb', extended: true }));
 
   // Security middleware
   app.use(helmet());
@@ -28,7 +33,7 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
+      forbidNonWhitelisted: false, // Allow additional query parameters
       transform: true,
     }),
   );

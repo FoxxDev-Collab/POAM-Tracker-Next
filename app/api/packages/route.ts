@@ -25,8 +25,23 @@ export async function GET() {
     });
     
     if (!response.ok) {
-      const error = await response.json();
-      return NextResponse.json({ error: error.message || 'Failed to fetch packages' }, { status: response.status });
+      let errorMessage = 'Failed to fetch packages';
+      try {
+        const errorText = await response.text();
+        if (errorText.includes('Too many requests')) {
+          errorMessage = 'Too many requests. Please try again later.';
+        } else {
+          try {
+            const error = JSON.parse(errorText);
+            errorMessage = error.message || errorMessage;
+          } catch {
+            errorMessage = errorText || errorMessage;
+          }
+        }
+      } catch {
+        // If we can't read the error, use the default message
+      }
+      return NextResponse.json({ error: errorMessage }, { status: response.status });
     }
 
     const data = await response.json();
@@ -49,8 +64,23 @@ export async function POST(req: NextRequest) {
     });
     
     if (!response.ok) {
-      const error = await response.json();
-      return NextResponse.json({ error: error.message || 'Failed to create package' }, { status: response.status });
+      let errorMessage = 'Failed to create package';
+      try {
+        const errorText = await response.text();
+        if (errorText.includes('Too many requests')) {
+          errorMessage = 'Too many requests. Please try again later.';
+        } else {
+          try {
+            const error = JSON.parse(errorText);
+            errorMessage = error.message || errorMessage;
+          } catch {
+            errorMessage = errorText || errorMessage;
+          }
+        }
+      } catch {
+        // If we can't read the error, use the default message
+      }
+      return NextResponse.json({ error: errorMessage }, { status: response.status });
     }
 
     const data = await response.json();

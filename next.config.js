@@ -10,6 +10,12 @@ const nextConfig = {
     // Re-enable after converting components to proper types
     ignoreBuildErrors: true,
   },
+  // Increase file upload limits for large Nessus files
+  experimental: {
+    bodyParser: {
+      sizeLimit: '50mb', // Increase limit to 50MB for Nessus files
+    },
+  },
 };
 
 module.exports = nextConfig;

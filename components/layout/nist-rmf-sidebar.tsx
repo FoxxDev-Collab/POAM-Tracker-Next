@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Package, FileCheck, Activity, AlertTriangle, ShieldCheck } from "lucide-react"
+import { Package, FileCheck, Activity, AlertTriangle, ShieldCheck, Network, HardDrive, Monitor } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 type SidebarItem = {
@@ -32,6 +32,24 @@ const nistRmfItems: SidebarItem[] = [
     href: "/nist-rmf/risks", 
     label: "Risk Register", 
     icon: AlertTriangle,
+  },
+  { 
+    href: "/nist-rmf/ppsm", 
+    label: "PPSM", 
+    icon: Network,
+    description: "Ports, Protocols, Services Management"
+  },
+  { 
+    href: "/nist-rmf/hardware-list", 
+    label: "Hardware List", 
+    icon: HardDrive,
+    description: "System hardware inventory"
+  },
+  { 
+    href: "/nist-rmf/software-list", 
+    label: "Software List", 
+    icon: Monitor,
+    description: "Software inventory and versions"
   },
 ]
 
