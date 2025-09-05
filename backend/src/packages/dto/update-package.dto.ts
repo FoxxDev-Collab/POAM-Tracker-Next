@@ -1,15 +1,21 @@
-import { IsString, IsOptional, IsInt, IsEnum, IsBoolean } from 'class-validator';
-import { 
-  RmfStep, 
-  SystemType, 
-  ImpactLevel, 
-  MissionCriticality, 
+import {
+  IsString,
+  IsOptional,
+  IsInt,
+  IsEnum,
+  IsBoolean,
+} from 'class-validator';
+import {
+  RmfStep,
+  SystemType,
+  ImpactLevel,
+  MissionCriticality,
   DataClassification,
   SecurityControlBaseline,
   AuthorizationStatus,
   ResidualRiskLevel,
   PoamStatus,
-  ContinuousMonitoringStatus
+  ContinuousMonitoringStatus,
 } from '@prisma/client';
 
 export class UpdatePackageDto {

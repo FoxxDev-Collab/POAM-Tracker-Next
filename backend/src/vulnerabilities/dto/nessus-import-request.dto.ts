@@ -1,4 +1,10 @@
-import { IsObject, IsArray, IsOptional, IsInt, ValidateNested } from 'class-validator';
+import {
+  IsObject,
+  IsArray,
+  IsOptional,
+  IsInt,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { NessusReportDto } from './nessus-report.dto';
 import { NessusHostDto } from './nessus-host.dto';

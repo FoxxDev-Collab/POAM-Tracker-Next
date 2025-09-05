@@ -2,79 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import * as xml2js from 'xml2js';
-
-// Interfaces for Nessus data import
-interface NessusReportData {
-  filename: string;
-  scan_name: string;
-  scan_date: string;
-  total_hosts: number;
-  total_vulnerabilities: number;
-  scan_metadata?: string;
-}
-
-interface NessusHostData {
-  hostname: string;
-  ip_address: string;
-  mac_address?: string;
-  os_info?: string;
-  total_vulnerabilities: number;
-  critical_count: number;
-  high_count: number;
-  medium_count: number;
-  low_count: number;
-  info_count: number;
-}
-
-interface NessusVulnerabilityData {
-  plugin_id: number;
-  plugin_name: string;
-  plugin_family: string;
-  severity: number;
-  port?: string;
-  protocol?: string;
-  service?: string;
-  description?: string;
-  solution?: string;
-  synopsis?: string;
-  cve?: string;
-  cvss_score?: number;
-  cvss3_score?: number;
-  plugin_output?: string;
-  risk_factor?: string;
-  exploit_available?: boolean;
-  patch_publication_date?: string;
-  vuln_publication_date?: string;
-}
-
-interface NessusImportRequest {
-  report: NessusReportData;
-  hosts: NessusHostData[];
-  vulnerabilities: NessusVulnerabilityData[];
-  package_id?: number;
-  system_id?: number;
-}
-
-// Interface for STIG finding data
-interface StigFindingData {
-  groupId?: string;
-  group_id?: string;
-  ruleId?: string;
-  rule_id?: string;
-  ruleVersion?: string;
-  rule_version?: string;
-  ruleTitle?: string;
-  rule_title?: string;
-  severity: string;
-  status: string;
-  findingDetails?: string;
-  finding_details?: string;
-  checkContent?: string;
-  check_content?: string;
-  fixText?: string;
-  fix_text?: string;
-  cci?: string;
-}
+import {
+  NessusImportRequestDto,
+  NessusReportDto,
+  NessusHostDto,
+  NessusVulnerabilityDto,
+  StigFindingDataDto,
+} from './dto';
 
 // Interface for Nessus XML parsed data
 interface NessusXmlReport {
@@ -361,7 +295,7 @@ export class VulnerabilitiesService {
   async createFindings(
     scanId: number,
     systemId: number,
-    findings: StigFindingData[],
+    findings: StigFindingDataDto[],
   ) {
     const findingsData = findings
       .filter((finding) => finding.ruleId || finding.rule_id) // Filter out findings without required fields
@@ -488,7 +422,7 @@ export class VulnerabilitiesService {
   // Nessus Vulnerability Methods
   // ---
 
-  async importNessusData(data: NessusImportRequest) {
+  async importNessusData(data: NessusImportRequestDto) {
     const { report, hosts, vulnerabilities, package_id, system_id } = data;
 
     // Create the report
@@ -763,8 +697,8 @@ export class VulnerabilitiesService {
       // Initialize counters
       let totalHosts = 0;
       let totalVulnerabilities = 0;
-      const hostsData: NessusHostData[] = [];
-      const vulnerabilitiesData: NessusVulnerabilityData[] = [];
+      const hostsData: NessusHostDto[] = [];
+      const vulnerabilitiesData: NessusVulnerabilityDto[] = [];
 
       // Handle both single host and multiple hosts
       const reportHosts = Array.isArray(reportElement?.ReportHost)
@@ -891,7 +825,7 @@ export class VulnerabilitiesService {
       totalHosts = hostsData.length;
 
       // Create report data
-      const reportData: NessusReportData = {
+      const reportData: NessusReportDto = {
         filename,
         scan_name,
         scan_date,
@@ -932,7 +866,7 @@ export class VulnerabilitiesService {
   }
 
   // Optimized import method for large datasets
-  private async importNessusDataOptimized(data: NessusImportRequest) {
+  private async importNessusDataOptimized(data: NessusImportRequestDto) {
     const { report, hosts, vulnerabilities, package_id, system_id } = data;
 
     console.log(

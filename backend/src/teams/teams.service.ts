@@ -108,8 +108,12 @@ export class TeamsService {
   async update(id: number, updateTeamDto: UpdateTeamDto) {
     const data: Prisma.TeamUpdateInput = {
       ...(updateTeamDto.name && { name: updateTeamDto.name }),
-      ...(updateTeamDto.description !== undefined && { description: updateTeamDto.description }),
-      ...(updateTeamDto.active !== undefined && { active: updateTeamDto.active }),
+      ...(updateTeamDto.description !== undefined && {
+        description: updateTeamDto.description,
+      }),
+      ...(updateTeamDto.active !== undefined && {
+        active: updateTeamDto.active,
+      }),
       ...(updateTeamDto.leadUserId && {
         lead: {
           connect: { id: updateTeamDto.leadUserId },

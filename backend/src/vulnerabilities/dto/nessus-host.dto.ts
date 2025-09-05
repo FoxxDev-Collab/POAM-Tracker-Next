@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsInt } from 'class-validator';
 
 export class NessusHostDto {
   @IsString()

@@ -219,7 +219,9 @@ export class PackagesService {
     }
     // Map generic impactLevel -> overallCategorization if provided
     if (mapped.impactLevel && !mapped.overallCategorization) {
-      mapped.overallCategorization = this.normalizeImpactLevel(mapped.impactLevel);
+      mapped.overallCategorization = this.normalizeImpactLevel(
+        mapped.impactLevel,
+      );
     }
 
     // Drop fields not recognized by the Package model

@@ -12,12 +12,12 @@ import {
 } from '@nestjs/common';
 import { PoamsService } from './poams.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { 
-  CreatePoamDto, 
-  UpdatePoamDto, 
-  CreatePoamMilestoneDto, 
-  UpdatePoamMilestoneDto, 
-  CreatePoamCommentDto 
+import {
+  CreatePoamDto,
+  UpdatePoamDto,
+  CreatePoamMilestoneDto,
+  UpdatePoamMilestoneDto,
+  CreatePoamCommentDto,
 } from './dto';
 
 @Controller('poams')
@@ -47,7 +47,10 @@ export class PoamsController {
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() updatePoamDto: UpdatePoamDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updatePoamDto: UpdatePoamDto,
+  ) {
     return this.poamsService.update(id, updatePoamDto);
   }
 

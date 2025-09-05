@@ -18,99 +18,19 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { VulnerabilitiesService } from './vulnerabilities.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Prisma } from '@prisma/client';
-
-// Type definitions
-interface NessusReportsQuery {
-  package_id?: string;
-  system_id?: string;
-}
-
-interface NessusStatsQuery {
-  package_id?: string;
-  system_id?: string;
-  report_id?: string;
-}
-
-interface NessusVulnerabilitiesQuery {
-  report_id?: string;
-  host_id?: string;
-  severity?: string;
-  plugin_family?: string;
-  limit?: string;
-  offset?: string;
-  system_id?: string;
-}
-
-interface NessusImportRequest {
-  report: {
-    filename: string;
-    scan_name: string;
-    scan_date: string;
-    total_hosts: number;
-    total_vulnerabilities: number;
-    scan_metadata?: string;
-  };
-  hosts: Array<{
-    hostname: string;
-    ip_address: string;
-    mac_address?: string;
-    os_info?: string;
-    total_vulnerabilities: number;
-    critical_count: number;
-    high_count: number;
-    medium_count: number;
-    low_count: number;
-    info_count: number;
-  }>;
-  vulnerabilities: Array<{
-    plugin_id: number;
-    plugin_name: string;
-    plugin_family: string;
-    severity: number;
-    port?: string;
-    protocol?: string;
-    service?: string;
-    description?: string;
-    solution?: string;
-    synopsis?: string;
-    cve?: string;
-    cvss_score?: number;
-    cvss3_score?: number;
-    plugin_output?: string;
-    risk_factor?: string;
-    exploit_available?: boolean;
-    patch_publication_date?: string;
-    vuln_publication_date?: string;
-  }>;
-  package_id?: number;
-  system_id?: number;
-}
+import {
+  NessusReportsQueryDto,
+  NessusStatsQueryDto,
+  NessusVulnerabilitiesQueryDto,
+  NessusImportRequestDto,
+  StigFindingDataDto,
+} from './dto';
 
 interface CklbData {
   title?: string;
   checklistId?: string;
-  findings?: StigFindingData[];
-  vulns?: StigFindingData[];
-}
-
-interface StigFindingData {
-  groupId?: string;
-  group_id?: string;
-  ruleId?: string;
-  rule_id?: string;
-  ruleVersion?: string;
-  rule_version?: string;
-  ruleTitle?: string;
-  rule_title?: string;
-  severity: string;
-  status: string;
-  findingDetails?: string;
-  finding_details?: string;
-  checkContent?: string;
-  check_content?: string;
-  fixText?: string;
-  fix_text?: string;
-  cci?: string;
+  findings?: StigFindingDataDto[];
+  vulns?: StigFindingDataDto[];
 }
 
 interface MulterFile {
@@ -160,7 +80,7 @@ export class VulnerabilitiesController {
 
   // Put specific routes first to avoid conflicts
   @Get('reports')
-  async getNessusReports(@Query() query: NessusReportsQuery) {
+  async getNessusReports(@Query() query: NessusReportsQueryDto) {
     console.log('=== REPORTS ENDPOINT HIT ===');
     console.log('Reports request query:', query);
 
@@ -188,7 +108,7 @@ export class VulnerabilitiesController {
   }
 
   @Get('nessus/stats')
-  async getNessusStats(@Query() query: NessusStatsQuery) {
+  async getNessusStats(@Query() query: NessusStatsQueryDto) {
     console.log('Nessus stats request query:', query);
 
     return this.vulnerabilitiesService.getNessusVulnerabilityStats({
@@ -199,7 +119,9 @@ export class VulnerabilitiesController {
   }
 
   @Get('nessus')
-  async getNessusVulnerabilities(@Query() query: NessusVulnerabilitiesQuery) {
+  async getNessusVulnerabilities(
+    @Query() query: NessusVulnerabilitiesQueryDto,
+  ) {
     console.log('=== NESSUS ENDPOINT HIT ===');
     console.log('Nessus vulnerabilities request query:', query);
 
@@ -300,7 +222,7 @@ export class VulnerabilitiesController {
 
   // Legacy import endpoint (for direct JSON data)
   @Post('import')
-  async importNessusData(@Body() importData: NessusImportRequest) {
+  async importNessusData(@Body() importData: NessusImportRequestDto) {
     return this.vulnerabilitiesService.importNessusData(importData);
   }
 
@@ -355,7 +277,7 @@ export class SystemsStigController {
     });
 
     // Extract findings from CKLB data
-    const findings: StigFindingData[] =
+    const findings: StigFindingDataDto[] =
       body.data.findings || body.data.vulns || [];
 
     // Create findings in bulk

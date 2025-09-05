@@ -43,28 +43,6 @@ export default tseslint.config(
     },
   },
   {
-    // Targeted overrides for areas that intentionally work with dynamic/any-typed data
-    files: [
-      'src/interceptors/**/*.ts',
-      'src/middleware/**/*.ts',
-      'src/logging/**/*.ts',
-      'src/systems/**/*.ts',
-      'src/packages/**/*.ts',
-      'src/stps/**/*.ts',
-      'src/poams/**/*.ts',
-      'src/teams/**/*.ts',
-      'src/users/**/*.ts',
-    ],
-    rules: {
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/no-unsafe-call': 'off',
-      '@typescript-eslint/no-unsafe-return': 'off',
-      '@typescript-eslint/no-unsafe-argument': 'off',
-      '@typescript-eslint/require-await': 'off',
-    },
-  },
-  {
     files: ['prisma/**/*.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',

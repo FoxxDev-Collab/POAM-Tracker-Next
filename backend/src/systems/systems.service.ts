@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, System, StigFinding } from '@prisma/client';
-import { CreateSystemDto, UpdateSystemDto } from './dto';
+import { System, StigFinding } from '@prisma/client';
 import * as xml2js from 'xml2js';
+import { CreateSystemDto, UpdateSystemDto } from './dto';
 
 export interface StigFile {
   originalname: string;

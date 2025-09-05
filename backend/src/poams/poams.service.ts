@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { 
-  CreatePoamDto, 
-  UpdatePoamDto, 
-  CreatePoamMilestoneDto, 
-  UpdatePoamMilestoneDto, 
-  CreatePoamCommentDto 
+import {
+  CreatePoamDto,
+  UpdatePoamDto,
+  CreatePoamMilestoneDto,
+  UpdatePoamMilestoneDto,
+  CreatePoamCommentDto,
 } from './dto';
 
 @Injectable()
@@ -165,28 +165,48 @@ export class PoamsService {
   async update(id: number, updatePoamDto: UpdatePoamDto) {
     const data: Prisma.PoamUpdateInput = {
       ...(updatePoamDto.title && { title: updatePoamDto.title }),
-      ...(updatePoamDto.weaknessDescription !== undefined && { weaknessDescription: updatePoamDto.weaknessDescription }),
-      ...(updatePoamDto.nistControlId !== undefined && { nistControlId: updatePoamDto.nistControlId }),
+      ...(updatePoamDto.weaknessDescription !== undefined && {
+        weaknessDescription: updatePoamDto.weaknessDescription,
+      }),
+      ...(updatePoamDto.nistControlId !== undefined && {
+        nistControlId: updatePoamDto.nistControlId,
+      }),
       ...(updatePoamDto.severity && { severity: updatePoamDto.severity }),
       ...(updatePoamDto.status && { status: updatePoamDto.status }),
       ...(updatePoamDto.priority && { priority: updatePoamDto.priority }),
-      ...(updatePoamDto.residualRiskLevel !== undefined && { residualRiskLevel: updatePoamDto.residualRiskLevel }),
-      ...(updatePoamDto.targetCompletionDate !== undefined && { targetCompletionDate: updatePoamDto.targetCompletionDate }),
-      ...(updatePoamDto.actualCompletionDate !== undefined && { actualCompletionDate: updatePoamDto.actualCompletionDate }),
-      ...(updatePoamDto.estimatedCost !== undefined && { estimatedCost: updatePoamDto.estimatedCost }),
-      ...(updatePoamDto.actualCost !== undefined && { actualCost: updatePoamDto.actualCost }),
-      ...(updatePoamDto.pocName !== undefined && { pocName: updatePoamDto.pocName }),
-      ...(updatePoamDto.pocEmail !== undefined && { pocEmail: updatePoamDto.pocEmail }),
-      ...(updatePoamDto.pocPhone !== undefined && { pocPhone: updatePoamDto.pocPhone }),
+      ...(updatePoamDto.residualRiskLevel !== undefined && {
+        residualRiskLevel: updatePoamDto.residualRiskLevel,
+      }),
+      ...(updatePoamDto.targetCompletionDate !== undefined && {
+        targetCompletionDate: updatePoamDto.targetCompletionDate,
+      }),
+      ...(updatePoamDto.actualCompletionDate !== undefined && {
+        actualCompletionDate: updatePoamDto.actualCompletionDate,
+      }),
+      ...(updatePoamDto.estimatedCost !== undefined && {
+        estimatedCost: updatePoamDto.estimatedCost,
+      }),
+      ...(updatePoamDto.actualCost !== undefined && {
+        actualCost: updatePoamDto.actualCost,
+      }),
+      ...(updatePoamDto.pocName !== undefined && {
+        pocName: updatePoamDto.pocName,
+      }),
+      ...(updatePoamDto.pocEmail !== undefined && {
+        pocEmail: updatePoamDto.pocEmail,
+      }),
+      ...(updatePoamDto.pocPhone !== undefined && {
+        pocPhone: updatePoamDto.pocPhone,
+      }),
       ...(updatePoamDto.groupId !== undefined && {
-        group: updatePoamDto.groupId 
+        group: updatePoamDto.groupId
           ? { connect: { id: updatePoamDto.groupId } }
-          : { disconnect: true }
+          : { disconnect: true },
       }),
       ...(updatePoamDto.assignedTeamId !== undefined && {
-        assignedTeam: updatePoamDto.assignedTeamId 
+        assignedTeam: updatePoamDto.assignedTeamId
           ? { connect: { id: updatePoamDto.assignedTeamId } }
-          : { disconnect: true }
+          : { disconnect: true },
       }),
     };
 
@@ -271,21 +291,38 @@ export class PoamsService {
     });
   }
 
-  async updateMilestone(id: number, updateMilestoneDto: UpdatePoamMilestoneDto) {
+  async updateMilestone(
+    id: number,
+    updateMilestoneDto: UpdatePoamMilestoneDto,
+  ) {
     const data: Prisma.PoamMilestoneUpdateInput = {
       ...(updateMilestoneDto.title && { title: updateMilestoneDto.title }),
-      ...(updateMilestoneDto.description !== undefined && { description: updateMilestoneDto.description }),
-      ...(updateMilestoneDto.targetDate !== undefined && { targetDate: updateMilestoneDto.targetDate }),
-      ...(updateMilestoneDto.actualDate !== undefined && { actualDate: updateMilestoneDto.actualDate }),
+      ...(updateMilestoneDto.description !== undefined && {
+        description: updateMilestoneDto.description,
+      }),
+      ...(updateMilestoneDto.targetDate !== undefined && {
+        targetDate: updateMilestoneDto.targetDate,
+      }),
+      ...(updateMilestoneDto.actualDate !== undefined && {
+        actualDate: updateMilestoneDto.actualDate,
+      }),
       ...(updateMilestoneDto.status && { status: updateMilestoneDto.status }),
-      ...(updateMilestoneDto.milestoneType !== undefined && { milestoneType: updateMilestoneDto.milestoneType }),
-      ...(updateMilestoneDto.deliverables !== undefined && { deliverables: updateMilestoneDto.deliverables }),
-      ...(updateMilestoneDto.successCriteria !== undefined && { successCriteria: updateMilestoneDto.successCriteria }),
-      ...(updateMilestoneDto.completionPercentage !== undefined && { completionPercentage: updateMilestoneDto.completionPercentage }),
+      ...(updateMilestoneDto.milestoneType !== undefined && {
+        milestoneType: updateMilestoneDto.milestoneType,
+      }),
+      ...(updateMilestoneDto.deliverables !== undefined && {
+        deliverables: updateMilestoneDto.deliverables,
+      }),
+      ...(updateMilestoneDto.successCriteria !== undefined && {
+        successCriteria: updateMilestoneDto.successCriteria,
+      }),
+      ...(updateMilestoneDto.completionPercentage !== undefined && {
+        completionPercentage: updateMilestoneDto.completionPercentage,
+      }),
       ...(updateMilestoneDto.assignedUserId !== undefined && {
-        assignedUser: updateMilestoneDto.assignedUserId 
+        assignedUser: updateMilestoneDto.assignedUserId
           ? { connect: { id: updateMilestoneDto.assignedUserId } }
-          : { disconnect: true }
+          : { disconnect: true },
       }),
     };
 
@@ -329,10 +366,7 @@ export class PoamsService {
     });
   }
 
-  async createComment(
-    poamId: number,
-    createCommentDto: CreatePoamCommentDto,
-  ) {
+  async createComment(poamId: number, createCommentDto: CreatePoamCommentDto) {
     const data: Prisma.PoamCommentCreateInput = {
       comment: createCommentDto.comment,
       commentType: createCommentDto.commentType || 'General',

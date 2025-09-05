@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsInt, IsEnum } from 'class-validator';
-import { 
+import {
   SystemOperatingSystem,
   SystemArchitecture,
   DataClassification,
@@ -7,7 +7,7 @@ import {
   AntivirusStatus,
   LifecycleStatus,
   EnvironmentType,
-  SystemCriticality
+  SystemCriticality,
 } from '@prisma/client';
 
 export class UpdateSystemDto {

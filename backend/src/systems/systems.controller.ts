@@ -47,7 +47,10 @@ export class SystemsController {
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateSystemDto: UpdateSystemDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateSystemDto: UpdateSystemDto,
+  ) {
     return this.systemsService.update(id, updateSystemDto);
   }
 

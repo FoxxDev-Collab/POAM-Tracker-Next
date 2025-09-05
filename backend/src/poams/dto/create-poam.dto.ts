@@ -1,5 +1,10 @@
 import { IsString, IsOptional, IsInt, IsEnum, IsNumber } from 'class-validator';
-import { PoamSeverity, PoamStatus, PoamPriority, ResidualRiskLevel } from '@prisma/client';
+import {
+  PoamSeverity,
+  PoamStatus,
+  PoamPriority,
+  ResidualRiskLevel,
+} from '@prisma/client';
 
 export class CreatePoamDto {
   @IsInt()

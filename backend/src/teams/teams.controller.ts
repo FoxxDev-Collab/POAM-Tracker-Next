@@ -11,7 +11,12 @@ import {
 } from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CreateTeamDto, UpdateTeamDto, AddTeamMemberDto, UpdateTeamMemberDto } from './dto';
+import {
+  CreateTeamDto,
+  UpdateTeamDto,
+  AddTeamMemberDto,
+  UpdateTeamMemberDto,
+} from './dto';
 
 @Controller('teams')
 @UseGuards(JwtAuthGuard)
@@ -34,7 +39,10 @@ export class TeamsController {
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateTeamDto: UpdateTeamDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateTeamDto: UpdateTeamDto,
+  ) {
     return this.teamsService.update(id, updateTeamDto);
   }
 
@@ -54,7 +62,11 @@ export class TeamsController {
     @Param('id', ParseIntPipe) id: number,
     @Body() addTeamMemberDto: AddTeamMemberDto,
   ) {
-    return this.teamsService.addMember(id, addTeamMemberDto.userId, addTeamMemberDto.role);
+    return this.teamsService.addMember(
+      id,
+      addTeamMemberDto.userId,
+      addTeamMemberDto.role,
+    );
   }
 
   @Patch(':id/members/:userId')

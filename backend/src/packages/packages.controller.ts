@@ -62,7 +62,7 @@ export class PackagesController {
     return this.systemsService.findByPackage(id);
   }
 
-  // Package groups endpoints  
+  // Package groups endpoints
   @Get(':id/groups')
   getPackageGroups(@Param('id', ParseIntPipe) id: number) {
     return this.groupsService.findByPackage(id);

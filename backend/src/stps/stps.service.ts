@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { CreateStpDto, UpdateStpDto, CreateTestCaseDto, UpdateTestCaseDto } from './dto';
+import {
+  CreateStpDto,
+  UpdateStpDto,
+  UploadTestCaseEvidenceDto,
+  AddTestCaseCommentDto,
+} from './dto';
 
 @Injectable()
 export class StpsService {
@@ -138,14 +143,18 @@ export class StpsService {
   async update(id: number, updateStpDto: UpdateStpDto) {
     const data: Prisma.StpUpdateInput = {
       ...(updateStpDto.title && { title: updateStpDto.title }),
-      ...(updateStpDto.description !== undefined && { description: updateStpDto.description }),
+      ...(updateStpDto.description !== undefined && {
+        description: updateStpDto.description,
+      }),
       ...(updateStpDto.status && { status: updateStpDto.status }),
       ...(updateStpDto.priority && { priority: updateStpDto.priority }),
-      ...(updateStpDto.dueDate !== undefined && { dueDate: updateStpDto.dueDate }),
+      ...(updateStpDto.dueDate !== undefined && {
+        dueDate: updateStpDto.dueDate,
+      }),
       ...(updateStpDto.assignedTeamId !== undefined && {
-        assignedTeam: updateStpDto.assignedTeamId 
+        assignedTeam: updateStpDto.assignedTeamId
           ? { connect: { id: updateStpDto.assignedTeamId } }
-          : { disconnect: true }
+          : { disconnect: true },
       }),
     };
 

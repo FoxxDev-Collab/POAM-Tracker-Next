@@ -12,13 +12,13 @@ import {
 } from '@nestjs/common';
 import { StpsService } from './stps.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { 
-  CreateStpDto, 
-  UpdateStpDto, 
-  CreateTestCaseDto, 
-  UpdateTestCaseDto, 
+import {
+  CreateStpDto,
+  UpdateStpDto,
+  CreateTestCaseDto,
+  UpdateTestCaseDto,
   UploadTestCaseEvidenceDto,
-  AddTestCaseCommentDto 
+  AddTestCaseCommentDto,
 } from './dto';
 
 @Controller('stps')
@@ -48,7 +48,10 @@ export class StpsController {
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateStpDto: UpdateStpDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateStpDto: UpdateStpDto,
+  ) {
     return this.stpsService.update(id, updateStpDto);
   }
 
