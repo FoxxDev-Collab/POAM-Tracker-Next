@@ -14,14 +14,14 @@ interface ComplianceFrameworkProps {
 const COMPLIANCE_FRAMEWORKS = [
   {
     id: 'NIST_800_53_rev5',
-    name: 'NIST SP 800-53 Rev 5',
-    description: 'Security and Privacy Controls for Federal Information Systems (Latest Version)',
-    required: false
+    name: 'NIST SP 800-53',
+    description: 'Security and Privacy Controls for Federal Information Systems',
+    required: true
   },
   {
     id: 'NIST_800_53_rev4',
-    name: 'NIST SP 800-53 Rev 4', 
-    description: 'Security and Privacy Controls for Federal Information Systems (Previous Version)',
+    name: 'NIST SP 800-171', 
+    description: 'Protecting Controlled Unclassified Information in Nonfederal Systems',
     required: false
   },
 ]
@@ -41,35 +41,65 @@ export function ComplianceFramework({ formData, updateFormData }: ComplianceFram
 
   return (
     <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <h4 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
           <Target className="h-4 w-4" />
-          NIST SP 800-53 Framework Selection
+          Compliance Framework Selection
         </h4>
-        <p className="text-sm text-blue-700">
-          Select which revision of NIST SP 800-53 applies to your system. You must select at least one framework.
+        <p className="text-sm text-green-700">
+          Select the compliance frameworks that apply to your system. Required frameworks are automatically included based on federal requirements.
         </p>
       </div>
 
-      {/* Framework Selection */}
+      {/* Required Frameworks */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ShieldIcon className="h-5 w-5 text-blue-600" />
-            Available Frameworks
+            <ShieldIcon className="h-5 w-5 text-red-600" />
+            Required Frameworks
           </CardTitle>
           <CardDescription>
-            Choose the appropriate revision(s) of NIST SP 800-53 for your system
+            These frameworks are mandatory for federal information systems
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {COMPLIANCE_FRAMEWORKS.map((framework) => (
+          {requiredFrameworks.map((framework) => (
+            <div 
+              key={framework.id}
+              className="flex items-start space-x-3 p-3 bg-red-50 border border-red-200 rounded-lg"
+            >
+              <CheckCircle className="h-5 w-5 text-red-600 mt-0.5" />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-semibold text-red-800">{framework.name}</span>
+                  <Badge className="bg-red-100 text-red-800">Required</Badge>
+                </div>
+                <p className="text-sm text-red-700">{framework.description}</p>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Optional Frameworks */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-blue-600" />
+            Additional Frameworks
+          </CardTitle>
+          <CardDescription>
+            Optional frameworks that may apply to your system based on specific requirements
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {optionalFrameworks.map((framework) => (
             <div 
               key={framework.id}
               className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors"
             >
               <Checkbox
-                id={framework.id}
+                {...{ id: framework.id }}
                 checked={formData.complianceFrameworks.includes(framework.id)}
                 onCheckedChange={() => handleFrameworkToggle(framework.id)}
                 className="mt-0.5"
@@ -78,9 +108,7 @@ export function ComplianceFramework({ formData, updateFormData }: ComplianceFram
                 <Label htmlFor={framework.id} className="cursor-pointer">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold">{framework.name}</span>
-                    <Badge variant="outline">
-                      {framework.id === 'NIST_800_53_rev5' ? 'Latest' : 'Previous'}
-                    </Badge>
+                    <Badge variant="outline">Optional</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{framework.description}</p>
                 </Label>
@@ -117,16 +145,23 @@ export function ComplianceFramework({ formData, updateFormData }: ComplianceFram
 
       {/* Selected Frameworks Summary */}
       {formData.complianceFrameworks.length > 0 && (
-        <Card className="bg-green-50 border-green-200">
+        <Card className="bg-blue-50 border-blue-200">
           <CardHeader>
-            <CardTitle className="text-green-800">Selected Frameworks Summary</CardTitle>
+            <CardTitle className="text-blue-800">Selected Frameworks Summary</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
+              {/* Required frameworks (always included) */}
+              {requiredFrameworks.map(framework => (
+                <Badge key={framework.id} className="bg-red-100 text-red-800">
+                  {framework.name} (Required)
+                </Badge>
+              ))}
+              {/* Selected optional frameworks */}
               {formData.complianceFrameworks.map(frameworkId => {
                 const framework = COMPLIANCE_FRAMEWORKS.find(f => f.id === frameworkId)
-                return framework ? (
-                  <Badge key={frameworkId} className="bg-green-100 text-green-800">
+                return framework && !framework.required ? (
+                  <Badge key={frameworkId} className="bg-blue-100 text-blue-800">
                     {framework.name}
                   </Badge>
                 ) : null
