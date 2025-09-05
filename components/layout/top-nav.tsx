@@ -2,9 +2,10 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Shield, MessageSquare, BookOpen, Sun, Moon, LayoutDashboard, Users, User, LogOut, Settings, ShieldCheck } from "lucide-react"
+import { Shield, MessageSquare, BookOpen, Sun, Moon, LayoutDashboard, Users, User, LogOut, Settings, ShieldCheck, UserCog } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useThemePalette } from "@/components/ThemePaletteProvider"
+import { useAuth } from "@/hooks/use-auth"
 
 type TopNavItem = {
   href: string
@@ -21,10 +22,10 @@ const topNavItems: TopNavItem[] = [
     pattern: "/vulnerability-center"
   },
   { 
-    href: "/nist-rmf", 
-    label: "NIST RMF", 
+    href: "/rmf-center", 
+    label: "RMF Center", 
     icon: ShieldCheck,
-    pattern: "/nist-rmf"
+    pattern: "/rmf-center"
   },
   { 
     href: "/forum", 
@@ -56,6 +57,7 @@ export function TopNav() {
   const pathname = usePathname()
   const router = useRouter()
   const { dark, toggleDark } = useThemePalette()
+  const { user, isAdmin } = useAuth()
 
   const getActiveSection = () => {
     for (const item of topNavItems) {
@@ -146,6 +148,19 @@ export function TopNav() {
             {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
           
+          {/* Admin Button - Only visible to admins */}
+          {isAdmin && (
+            <Link href="/admin">
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                aria-label="Admin Panel"
+              >
+                <UserCog className="h-4 w-4" />
+              </Button>
+            </Link>
+          )}
+
           {/* Settings Button */}
           <Link href="/settings">
             <Button 

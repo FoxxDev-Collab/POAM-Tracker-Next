@@ -34,7 +34,7 @@ export class AuditInterceptor implements NestInterceptor {
     const correlationId = request.correlationId;
 
     return next.handle().pipe(
-      tap(async (data) => {
+      tap((data) => {
         if (user) {
           // Log to Winston audit logger
           this.logger.logAuditEvent({
@@ -50,8 +50,8 @@ export class AuditInterceptor implements NestInterceptor {
           });
 
           // Also save to database audit_logs table
-          try {
-            await this.prisma.auditLog.create({
+          this.prisma.auditLog
+            .create({
               data: {
                 event: `${auditOptions.action}_${auditOptions.resource}`,
                 data: JSON.stringify({
@@ -65,15 +65,15 @@ export class AuditInterceptor implements NestInterceptor {
                 userAgent: request.get('User-Agent'),
                 userId: user.id,
               },
+            })
+            .catch((error) => {
+              this.logger.error(
+                'Failed to save audit log to database',
+                error.stack,
+                'AuditInterceptor',
+                correlationId,
+              );
             });
-          } catch (error) {
-            this.logger.error(
-              'Failed to save audit log to database',
-              error.stack,
-              'AuditInterceptor',
-              correlationId,
-            );
-          }
         }
       }),
     );

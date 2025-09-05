@@ -7,14 +7,14 @@ async function main() {
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@poamtracker.mil';
   const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
   const adminName = process.env.ADMIN_NAME || 'System Administrator';
-  
+
   // Check if admin user exists
   const existingAdmin = await prisma.user.findUnique({
-    where: { email: adminEmail }
+    where: { email: adminEmail },
   });
-  
+
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
-  
+
   let admin;
   if (existingAdmin) {
     // Update existing admin user

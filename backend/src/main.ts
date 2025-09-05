@@ -59,4 +59,4 @@ async function bootstrap() {
     details: { port, environment: process.env.NODE_ENV || 'development' },
   });
 }
-bootstrap();
+void bootstrap();

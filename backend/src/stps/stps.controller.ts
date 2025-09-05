@@ -12,6 +12,14 @@ import {
 } from '@nestjs/common';
 import { StpsService } from './stps.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { 
+  CreateStpDto, 
+  UpdateStpDto, 
+  CreateTestCaseDto, 
+  UpdateTestCaseDto, 
+  UploadTestCaseEvidenceDto,
+  AddTestCaseCommentDto 
+} from './dto';
 
 @Controller('stps')
 @UseGuards(JwtAuthGuard)
@@ -19,7 +27,7 @@ export class StpsController {
   constructor(private readonly stpsService: StpsService) {}
 
   @Post()
-  create(@Body() createStpDto: any) {
+  create(@Body() createStpDto: CreateStpDto) {
     return this.stpsService.create(createStpDto);
   }
 
@@ -40,7 +48,7 @@ export class StpsController {
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateStpDto: any) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateStpDto: UpdateStpDto) {
     return this.stpsService.update(id, updateStpDto);
   }
 
@@ -57,7 +65,7 @@ export class StpsController {
   @Post(':id/test-cases')
   createTestCase(
     @Param('id', ParseIntPipe) id: number,
-    @Body() createTestCaseDto: any,
+    @Body() createTestCaseDto: CreateTestCaseDto,
   ) {
     return this.stpsService.createTestCase(id, createTestCaseDto);
   }
@@ -65,7 +73,7 @@ export class StpsController {
   @Patch('test-cases/:testCaseId')
   updateTestCase(
     @Param('testCaseId', ParseIntPipe) id: number,
-    @Body() updateTestCaseDto: any,
+    @Body() updateTestCaseDto: UpdateTestCaseDto,
   ) {
     return this.stpsService.updateTestCase(id, updateTestCaseDto);
   }
@@ -83,18 +91,18 @@ export class StpsController {
   @Post('test-cases/:testCaseId/evidence')
   uploadTestCaseEvidence(
     @Param('testCaseId', ParseIntPipe) testCaseId: number,
-    @Body() uploadData: any, // This will be handled by multer middleware
+    @Body() uploadData: UploadTestCaseEvidenceDto, // This will be handled by multer middleware
   ) {
     // For now, return a mock response
     // This should be implemented with proper file upload handling
     return this.stpsService.uploadTestCaseEvidence(
       testCaseId,
-      'mock-filename.jpg',
-      'original-filename.jpg',
-      1024,
-      'image/jpeg',
-      'Test evidence',
-      1, // TODO: Get from auth
+      uploadData.filename,
+      uploadData.originalFilename,
+      uploadData.fileSize,
+      uploadData.mimeType || 'application/octet-stream',
+      uploadData.description || '',
+      uploadData.uploadedBy,
     );
   }
 
@@ -106,12 +114,12 @@ export class StpsController {
   @Post('test-cases/:testCaseId/comments')
   addTestCaseComment(
     @Param('testCaseId', ParseIntPipe) testCaseId: number,
-    @Body() commentData: { content: string },
+    @Body() commentDto: AddTestCaseCommentDto,
   ) {
     return this.stpsService.addTestCaseComment(
       testCaseId,
-      commentData.content,
-      1,
-    ); // TODO: Get from auth
+      commentDto.content,
+      1, // TODO: Get from auth
+    );
   }
 }

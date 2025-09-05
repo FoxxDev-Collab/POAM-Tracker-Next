@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { CreateStpDto, UpdateStpDto, CreateTestCaseDto, UpdateTestCaseDto } from './dto';
 
 @Injectable()
 export class StpsService {
@@ -92,25 +93,25 @@ export class StpsService {
     return stp ? { item: stp } : null;
   }
 
-  async create(data: any) {
+  async create(createStpDto: CreateStpDto) {
     const createData: Prisma.StpCreateInput = {
-      title: data.title,
-      description: data.description || '',
-      status: data.status || 'Draft',
-      priority: data.priority || 'Medium',
-      dueDate: data.due_date,
+      title: createStpDto.title,
+      description: createStpDto.description || '',
+      status: createStpDto.status || 'Draft',
+      priority: createStpDto.priority || 'Medium',
+      dueDate: createStpDto.dueDate,
       system: {
-        connect: { id: data.system_id },
+        connect: { id: createStpDto.systemId },
       },
       package: {
-        connect: { id: data.package_id },
+        connect: { id: createStpDto.packageId },
       },
       creator: {
-        connect: { id: data.created_by },
+        connect: { id: createStpDto.createdBy },
       },
-      ...(data.assigned_team_id && {
+      ...(createStpDto.assignedTeamId && {
         assignedTeam: {
-          connect: { id: data.assigned_team_id },
+          connect: { id: createStpDto.assignedTeamId },
         },
       }),
     };
@@ -134,7 +135,20 @@ export class StpsService {
     return { item: stp };
   }
 
-  async update(id: number, data: Prisma.StpUpdateInput) {
+  async update(id: number, updateStpDto: UpdateStpDto) {
+    const data: Prisma.StpUpdateInput = {
+      ...(updateStpDto.title && { title: updateStpDto.title }),
+      ...(updateStpDto.description !== undefined && { description: updateStpDto.description }),
+      ...(updateStpDto.status && { status: updateStpDto.status }),
+      ...(updateStpDto.priority && { priority: updateStpDto.priority }),
+      ...(updateStpDto.dueDate !== undefined && { dueDate: updateStpDto.dueDate }),
+      ...(updateStpDto.assignedTeamId !== undefined && {
+        assignedTeam: updateStpDto.assignedTeamId 
+          ? { connect: { id: updateStpDto.assignedTeamId } }
+          : { disconnect: true }
+      }),
+    };
+
     const stp = await this.prisma.stp.update({
       where: { id },
       data,

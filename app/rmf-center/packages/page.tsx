@@ -1,230 +1,306 @@
-import { db } from "@/lib/db"
+"use client"
+
+import { useState, useEffect } from "react"
+import { Plus, Package, Shield, Users } from "lucide-react"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Shield, 
-  CheckCircle, 
-  AlertCircle, 
-  XCircle,
-  ArrowRight,
-} from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
+import { toast } from "sonner"
 
-export const dynamic = "force-dynamic"
+interface Package {
+  id: number
+  name: string
+  description: string | null
+  authorizationExpiry: string | null
+  rmfStep: string
+  impactLevel: string | null
+  dataClassification: string | null
+  systemType: string | null
+  createdAt: string
+  updatedAt: string
+  _count?: {
+    systems: number
+    groups: number
+  }
+}
 
-export default async function NistRmfPage() {
-  const packages = await db.getPackages()
-  
-  // For now, return packages with mock stats until backend API supports detailed statistics
-  const packageStats = packages.map((pkg: any) => ({
-    ...pkg,
-    totalControls: 0,
-    implementedControls: 0,
-    openControls: 0,
-    complianceScore: 0,
-    highRisks: 0,
-    mediumRisks: 0,
-    lowRisks: 0,
-    totalRisks: 0
-  }))
+const RMF_STEPS = [
+  { key: 'CATEGORIZE', label: 'Categorize', order: 1 },
+  { key: 'SELECT', label: 'Select', order: 2 },
+  { key: 'IMPLEMENT', label: 'Implement', order: 3 },
+  { key: 'ASSESS', label: 'Assess', order: 4 },
+  { key: 'AUTHORIZE', label: 'Authorize', order: 5 },
+  { key: 'MONITOR', label: 'Monitor', order: 6 }
+]
 
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return 'text-green-600'
-    if (score >= 70) return 'text-yellow-600'
-    if (score >= 50) return 'text-orange-600'
-    return 'text-red-600'
+export default function RmfPackagesPage() {
+  const [packages, setPackages] = useState<Package[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+
+  const fetchPackages = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/packages')
+      if (response.ok) {
+        const data = await response.json()
+        setPackages(data.items || data || [])
+      } else {
+        throw new Error('Failed to fetch packages')
+      }
+    } catch (error) {
+      console.error('Error fetching packages:', error)
+      toast.error("Failed to load packages")
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const getScoreBadgeClass = (score: number) => {
-    if (score >= 90) return 'bg-green-500'
-    if (score >= 70) return 'bg-yellow-500'
-    if (score >= 50) return 'bg-orange-500'
-    return 'bg-red-500'
+  useEffect(() => {
+    fetchPackages()
+  }, [])
+
+  const filteredPackages = packages.filter(pkg => 
+    pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    pkg.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const getRmfProgress = (step: string) => {
+    const currentStep = RMF_STEPS.find(s => s.key === step)
+    return currentStep ? (currentStep.order / 6) * 100 : 0
   }
 
-  const getAuthStatusIcon = (status: string | null | undefined) => {
-    switch (status) {
-      case 'Authorized': return <CheckCircle className="h-4 w-4 text-green-500" />
-      case 'In Progress': return <AlertCircle className="h-4 w-4 text-yellow-500" />
-      case 'Expired': return <XCircle className="h-4 w-4 text-red-500" />
-      default: return <AlertCircle className="h-4 w-4 text-gray-500" />
+  const getRmfStepColor = (step: string) => {
+    switch (step) {
+      case 'CATEGORIZE':
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'SELECT':
+        return 'bg-purple-100 text-purple-800 border-purple-200'
+      case 'IMPLEMENT':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'ASSESS':
+        return 'bg-orange-100 text-orange-800 border-orange-200'
+      case 'AUTHORIZE':
+        return 'bg-green-100 text-green-800 border-green-200'
+      case 'MONITOR':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200'
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200'
+    }
+  }
+
+  const getClassificationColor = (classification: string | null) => {
+    switch (classification) {
+      case 'TOP_SECRET':
+        return 'bg-red-100 text-red-800 border-red-200'
+      case 'SECRET':
+        return 'bg-orange-100 text-orange-800 border-orange-200'
+      case 'CONFIDENTIAL':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'UNCLASSIFIED':
+        return 'bg-green-100 text-green-800 border-green-200'
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200'
     }
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Shield className="h-8 w-8" />
-          NIST Risk Management Framework
-        </h1>
-        <p className="text-muted-foreground">
-          Manage security controls, assess risks, and maintain compliance with NIST RMF requirements
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Shield className="h-8 w-8 text-blue-600" />
+            RMF Center: ATO Packages
+          </h1>
+          <p className="text-muted-foreground">
+            Manage Authorization to Operate packages through the Risk Management Framework
+          </p>
+        </div>
+        <Link href="/rmf-center/packages/new">
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="h-4 w-4 mr-2" />
+            New ATO Package
+          </Button>
+        </Link>
       </div>
 
-      {/* Overview Stats */}
+      {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{packages.length}</div>
-            <p className="text-xs text-muted-foreground">Active ATO packages</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Controls Tracked</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {packageStats.reduce((sum, pkg) => sum + pkg.totalControls, 0)}
+              {packages.filter(p => !['AUTHORIZE', 'MONITOR'].includes(p.rmfStep)).length}
             </div>
-            <p className="text-xs text-muted-foreground">Across all packages</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Average Compliance</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Authorized</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${getScoreColor(
-              packages.length > 0 
-                ? packageStats.reduce((sum, pkg) => sum + pkg.complianceScore, 0) / packages.length
-                : 0
-            )}`}>
-              {packages.length > 0 
-                ? Math.round(packageStats.reduce((sum, pkg) => sum + pkg.complianceScore, 0) / packages.length)
-                : 0}%
+            <div className="text-2xl font-bold">
+              {packages.filter(p => ['AUTHORIZE', 'MONITOR'].includes(p.rmfStep)).length}
             </div>
-            <p className="text-xs text-muted-foreground">Control implementation</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total Risks</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total Systems</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {packageStats.reduce((sum, pkg) => sum + pkg.totalRisks, 0)}
+            <div className="text-2xl font-bold">
+              {packages.reduce((acc, p) => acc + (p._count?.systems || 0), 0)}
             </div>
-            <p className="text-xs text-muted-foreground">Open risk items</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Package Cards */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Select ATO Package</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {packageStats.map(pkg => (
-            <Card key={pkg.id} className="hover:shadow-lg transition-shadow">
+      {/* Search */}
+      <div className="flex gap-4">
+        <Input
+          placeholder="Search packages..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
+
+      {/* Package Grid */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">{pkg.name}</CardTitle>
-                    <CardDescription>{pkg.description || 'No description'}</CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {getAuthStatusIcon(pkg.authorization_status)}
-                    <Badge variant="outline">
-                      {pkg.authorization_status || 'Not Started'}
-                    </Badge>
-                  </div>
-                </div>
+                <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-full"></div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Compliance Score */}
+              <CardContent>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Control Compliance</span>
-                    <span className={`font-bold ${getScoreColor(pkg.complianceScore)}`}>
-                      {pkg.complianceScore}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full ${getScoreBadgeClass(pkg.complianceScore)}`}
-                      style={{ width: `${pkg.complianceScore}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{pkg.implementedControls} implemented</span>
-                    <span>{pkg.openControls} open</span>
-                    <span>{pkg.totalControls} total</span>
-                  </div>
-                </div>
-
-                {/* Risk Summary */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Risk Profile</span>
-                    <Badge variant="outline" className="text-xs">
-                      {pkg.totalRisks} Total Risks
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="p-2 bg-red-50 dark:bg-red-950/20 rounded">
-                      <div className="text-lg font-bold text-red-600">{pkg.highRisks}</div>
-                      <div className="text-xs text-muted-foreground">High</div>
-                    </div>
-                    <div className="p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded">
-                      <div className="text-lg font-bold text-yellow-600">{pkg.mediumRisks}</div>
-                      <div className="text-xs text-muted-foreground">Medium</div>
-                    </div>
-                    <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded">
-                      <div className="text-lg font-bold text-green-600">{pkg.lowRisks}</div>
-                      <div className="text-xs text-muted-foreground">Low</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* System Info */}
-                <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Impact Level:</span>{' '}
-                    <Badge variant="outline" className="ml-1">
-                      {pkg.overall_categorization || 'Not Set'}
-                    </Badge>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Baseline:</span>{' '}
-                    <Badge variant="outline" className="ml-1">
-                      {pkg.security_control_baseline || 'Not Set'}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 pt-2">
-                  <Button asChild className="flex-1">
-                    <Link href={`/nist-rmf/${pkg.id}`}>
-                      <Shield className="h-4 w-4 mr-2" />
-                      Manage RMF
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Link>
-                  </Button>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
+      ) : filteredPackages.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No ATO Packages Found</h3>
+            <p className="text-muted-foreground mb-4">
+              {searchTerm ? "No packages match your search" : "Create your first ATO package to get started"}
+            </p>
+            {!searchTerm && (
+              <Link href="/rmf-center/packages/new">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create First Package
+                </Button>
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredPackages.map((pkg) => (
+            <Card key={pkg.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5 text-blue-600" />
+                      {pkg.name}
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {pkg.description || "No description provided"}
+                    </CardDescription>
+                  </div>
+                </div>
+                
+                {/* RMF Progress */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">RMF Progress</span>
+                    <Badge className={getRmfStepColor(pkg.rmfStep)}>
+                      {RMF_STEPS.find(s => s.key === pkg.rmfStep)?.label || pkg.rmfStep}
+                    </Badge>
+                  </div>
+                  <Progress value={getRmfProgress(pkg.rmfStep)} className="h-2" />
+                </div>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="space-y-3">
+                  {/* System Details */}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span>{pkg._count?.systems || 0} Systems</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                      <span>{pkg._count?.groups || 0} Groups</span>
+                    </div>
+                  </div>
 
-        {packages.length === 0 && (
-          <Card>
-            <CardContent className="text-center py-8">
-              <p className="text-muted-foreground">No ATO packages found. Create a package first.</p>
-              <Button asChild className="mt-4">
-                <Link href="/vulnerability-center/vulnerabilities">Go to Packages</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                  {/* Classification & Impact */}
+                  <div className="flex gap-2 flex-wrap">
+                    {pkg.dataClassification && (
+                      <Badge variant="outline" className={getClassificationColor(pkg.dataClassification)}>
+                        {pkg.dataClassification}
+                      </Badge>
+                    )}
+                    {pkg.impactLevel && (
+                      <Badge variant="outline">
+                        {pkg.impactLevel} Impact
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* ATO Expiration */}
+                  {pkg.authorizationExpiry && (
+                    <div className="pt-3 border-t">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">ATO Expires</span>
+                        <span className="font-medium">
+                          {new Date(pkg.authorizationExpiry).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="pt-3 border-t">
+                    <Link href={`/rmf-center/packages/${pkg.id}`}>
+                      <Button className="w-full" variant="outline">
+                        <Shield className="h-4 w-4 mr-2" />
+                        Manage Package
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
     </div>
   )
 }

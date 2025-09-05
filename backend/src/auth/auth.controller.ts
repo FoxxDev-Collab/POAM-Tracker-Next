@@ -8,16 +8,24 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { LoginDto, RegisterDto } from './auth.service';
-import { LocalAuthGuard } from './local-auth.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import type { Request as ExpressRequest } from 'express';
+
+interface RequestWithUser extends ExpressRequest {
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+  };
+}
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('login')
-  async login(@Body() loginDto: LoginDto, @Request() req) {
-    const ipAddress = req.ip || req.connection.remoteAddress;
+  async login(@Body() loginDto: LoginDto, @Request() req: ExpressRequest) {
+    const ipAddress = req.ip || req.connection?.remoteAddress;
     const userAgent = req.get('User-Agent');
     return this.authService.login(loginDto, ipAddress, userAgent);
   }
@@ -29,7 +37,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  getProfile(@Request() req) {
+  getProfile(@Request() req: RequestWithUser) {
     return req.user;
   }
 }

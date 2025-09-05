@@ -1,21 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import type { User, UserRole } from '@prisma/client';
-
-export interface CreateUserDto {
-  name: string;
-  email: string;
-  passwordHash: string;
-  role: UserRole;
-  active?: boolean;
-}
-
-export interface UpdateUserDto {
-  name?: string;
-  email?: string;
-  role?: UserRole;
-  active?: boolean;
-}
+import type { User } from '@prisma/client';
+import { CreateUserDto, UpdateUserDto } from './dto';
 
 export type SafeUser = Omit<User, 'passwordHash'>;
 

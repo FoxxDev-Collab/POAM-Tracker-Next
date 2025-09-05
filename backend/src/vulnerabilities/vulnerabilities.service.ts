@@ -55,6 +55,79 @@ interface NessusImportRequest {
   system_id?: number;
 }
 
+// Interface for STIG finding data
+interface StigFindingData {
+  groupId?: string;
+  group_id?: string;
+  ruleId?: string;
+  rule_id?: string;
+  ruleVersion?: string;
+  rule_version?: string;
+  ruleTitle?: string;
+  rule_title?: string;
+  severity: string;
+  status: string;
+  findingDetails?: string;
+  finding_details?: string;
+  checkContent?: string;
+  check_content?: string;
+  fixText?: string;
+  fix_text?: string;
+  cci?: string;
+}
+
+// Interface for Nessus XML parsed data
+interface NessusXmlReport {
+  NessusClientData_v2?: {
+    Report?: NessusXmlReportElement;
+  };
+  Report?: NessusXmlReportElement;
+}
+
+interface NessusXmlReportElement {
+  name?: string;
+  ReportHost?: NessusXmlHostElement | NessusXmlHostElement[];
+}
+
+interface NessusXmlHostElement {
+  name?: string;
+  HostProperties?: {
+    tag?: NessusXmlTag | NessusXmlTag[];
+  };
+  ReportItem?: NessusXmlReportItem | NessusXmlReportItem[];
+}
+
+interface NessusXmlTag {
+  name?: string;
+  _?: string;
+}
+
+interface NessusXmlReportItem {
+  pluginID?: string;
+  pluginName?: string;
+  pluginFamily?: string;
+  severity?: string;
+  port?: string;
+  protocol?: string;
+  svc_name?: string;
+  description?: string;
+  solution?: string;
+  synopsis?: string;
+  cve?: string | string[];
+  cvss_base_score?: string;
+  cvss3_base_score?: string;
+  plugin_output?: string;
+  risk_factor?: string;
+  exploit_available?: string;
+  patch_publication_date?: string;
+  vuln_publication_date?: string;
+}
+
+interface CreatedHost {
+  id: number;
+  ip_address: string;
+}
+
 @Injectable()
 export class VulnerabilitiesService {
   constructor(private prisma: PrismaService) {}
@@ -285,21 +358,28 @@ export class VulnerabilitiesService {
   }
 
   // Bulk create findings from STIG scan
-  async createFindings(scanId: number, systemId: number, findings: any[]) {
-    const findingsData = findings.map((finding) => ({
-      systemId,
-      scanId,
-      groupId: finding.groupId || finding.group_id,
-      ruleId: finding.ruleId || finding.rule_id,
-      ruleVersion: finding.ruleVersion || finding.rule_version,
-      ruleTitle: finding.ruleTitle || finding.rule_title,
-      severity: finding.severity,
-      status: finding.status,
-      findingDetails: finding.findingDetails || finding.finding_details,
-      checkContent: finding.checkContent || finding.check_content,
-      fixText: finding.fixText || finding.fix_text,
-      cci: finding.cci,
-    }));
+  async createFindings(
+    scanId: number,
+    systemId: number,
+    findings: StigFindingData[],
+  ) {
+    const findingsData = findings
+      .filter((finding) => finding.ruleId || finding.rule_id) // Filter out findings without required fields
+      .map((finding) => ({
+        systemId,
+        scanId,
+        groupId: finding.groupId || finding.group_id || '',
+        ruleId: finding.ruleId || finding.rule_id || '',
+        ruleVersion: finding.ruleVersion || finding.rule_version || '',
+        ruleTitle: finding.ruleTitle || finding.rule_title || '',
+        severity: finding.severity,
+        status: finding.status,
+        findingDetails:
+          finding.findingDetails || finding.finding_details || null,
+        checkContent: finding.checkContent || finding.check_content || null,
+        fixText: finding.fixText || finding.fix_text || null,
+        cci: finding.cci || null,
+      }));
 
     // Use createMany for bulk insert
     await this.prisma.stigFinding.createMany({
@@ -428,13 +508,14 @@ export class VulnerabilitiesService {
             ...host,
             reportId: createdReport.id,
           },
-        })
-      )
+        }),
+      ),
     );
 
     // Map IP addresses to host IDs for vulnerability association
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const hostMap = new Map(
-      createdHosts.map((host) => [host.ip_address, host.id])
+      createdHosts.map((host) => [host.ip_address, host.id]),
     );
 
     // Group vulnerabilities by host IP (assuming one host in our sample)
@@ -456,10 +537,7 @@ export class VulnerabilitiesService {
     };
   }
 
-  async findNessusReports(filters?: {
-    packageId?: number;
-    systemId?: number;
-  }) {
+  async findNessusReports(filters?: { packageId?: number; systemId?: number }) {
     const where: Prisma.NessusReportWhereInput = {};
 
     if (filters?.packageId) {
@@ -626,10 +704,13 @@ export class VulnerabilitiesService {
     };
 
     // Get family breakdown
-    const familyStats = vulnerabilities.reduce((acc, vuln) => {
-      acc[vuln.plugin_family] = (acc[vuln.plugin_family] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const familyStats = vulnerabilities.reduce(
+      (acc, vuln) => {
+        acc[vuln.plugin_family] = (acc[vuln.plugin_family] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return {
       ...stats,
@@ -641,10 +722,10 @@ export class VulnerabilitiesService {
   }
 
   async processNessusUpload(
-    fileBuffer: Buffer, 
-    filename: string, 
-    packageId?: number, 
-    systemId?: number
+    fileBuffer: Buffer,
+    filename: string,
+    packageId?: number,
+    systemId?: number,
   ) {
     try {
       const fileSizeBytes = fileBuffer.length;
@@ -653,7 +734,7 @@ export class VulnerabilitiesService {
 
       // Memory-optimized XML parsing
       const xmlContent = fileBuffer.toString('utf-8');
-      
+
       const parser = new xml2js.Parser({
         explicitArray: false,
         ignoreAttrs: false,
@@ -661,11 +742,13 @@ export class VulnerabilitiesService {
         normalize: false, // Disable normalization for performance
         normalizeTags: false, // Disable tag normalization for performance
         trim: true,
-        async: true // Enable async parsing for large files
+        async: true, // Enable async parsing for large files
       });
 
       console.log('Starting XML parsing...');
-      const result = await parser.parseStringPromise(xmlContent) as any;
+      const result = (await parser.parseStringPromise(
+        xmlContent,
+      )) as NessusXmlReport;
       console.log('XML parsing completed');
 
       // Extract report metadata
@@ -674,7 +757,7 @@ export class VulnerabilitiesService {
         throw new Error('Invalid Nessus file format: No Report element found');
       }
 
-      const scan_name = reportElement.name || filename.replace('.nessus', '');
+      const scan_name = reportElement?.name || filename.replace('.nessus', '');
       const scan_date = new Date().toISOString().split('T')[0];
 
       // Initialize counters
@@ -684,12 +767,14 @@ export class VulnerabilitiesService {
       const vulnerabilitiesData: NessusVulnerabilityData[] = [];
 
       // Handle both single host and multiple hosts
-      const reportHosts = Array.isArray(reportElement.ReportHost) 
-        ? reportElement.ReportHost 
-        : reportElement.ReportHost ? [reportElement.ReportHost] : [];
+      const reportHosts = Array.isArray(reportElement?.ReportHost)
+        ? reportElement.ReportHost
+        : reportElement?.ReportHost
+          ? [reportElement.ReportHost]
+          : [];
 
       for (const hostElement of reportHosts) {
-        const hostname = hostElement.name;
+        const hostname = hostElement.name || 'unknown';
         const ip_address = hostname;
 
         // Extract host properties
@@ -697,15 +782,15 @@ export class VulnerabilitiesService {
         let os_info: string | undefined;
 
         if (hostElement.HostProperties?.tag) {
-          const tags = Array.isArray(hostElement.HostProperties.tag) 
-            ? hostElement.HostProperties.tag 
+          const tags = Array.isArray(hostElement.HostProperties.tag)
+            ? hostElement.HostProperties.tag
             : [hostElement.HostProperties.tag];
-          
+
           for (const tag of tags) {
             if (tag.name === 'mac-address') {
-              mac_address = tag._;
+              mac_address = tag._ || undefined;
             } else if (tag.name === 'operating-system') {
-              os_info = tag._;
+              os_info = tag._ || undefined;
             }
           }
         }
@@ -718,53 +803,71 @@ export class VulnerabilitiesService {
         let info_count = 0;
 
         // Parse report items (vulnerabilities)
-        const reportItems = Array.isArray(hostElement.ReportItem) 
-          ? hostElement.ReportItem 
-          : hostElement.ReportItem ? [hostElement.ReportItem] : [];
+        const reportItems = Array.isArray(hostElement.ReportItem)
+          ? hostElement.ReportItem
+          : hostElement.ReportItem
+            ? [hostElement.ReportItem]
+            : [];
 
         for (const item of reportItems) {
-          const plugin_id = parseInt(item.pluginID) || 0;
-          const severity = parseInt(item.severity) || 0;
-          
+          const plugin_id = parseInt(item.pluginID || '0') || 0;
+          const severity = parseInt(item.severity || '0') || 0;
+
           // Count by severity
           switch (severity) {
-            case 4: critical_count++; break;
-            case 3: high_count++; break;
-            case 2: medium_count++; break;
-            case 1: low_count++; break;
-            case 0: info_count++; break;
+            case 4:
+              critical_count++;
+              break;
+            case 3:
+              high_count++;
+              break;
+            case 2:
+              medium_count++;
+              break;
+            case 1:
+              low_count++;
+              break;
+            case 0:
+              info_count++;
+              break;
           }
 
           // Extract CVE list
           let cve_string: string | undefined;
           if (item.cve) {
-            const cves = Array.isArray(item.cve) ? item.cve : [item.cve];
+            const cves: string[] = Array.isArray(item.cve)
+              ? item.cve
+              : [item.cve];
             cve_string = cves.join(', ');
           }
 
           // Parse CVSS scores
-          const cvss_score = item.cvss_base_score ? parseFloat(item.cvss_base_score) : undefined;
-          const cvss3_score = item.cvss3_base_score ? parseFloat(item.cvss3_base_score) : undefined;
+          const cvss_score = item.cvss_base_score
+            ? parseFloat(item.cvss_base_score)
+            : undefined;
+          const cvss3_score = item.cvss3_base_score
+            ? parseFloat(item.cvss3_base_score)
+            : undefined;
 
           vulnerabilitiesData.push({
             plugin_id,
             plugin_name: item.pluginName || '',
             plugin_family: item.pluginFamily || '',
             severity,
-            port: item.port,
-            protocol: item.protocol,
-            service: item.svc_name,
-            description: item.description,
-            solution: item.solution,
-            synopsis: item.synopsis,
+            port: item.port || undefined,
+            protocol: item.protocol || undefined,
+            service: item.svc_name || undefined,
+            description: item.description || undefined,
+            solution: item.solution || undefined,
+            synopsis: item.synopsis || undefined,
             cve: cve_string,
             cvss_score,
             cvss3_score,
-            plugin_output: item.plugin_output,
-            risk_factor: item.risk_factor,
+            plugin_output: item.plugin_output || undefined,
+            risk_factor: item.risk_factor || undefined,
             exploit_available: item.exploit_available === 'true',
-            patch_publication_date: item.patch_publication_date,
-            vuln_publication_date: item.vuln_publication_date,
+            patch_publication_date: item.patch_publication_date || undefined,
+            vuln_publication_date: item.vuln_publication_date || undefined,
           });
         }
 
@@ -779,7 +882,7 @@ export class VulnerabilitiesService {
           high_count,
           medium_count,
           low_count,
-          info_count
+          info_count,
         });
 
         totalVulnerabilities += reportItems.length;
@@ -793,7 +896,7 @@ export class VulnerabilitiesService {
         scan_name,
         scan_date,
         total_hosts: totalHosts,
-        total_vulnerabilities: totalVulnerabilities
+        total_vulnerabilities: totalVulnerabilities,
       };
 
       // Import the data with optimized batching
@@ -803,7 +906,7 @@ export class VulnerabilitiesService {
         hosts: hostsData,
         vulnerabilities: vulnerabilitiesData,
         package_id: packageId,
-        system_id: systemId
+        system_id: systemId,
       });
 
       console.log('Database import completed');
@@ -816,22 +919,25 @@ export class VulnerabilitiesService {
           hostsProcessed: totalHosts,
           vulnerabilitiesProcessed: totalVulnerabilities,
           fileSizeMB,
-          reportId: importResult.report.id
+          reportId: importResult.report.id,
         },
-        ...importResult
+        ...importResult,
       };
-
     } catch (error) {
       console.error('Error processing Nessus file:', error);
-      throw new Error(`Failed to process Nessus file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to process Nessus file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 
   // Optimized import method for large datasets
   private async importNessusDataOptimized(data: NessusImportRequest) {
     const { report, hosts, vulnerabilities, package_id, system_id } = data;
-    
-    console.log(`Importing report with ${hosts.length} hosts and ${vulnerabilities.length} vulnerabilities`);
+
+    console.log(
+      `Importing report with ${hosts.length} hosts and ${vulnerabilities.length} vulnerabilities`,
+    );
 
     // Create the report
     const createdReport = await this.prisma.nessusReport.create({
@@ -846,20 +952,24 @@ export class VulnerabilitiesService {
 
     // Batch create hosts in chunks to avoid memory issues
     const BATCH_SIZE = 100;
-    const createdHosts: any[] = [];
-    
+    const createdHosts: CreatedHost[] = [];
+
     for (let i = 0; i < hosts.length; i += BATCH_SIZE) {
       const batch = hosts.slice(i, i + BATCH_SIZE);
       const batchData = batch.map((host) => ({
         ...host,
         reportId: createdReport.id,
       }));
-      
-      console.log(`Creating host batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(hosts.length / BATCH_SIZE)}`);
-      
+
+      console.log(
+        `Creating host batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(hosts.length / BATCH_SIZE)}`,
+      );
+
       // Use raw query for better performance with large batches
       for (const hostData of batchData) {
-        const createdHost = await this.prisma.nessusHost.create({ data: hostData });
+        const createdHost = await this.prisma.nessusHost.create({
+          data: hostData,
+        });
         createdHosts.push(createdHost);
       }
     }
@@ -872,22 +982,24 @@ export class VulnerabilitiesService {
 
     for (let i = 0; i < vulnerabilities.length; i += VULN_BATCH_SIZE) {
       const batch = vulnerabilities.slice(i, i + VULN_BATCH_SIZE);
-      
+
       // Associate with first host for simplicity (could be improved with IP mapping)
       const vulnerabilityData = batch.map((vuln) => ({
         ...vuln,
         reportId: createdReport.id,
-        hostId: createdHosts[0]?.id, // Associate with first host
+        hostId: createdHosts[0]?.id || 0, // Associate with first host
       }));
 
-      console.log(`Creating vulnerability batch ${Math.floor(i / VULN_BATCH_SIZE) + 1}/${Math.ceil(vulnerabilities.length / VULN_BATCH_SIZE)}`);
-      
+      console.log(
+        `Creating vulnerability batch ${Math.floor(i / VULN_BATCH_SIZE) + 1}/${Math.ceil(vulnerabilities.length / VULN_BATCH_SIZE)}`,
+      );
+
       // Use createMany for bulk insert efficiency
       await this.prisma.nessusVulnerability.createMany({
         data: vulnerabilityData,
         skipDuplicates: true, // Skip duplicates to avoid conflicts
       });
-      
+
       vulnerabilitiesCreated += batch.length;
     }
 
@@ -906,7 +1018,7 @@ export class VulnerabilitiesService {
     await this.prisma.nessusVulnerability.deleteMany({});
     await this.prisma.nessusHost.deleteMany({});
     await this.prisma.nessusReport.deleteMany({});
-    
+
     return { message: 'All Nessus data cleaned up successfully' };
   }
 }

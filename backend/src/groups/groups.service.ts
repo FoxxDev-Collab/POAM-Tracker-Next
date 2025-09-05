@@ -1,17 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import type { Group } from '@prisma/client';
-
-export interface CreateGroupDto {
-  packageId: number;
-  name: string;
-  description?: string;
-}
-
-export interface UpdateGroupDto {
-  name?: string;
-  description?: string;
-}
+import { Prisma, Group } from '@prisma/client';
+import { CreateGroupDto, UpdateGroupDto } from './dto';
 
 @Injectable()
 export class GroupsService {

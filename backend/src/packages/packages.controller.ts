@@ -10,14 +10,20 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { PackagesService } from './packages.service';
-import type { CreatePackageDto, UpdatePackageDto } from './packages.service';
+import { CreatePackageDto, UpdatePackageDto } from './dto';
+import { SystemsService } from '../systems/systems.service';
+import { GroupsService } from '../groups/groups.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Audit } from '../decorators/audit.decorator';
 
 @Controller('packages')
 @UseGuards(JwtAuthGuard)
 export class PackagesController {
-  constructor(private readonly packagesService: PackagesService) {}
+  constructor(
+    private readonly packagesService: PackagesService,
+    private readonly systemsService: SystemsService,
+    private readonly groupsService: GroupsService,
+  ) {}
 
   @Post()
   @Audit({ action: 'CREATE', resource: 'PACKAGE', sensitiveData: true })
@@ -48,5 +54,17 @@ export class PackagesController {
   @Audit({ action: 'DELETE', resource: 'PACKAGE', sensitiveData: true })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.packagesService.remove(id);
+  }
+
+  // Package systems endpoints
+  @Get(':id/systems')
+  getPackageSystems(@Param('id', ParseIntPipe) id: number) {
+    return this.systemsService.findByPackage(id);
+  }
+
+  // Package groups endpoints  
+  @Get(':id/groups')
+  getPackageGroups(@Param('id', ParseIntPipe) id: number) {
+    return this.groupsService.findByPackage(id);
   }
 }

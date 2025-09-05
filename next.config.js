@@ -10,11 +10,10 @@ const nextConfig = {
     // Re-enable after converting components to proper types
     ignoreBuildErrors: true,
   },
-  // Increase file upload limits for large Nessus files
+  // File upload limits for large Nessus files are now handled in API routes
   experimental: {
-    bodyParser: {
-      sizeLimit: '50mb', // Increase limit to 50MB for Nessus files
-    },
+    // bodyParser option has been removed in Next.js 15
+    // Use export config in individual API routes instead
   },
 };
 

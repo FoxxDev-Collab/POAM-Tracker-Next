@@ -4,18 +4,7 @@
       "Bash(npm install:*)",
       "Bash(node:*)",
       "Bash(del test-nessus-parser.js)",
-      "Read(/D:\\Dev Projects\\POAM-Tracker-Next\\app\\api\\vulnerabilities\\reports/**)",
-      "Read(/D:\\Dev Projects\\POAM-Tracker-Next\\app\\api\\vulnerabilities\\nessus/**)",
-      "Read(/D:\\Dev Projects\\POAM-Tracker-Next\\app\\vulnerability-center\\systems\\[id]\\nessus/**)",
-      "Read(/D:\\Dev Projects\\POAM-Tracker-Next\\app\\vulnerability-center\\systems\\[id]\\nessus/**)",
-      "Read(/D:\\Dev Projects\\POAM-Tracker-Next\\app\\vulnerability-center/**)",
-      "Read(/D:\\Dev Projects\\POAM-Tracker-Next\\app\\vulnerability-center\\stps/**)",
-      "Read(/D:\\Dev Projects\\POAM-Tracker-Next\\app\\vulnerability-center\\stps/**)",
-      "Read(/D:\\Dev Projects\\POAM-Tracker-Next\\app\\vulnerability-center\\stps\\stig-stps/**)",
-      "Read(/D:\\Dev Projects\\POAM-Tracker-Next\\app\\vulnerability-center\\stps\\stig-stps/**)",
-      "Read(/D:\\Dev Projects\\POAM-Tracker-Next\\app\\vulnerability-center\\stps\\stig-stps\\create/**)",
-      "Read(/D:\\Dev Projects\\POAM-Tracker-Next\\app\\vulnerability-center\\stps\\stig-stps/**)",
-      "Read(/D:\\Dev Projects\\POAM-Tracker-Next\\app\\vulnerability-center\\stps\\stig-stps\\create/**)"
+      "Read/*"
     ],
     "deny": [],
     "ask": []

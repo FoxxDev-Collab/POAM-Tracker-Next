@@ -1,73 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import type {
-  Package,
-  SystemType,
-  ImpactLevel,
-  AuthorizationStatus,
-  ResidualRiskLevel,
-  MissionCriticality,
-  DataClassification,
-  SecurityControlBaseline,
-  PoamStatus,
-  ContinuousMonitoringStatus,
-} from '@prisma/client';
-
-export interface CreatePackageDto {
-  name: string;
-  description?: string;
-  teamId?: number;
-  systemType?: SystemType;
-  confidentialityImpact?: ImpactLevel;
-  integrityImpact?: ImpactLevel;
-  availabilityImpact?: ImpactLevel;
-  overallCategorization?: ImpactLevel;
-  authorizationStatus?: AuthorizationStatus;
-  authorizationDate?: string;
-  authorizationExpiry?: string;
-  riskAssessmentDate?: string;
-  residualRiskLevel?: ResidualRiskLevel;
-  missionCriticality?: MissionCriticality;
-  dataClassification?: DataClassification;
-  systemOwner?: string;
-  authorizingOfficial?: string;
-  issoName?: string;
-  securityControlBaseline?: SecurityControlBaseline;
-  poamStatus?: PoamStatus;
-  continuousMonitoringStatus?: ContinuousMonitoringStatus;
-}
-
-export interface UpdatePackageDto {
-  name?: string;
-  description?: string;
-  teamId?: number;
-  systemType?: SystemType;
-  confidentialityImpact?: ImpactLevel;
-  integrityImpact?: ImpactLevel;
-  availabilityImpact?: ImpactLevel;
-  overallCategorization?: ImpactLevel;
-  authorizationStatus?: AuthorizationStatus;
-  authorizationDate?: string;
-  authorizationExpiry?: string;
-  riskAssessmentDate?: string;
-  residualRiskLevel?: ResidualRiskLevel;
-  missionCriticality?: MissionCriticality;
-  dataClassification?: DataClassification;
-  systemOwner?: string;
-  authorizingOfficial?: string;
-  issoName?: string;
-  securityControlBaseline?: SecurityControlBaseline;
-  poamStatus?: PoamStatus;
-  continuousMonitoringStatus?: ContinuousMonitoringStatus;
-}
+import type { Package } from '@prisma/client';
+import { CreatePackageDto, UpdatePackageDto } from './dto';
 
 @Injectable()
 export class PackagesService {
   constructor(private prisma: PrismaService) {}
 
   async create(createPackageDto: CreatePackageDto): Promise<{ item: Package }> {
+    // Normalize enum fields before creating
+    const normalizedData = this.normalizeEnumFields(createPackageDto);
+    // Whitelist and map only valid fields for the Package model
+    const sanitized = this.sanitizeAndMapPackageData(normalizedData);
+
     const packageItem = await this.prisma.package.create({
-      data: createPackageDto,
+      data: sanitized,
     });
 
     return { item: packageItem };
@@ -128,10 +75,11 @@ export class PackagesService {
 
     // Convert enum string values to match Prisma schema format
     const normalizedData = this.normalizeEnumFields(validUpdateData);
+    const sanitized = this.sanitizeAndMapPackageData(normalizedData);
 
     const packageItem = await this.prisma.package.update({
       where: { id },
-      data: normalizedData,
+      data: sanitized,
       include: {
         team: true,
         groups: true,
@@ -178,7 +126,111 @@ export class PackagesService {
       );
     }
 
+    if (normalized.dataClassification) {
+      normalized.dataClassification = this.normalizeDataClassification(
+        normalized.dataClassification,
+      );
+    }
+
+    if (normalized.rmfStep) {
+      normalized.rmfStep = this.normalizeRmfStep(normalized.rmfStep);
+    }
+
     return normalized;
+  }
+
+  // Ensure only fields defined on the Prisma Package model are sent to Prisma,
+  // and map common alias fields from the request payload to schema fields.
+  private sanitizeAndMapPackageData(data: any): any {
+    const allowedKeys = new Set([
+      'name',
+      'description',
+      'teamId',
+      // RMF progress
+      'rmfStep',
+      'categorizeComplete',
+      'selectComplete',
+      'implementComplete',
+      'assessComplete',
+      'authorizeComplete',
+      'monitorComplete',
+      // Assignments
+      'systemOwner',
+      'authorizingOfficial',
+      'issoName',
+      'issmName',
+      'systemAdministrator',
+      'networkAdministrator',
+      'databaseAdministrator',
+      'applicationAdministrator',
+      'securityControlAssessor',
+      // Categorization
+      'systemType',
+      'confidentialityImpact',
+      'integrityImpact',
+      'availabilityImpact',
+      'overallCategorization',
+      'missionCriticality',
+      'dataClassification',
+      // Control selection
+      'securityControlBaseline',
+      'controlSelectionRationale',
+      'tailoringDecisions',
+      // Authorization
+      'authorizationStatus',
+      'authorizationDate',
+      'authorizationExpiry',
+      'riskAssessmentDate',
+      'residualRiskLevel',
+      // Monitoring
+      'poamStatus',
+      'continuousMonitoringStatus',
+      'lastAssessmentDate',
+      'nextAssessmentDate',
+      // Business info
+      'businessOwner',
+      'businessPurpose',
+      'organizationalUnit',
+      'physicalLocation',
+      // Onboarding
+      'onboardingComplete',
+      'onboardingCompletedAt',
+      'onboardingCompletedBy',
+      // Relations (optional nested creates – leave here for future use)
+      'team',
+      'groups',
+      'systems',
+      'stps',
+      'poams',
+      'nessusReports',
+    ]);
+
+    const mapped: any = { ...data };
+
+    // Map aliases from incoming payload to schema fields
+    if (mapped.authorizedOfficialName && !mapped.authorizingOfficial) {
+      mapped.authorizingOfficial = mapped.authorizedOfficialName;
+    }
+    if (mapped.systemOwnerName && !mapped.systemOwner) {
+      mapped.systemOwner = mapped.systemOwnerName;
+    }
+    if (mapped.isssoName && !mapped.issoName) {
+      mapped.issoName = mapped.isssoName;
+    }
+    // Map generic impactLevel -> overallCategorization if provided
+    if (mapped.impactLevel && !mapped.overallCategorization) {
+      mapped.overallCategorization = this.normalizeImpactLevel(mapped.impactLevel);
+    }
+
+    // Drop fields not recognized by the Package model
+    const sanitized: any = {};
+    for (const key of Object.keys(mapped)) {
+      if (allowedKeys.has(key)) {
+        sanitized[key] = mapped[key];
+      }
+    }
+
+    return sanitized;
   }
 
   private normalizeImpactLevel(value: string): string {
@@ -236,6 +288,44 @@ export class PackagesService {
         return 'High';
       case 'VERY_HIGH':
         return 'Very_High';
+      default:
+        return value;
+    }
+  }
+
+  private normalizeDataClassification(value: string): string {
+    switch (value) {
+      case 'UNCLASSIFIED':
+        return 'Unclassified';
+      case 'CUI':
+        return 'CUI';
+      case 'CONFIDENTIAL':
+        return 'Confidential';
+      case 'SECRET':
+        return 'Secret';
+      case 'TOP_SECRET':
+        return 'Top_Secret';
+      case 'TS_SCI':
+        return 'TS_SCI';
+      default:
+        return value;
+    }
+  }
+
+  private normalizeRmfStep(value: string): string {
+    switch (value) {
+      case 'CATEGORIZE':
+        return 'Categorize';
+      case 'SELECT':
+        return 'Select';
+      case 'IMPLEMENT':
+        return 'Implement';
+      case 'ASSESS':
+        return 'Assess';
+      case 'AUTHORIZE':
+        return 'Authorize';
+      case 'MONITOR':
+        return 'Monitor';
       default:
         return value;
     }

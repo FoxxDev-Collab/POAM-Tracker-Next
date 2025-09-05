@@ -17,25 +17,65 @@ model Package {
   description                  String?  @default("")
   createdAt                    DateTime @default(now()) @map("created_at")
   updatedAt                    DateTime @updatedAt @map("updated_at")
+  
+  // RMF Progress Tracking
+  rmfStep                      RmfStep  @default(Categorize) @map("rmf_step")
+  categorizeComplete           Boolean  @default(false) @map("categorize_complete")
+  selectComplete               Boolean  @default(false) @map("select_complete")
+  implementComplete            Boolean  @default(false) @map("implement_complete")
+  assessComplete               Boolean  @default(false) @map("assess_complete")
+  authorizeComplete            Boolean  @default(false) @map("authorize_complete")
+  monitorComplete              Boolean  @default(false) @map("monitor_complete")
+  
+  // Team Assignments (Manual entry for now, future: FK to Users)
   teamId                       Int?     @map("team_id")
+  systemOwner                  String?  @map("system_owner")
+  authorizingOfficial          String?  @map("authorizing_official")
+  issoName                     String?  @map("isso_name")  // Information System Security Officer
+  issmName                     String?  @map("issm_name")  // Information System Security Manager
+  systemAdministrator          String?  @map("system_administrator")
+  networkAdministrator         String?  @map("network_administrator")
+  databaseAdministrator        String?  @map("database_administrator")
+  applicationAdministrator     String?  @map("application_administrator")
+  securityControlAssessor      String?  @map("security_control_assessor")
+  
+  // System Categorization (RMF Step 1)
   systemType                   SystemType? @map("system_type")
   confidentialityImpact        ImpactLevel? @map("confidentiality_impact")
   integrityImpact              ImpactLevel? @map("integrity_impact")
   availabilityImpact           ImpactLevel? @map("availability_impact")
   overallCategorization        ImpactLevel? @map("overall_categorization")
+  missionCriticality           MissionCriticality? @map("mission_criticality")
+  dataClassification           DataClassification? @map("data_classification")
+  
+  // Control Selection (RMF Step 2)
+  securityControlBaseline      SecurityControlBaseline? @map("security_control_baseline")
+  controlSelectionRationale    String?  @map("control_selection_rationale")
+  tailoringDecisions           String?  @map("tailoring_decisions")
+  
+  // Authorization Information
   authorizationStatus          AuthorizationStatus? @map("authorization_status")
-  authorizationDate            String?  @map("authorization_date") // Using String as Prisma doesn't have a Date-only type
+  authorizationDate            String?  @map("authorization_date")
   authorizationExpiry          String?  @map("authorization_expiry")
   riskAssessmentDate           String?  @map("risk_assessment_date")
   residualRiskLevel            ResidualRiskLevel? @map("residual_risk_level")
-  missionCriticality           MissionCriticality? @map("mission_criticality")
-  dataClassification           DataClassification? @map("data_classification")
-  systemOwner                  String?  @map("system_owner")
-  authorizingOfficial          String?  @map("authorizing_official")
-  issoName                     String?  @map("isso_name")
-  securityControlBaseline      SecurityControlBaseline? @map("security_control_baseline")
+  
+  // Monitoring and Maintenance
   poamStatus                   PoamStatus? @map("poam_status")
   continuousMonitoringStatus   ContinuousMonitoringStatus? @map("continuous_monitoring_status")
+  lastAssessmentDate           String?  @map("last_assessment_date")
+  nextAssessmentDate           String?  @map("next_assessment_date")
+  
+  // Business Information
+  businessOwner                String?  @map("business_owner")
+  businessPurpose              String?  @map("business_purpose")
+  organizationalUnit           String?  @map("organizational_unit")
+  physicalLocation             String?  @map("physical_location")
+  
+  // Onboarding Completion
+  onboardingComplete           Boolean  @default(false) @map("onboarding_complete")
+  onboardingCompletedAt        DateTime? @map("onboarding_completed_at")
+  onboardingCompletedBy        String?  @map("onboarding_completed_by")
 
   team   Team?    @relation(fields: [teamId], references: [id])
   groups Group[]
@@ -66,11 +106,69 @@ model System {
   id              Int      @id @default(autoincrement())
   packageId       Int      @map("package_id")
   groupId         Int?     @map("group_id")
+  
+  // Basic System Information
   name            String
+  hostname        String?
   description     String?  @default("")
+  
+  // Network Configuration
   ipAddress       String?  @map("ip_address")
-  operatingSystem String?  @map("operating_system")
+  macAddress      String?  @map("mac_address")
+  subnetMask      String?  @map("subnet_mask")
+  defaultGateway  String?  @map("default_gateway")
+  dnsServers      String?  @map("dns_servers")  // JSON array as string
+  
+  // System Specifications
+  operatingSystem SystemOperatingSystem? @map("operating_system")
+  osVersion       String?  @map("os_version")
+  architecture    SystemArchitecture? @default(x86_64)
+  cpuCores        Int?     @map("cpu_cores")
+  ramGB           Int?     @map("ram_gb")
+  storageGB       Int?     @map("storage_gb")
+  
+  // Security and Compliance
+  classification  DataClassification? 
+  encryptionStatus EncryptionStatus? @default(Unknown) @map("encryption_status")
+  patchLevel      String?  @map("patch_level")
+  antivirusStatus AntivirusStatus? @default(Unknown) @map("antivirus_status")
+  
+  // Asset Management and Lifecycle
+  assetTag        String?  @map("asset_tag")
+  serialNumber    String?  @map("serial_number")
+  manufacturer    String?
+  model           String?
+  purchaseDate    String?  @map("purchase_date")
+  warrantyExpiry  String?  @map("warranty_expiry")
+  lifecycleStatus LifecycleStatus? @default(Active) @map("lifecycle_status")
+  eolDate         String?  @map("eol_date")  // End of Life
+  replacementDate String?  @map("replacement_date")
+  
+  // System Support and Contacts
+  primaryContact  String?  @map("primary_contact")
+  backupContact   String?  @map("backup_contact")
+  vendor          String?
+  supportContract String?  @map("support_contract")
+  supportExpiry   String?  @map("support_expiry")
+  
+  // Physical Information
+  physicalLocation String? @map("physical_location")
+  rackLocation     String? @map("rack_location")
+  datacenter       String?
+  environmentType  EnvironmentType? @default(Production) @map("environment_type")
+  
+  // Operational Information
+  businessFunction String? @map("business_function")
+  criticality      SystemCriticality? @default(Medium)
+  backupSchedule   String? @map("backup_schedule")
+  maintenanceWindow String? @map("maintenance_window")
+  
+  // Audit and Compliance
+  lastInventoryDate String? @map("last_inventory_date")
+  complianceNotes  String? @map("compliance_notes")
+  
   createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   package      Package       @relation(fields: [packageId], references: [id], onDelete: Cascade)
   group        Group?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -81,6 +179,9 @@ model System {
 
   @@index([packageId])
   @@index([groupId])
+  @@index([ipAddress])
+  @@index([hostname])
+  @@index([assetTag])
   @@map("systems")
 }
 
@@ -660,8 +761,10 @@ enum MissionCriticality {
 enum DataClassification {
   Unclassified
   CUI
+  Confidential
   Secret
   Top_Secret
+  TS_SCI  // Top Secret Sensitive Compartmented Information
 }
 
 enum SecurityControlBaseline {
@@ -791,4 +894,158 @@ enum PoamCommentType {
   Risk_Assessment
   Technical_Note
   Management_Decision
+}
+
+// ---
+// New RMF and System Management Enums
+// ---
+
+enum RmfStep {
+  Categorize
+  Select
+  Implement
+  Assess
+  Authorize
+  Monitor
+}
+
+enum SystemOperatingSystem {
+  // Windows Server
+  Windows_Server_2022
+  Windows_Server_2019
+  Windows_Server_2016
+  Windows_Server_2012_R2
+  Windows_Server_2012
+  
+  // Windows Desktop
+  Windows_11
+  Windows_10
+  Windows_8_1
+  Windows_7
+  
+  // Linux Server Distributions
+  RHEL_9
+  RHEL_8
+  RHEL_7
+  CentOS_9
+  CentOS_8
+  CentOS_7
+  Ubuntu_22_04_LTS
+  Ubuntu_20_04_LTS
+  Ubuntu_18_04_LTS
+  SUSE_Linux_Enterprise_15
+  SUSE_Linux_Enterprise_12
+  Oracle_Linux_9
+  Oracle_Linux_8
+  Amazon_Linux_2
+  Rocky_Linux_9
+  Rocky_Linux_8
+  AlmaLinux_9
+  AlmaLinux_8
+  
+  // Linux Desktop
+  Ubuntu_Desktop
+  Fedora_Workstation
+  CentOS_Desktop
+  RHEL_Workstation
+  
+  // Unix Systems
+  AIX_7_3
+  AIX_7_2
+  Solaris_11_4
+  HP_UX_11_31
+  
+  // Network Operating Systems
+  Cisco_IOS
+  Cisco_IOS_XE
+  Cisco_NX_OS
+  Juniper_Junos
+  
+  // Virtualization
+  VMware_vSphere_8
+  VMware_vSphere_7
+  VMware_vSphere_6_7
+  Citrix_XenServer
+  Microsoft_Hyper_V
+  
+  // Container Platforms
+  Docker_Engine
+  Kubernetes
+  OpenShift_4
+  Rancher
+  
+  // Cloud Operating Systems
+  Amazon_Linux
+  Google_Container_Optimized_OS
+  Azure_Linux
+  
+  // Database Systems
+  Oracle_Database_19c
+  Oracle_Database_12c
+  SQL_Server_2022
+  SQL_Server_2019
+  MySQL_8_0
+  PostgreSQL_15
+  MongoDB_6_0
+  
+  // Other/Legacy
+  Other
+  Unknown
+}
+
+enum SystemArchitecture {
+  x86_64      // 64-bit x86
+  x86_32      // 32-bit x86
+  ARM64       // 64-bit ARM
+  ARM32       // 32-bit ARM
+  PowerPC
+  SPARC
+  IA_64       // Intel Itanium
+  MIPS
+  Other
+}
+
+enum EncryptionStatus {
+  Fully_Encrypted
+  Partially_Encrypted
+  Not_Encrypted
+  Unknown
+}
+
+enum AntivirusStatus {
+  Installed_Current
+  Installed_Outdated
+  Not_Installed
+  Not_Applicable
+  Unknown
+}
+
+enum LifecycleStatus {
+  Planning
+  Development
+  Testing
+  Active
+  Maintenance_Mode
+  End_of_Life
+  Decommissioned
+  Retired
+}
+
+enum EnvironmentType {
+  Production
+  Staging
+  Development
+  Testing
+  Training
+  Backup
+  Disaster_Recovery
+  Sandbox
+}
+
+enum SystemCriticality {
+  Critical
+  High
+  Medium
+  Low
+  Non_Essential
 }

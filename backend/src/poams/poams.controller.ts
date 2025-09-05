@@ -12,6 +12,13 @@ import {
 } from '@nestjs/common';
 import { PoamsService } from './poams.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { 
+  CreatePoamDto, 
+  UpdatePoamDto, 
+  CreatePoamMilestoneDto, 
+  UpdatePoamMilestoneDto, 
+  CreatePoamCommentDto 
+} from './dto';
 
 @Controller('poams')
 @UseGuards(JwtAuthGuard)
@@ -19,7 +26,7 @@ export class PoamsController {
   constructor(private readonly poamsService: PoamsService) {}
 
   @Post()
-  create(@Body() createPoamDto: any) {
+  create(@Body() createPoamDto: CreatePoamDto) {
     return this.poamsService.create(createPoamDto);
   }
 
@@ -40,7 +47,7 @@ export class PoamsController {
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() updatePoamDto: any) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updatePoamDto: UpdatePoamDto) {
     return this.poamsService.update(id, updatePoamDto);
   }
 
@@ -58,7 +65,7 @@ export class PoamsController {
   @Post(':id/milestones')
   createMilestone(
     @Param('id', ParseIntPipe) id: number,
-    @Body() createMilestoneDto: any,
+    @Body() createMilestoneDto: CreatePoamMilestoneDto,
   ) {
     return this.poamsService.createMilestone(id, createMilestoneDto);
   }
@@ -66,7 +73,7 @@ export class PoamsController {
   @Patch('milestones/:milestoneId')
   updateMilestone(
     @Param('milestoneId', ParseIntPipe) id: number,
-    @Body() updateMilestoneDto: any,
+    @Body() updateMilestoneDto: UpdatePoamMilestoneDto,
   ) {
     return this.poamsService.updateMilestone(id, updateMilestoneDto);
   }
@@ -85,7 +92,7 @@ export class PoamsController {
   @Post(':id/comments')
   createComment(
     @Param('id', ParseIntPipe) id: number,
-    @Body() createCommentDto: any,
+    @Body() createCommentDto: CreatePoamCommentDto,
   ) {
     return this.poamsService.createComment(id, createCommentDto);
   }

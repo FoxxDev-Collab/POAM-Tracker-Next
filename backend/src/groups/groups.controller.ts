@@ -11,8 +11,8 @@ import {
   Query,
 } from '@nestjs/common';
 import { GroupsService } from './groups.service';
-import type { CreateGroupDto, UpdateGroupDto } from './groups.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CreateGroupDto, UpdateGroupDto } from './dto';
 
 @Controller('groups')
 @UseGuards(JwtAuthGuard)
@@ -38,10 +38,7 @@ export class GroupsController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateGroupDto: UpdateGroupDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateGroupDto: UpdateGroupDto) {
     return this.groupsService.update(id, updateGroupDto);
   }
 

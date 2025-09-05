@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CreateTeamDto, UpdateTeamDto, AddTeamMemberDto, UpdateTeamMemberDto } from './dto';
 
 @Controller('teams')
 @UseGuards(JwtAuthGuard)
@@ -18,7 +19,7 @@ export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
   @Post()
-  create(@Body() createTeamDto: any) {
+  create(@Body() createTeamDto: CreateTeamDto) {
     return this.teamsService.create(createTeamDto);
   }
 
@@ -33,7 +34,7 @@ export class TeamsController {
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateTeamDto: any) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateTeamDto: UpdateTeamDto) {
     return this.teamsService.update(id, updateTeamDto);
   }
 
@@ -51,18 +52,18 @@ export class TeamsController {
   @Post(':id/members')
   addMember(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { userId: number; role?: 'Lead' | 'Member' },
+    @Body() addTeamMemberDto: AddTeamMemberDto,
   ) {
-    return this.teamsService.addMember(id, body.userId, body.role);
+    return this.teamsService.addMember(id, addTeamMemberDto.userId, addTeamMemberDto.role);
   }
 
   @Patch(':id/members/:userId')
   updateMember(
     @Param('id', ParseIntPipe) id: number,
     @Param('userId', ParseIntPipe) userId: number,
-    @Body() body: { role: 'Lead' | 'Member' },
+    @Body() updateTeamMemberDto: UpdateTeamMemberDto,
   ) {
-    return this.teamsService.updateMember(id, userId, body.role);
+    return this.teamsService.updateMember(id, userId, updateTeamMemberDto.role);
   }
 
   @Delete(':id/members/:userId')

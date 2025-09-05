@@ -24,13 +24,15 @@ export class AuthService {
     private logger: AppLoggerService,
   ) {}
 
-  async validateUser(email: string, password: string): Promise<any> {
+  async validateUser(email: string, password: string) {
     const user = await this.usersService.findByEmail(email);
     if (
       user &&
       user.passwordHash &&
       (await bcrypt.compare(password, user.passwordHash))
     ) {
+      // Remove passwordHash from result
+
       const { passwordHash, ...result } = user;
       return result;
     }
@@ -87,7 +89,7 @@ export class AuthService {
 
       this.logger.error(
         'Login system error',
-        error.stack,
+        error instanceof Error ? error.stack : String(error),
         'AuthService',
         correlationId,
       );

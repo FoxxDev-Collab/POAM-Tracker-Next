@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { CreateTeamDto, UpdateTeamDto } from './dto';
 
 @Injectable()
 export class TeamsService {
@@ -68,7 +69,16 @@ export class TeamsService {
     });
   }
 
-  async create(data: Prisma.TeamCreateInput) {
+  async create(createTeamDto: CreateTeamDto) {
+    const data: Prisma.TeamCreateInput = {
+      name: createTeamDto.name,
+      description: createTeamDto.description,
+      active: createTeamDto.active ?? true,
+      lead: {
+        connect: { id: createTeamDto.leadUserId },
+      },
+    };
+
     return this.prisma.team.create({
       data,
       include: {
@@ -95,7 +105,18 @@ export class TeamsService {
     });
   }
 
-  async update(id: number, data: Prisma.TeamUpdateInput) {
+  async update(id: number, updateTeamDto: UpdateTeamDto) {
+    const data: Prisma.TeamUpdateInput = {
+      ...(updateTeamDto.name && { name: updateTeamDto.name }),
+      ...(updateTeamDto.description !== undefined && { description: updateTeamDto.description }),
+      ...(updateTeamDto.active !== undefined && { active: updateTeamDto.active }),
+      ...(updateTeamDto.leadUserId && {
+        lead: {
+          connect: { id: updateTeamDto.leadUserId },
+        },
+      }),
+    };
+
     return this.prisma.team.update({
       where: { id },
       data,

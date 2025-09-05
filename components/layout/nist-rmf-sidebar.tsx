@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Package, FileCheck, Activity, AlertTriangle, ShieldCheck, Network, HardDrive, Monitor } from "lucide-react"
+import { Package, FileCheck, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 type SidebarItem = {
@@ -14,42 +14,16 @@ type SidebarItem = {
 
 const nistRmfItems: SidebarItem[] = [
   { 
-    href: "/nist-rmf/packages", 
+    href: "/rmf-center/packages", 
     label: "ATO Packages", 
     icon: Package,
+    description: "Authorization to Operate Packages"
   },
   { 
-    href: "/nist-rmf/controls", 
+    href: "/rmf-center/controls", 
     label: "Control Catalog", 
     icon: FileCheck,
-  },
-  { 
-    href: "/nist-rmf/assessments", 
-    label: "Assessments", 
-    icon: Activity,
-  },
-  { 
-    href: "/nist-rmf/risks", 
-    label: "Risk Register", 
-    icon: AlertTriangle,
-  },
-  { 
-    href: "/nist-rmf/ppsm", 
-    label: "PPSM", 
-    icon: Network,
-    description: "Ports, Protocols, Services Management"
-  },
-  { 
-    href: "/nist-rmf/hardware-list", 
-    label: "Hardware List", 
-    icon: HardDrive,
-    description: "System hardware inventory"
-  },
-  { 
-    href: "/nist-rmf/software-list", 
-    label: "Software List", 
-    icon: Monitor,
-    description: "Software inventory and versions"
+    description: "View and manage security controls"
   },
 ]
 

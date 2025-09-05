@@ -1,24 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import type { System, StigFinding, StigScan } from '@prisma/client';
-import * as fs from 'fs';
+import { Prisma, System, StigFinding } from '@prisma/client';
+import { CreateSystemDto, UpdateSystemDto } from './dto';
 import * as xml2js from 'xml2js';
 
-export interface CreateSystemDto {
-  packageId: number;
-  groupId?: number;
-  name: string;
-  description?: string;
-  ipAddress?: string;
-  operatingSystem?: string;
+export interface StigFile {
+  originalname: string;
+  buffer: Buffer;
 }
 
-export interface UpdateSystemDto {
-  groupId?: number;
-  name?: string;
-  description?: string;
-  ipAddress?: string;
-  operatingSystem?: string;
+export interface StigData {
+  display_name?: string;
+  stig_name?: string;
+  stig_id?: string;
+  rules?: any[];
+}
+
+export interface JsonData {
+  title?: string;
+  id?: string;
+  stigs?: StigData[];
 }
 
 @Injectable()
@@ -27,7 +28,15 @@ export class SystemsService {
 
   async create(createSystemDto: CreateSystemDto): Promise<{ item: System }> {
     const system = await this.prisma.system.create({
-      data: createSystemDto,
+      data: {
+        packageId: createSystemDto.packageId,
+        groupId: createSystemDto.groupId,
+        name: createSystemDto.name,
+        hostname: createSystemDto.hostname,
+        description: createSystemDto.description,
+        ipAddress: createSystemDto.ipAddress,
+        operatingSystem: createSystemDto.operatingSystem,
+      },
       include: {
         package: true,
         group: true,
@@ -115,7 +124,13 @@ export class SystemsService {
   async update(id: number, updateSystemDto: UpdateSystemDto): Promise<System> {
     return this.prisma.system.update({
       where: { id },
-      data: updateSystemDto,
+      data: {
+        name: updateSystemDto.name,
+        hostname: updateSystemDto.hostname,
+        description: updateSystemDto.description,
+        ipAddress: updateSystemDto.ipAddress,
+        operatingSystem: updateSystemDto.operatingSystem,
+      },
     });
   }
 
@@ -146,7 +161,7 @@ export class SystemsService {
 
   async uploadStigFile(
     systemId: number,
-    file: any,
+    file: StigFile,
   ): Promise<{ success: boolean; message: string; scanId?: number }> {
     try {
       // Verify system exists
@@ -163,29 +178,22 @@ export class SystemsService {
       }
 
       if (!file.buffer) {
-        console.log('File structure:', {
-          originalname: file.originalname,
-          mimetype: file.mimetype,
-          size: file.size,
-          hasBuffer: !!file.buffer,
-          hasPath: !!file.path,
-          keys: Object.keys(file),
-        });
-        throw new Error(
-          'File buffer not available - ensure Multer is configured with memoryStorage',
-        );
+        throw new Error('File buffer is missing');
       }
 
-      const fileContent = file.buffer.toString();
+      const fileContent = file.buffer.toString('utf-8');
+      const findings: any[] = [];
       let stigScan: any;
-      let findings: any[] = [];
 
-      // Try to parse as JSON first (CKLB format)
+      // Try parsing as JSON first (CKLB format). If this fails or content is invalid, fallback to XML parsing.
+      let parsedAsJson = false;
       try {
-        const jsonData = JSON.parse(fileContent);
-
-        // Handle CKLB JSON format
-        if (jsonData.stigs && Array.isArray(jsonData.stigs)) {
+        const jsonData = JSON.parse(fileContent) as JsonData;
+        if (
+          jsonData.stigs &&
+          Array.isArray(jsonData.stigs) &&
+          jsonData.stigs.length > 0
+        ) {
           const stigData = jsonData.stigs[0]; // Take first STIG
 
           // Create scan record
@@ -193,10 +201,11 @@ export class SystemsService {
             data: {
               systemId,
               title:
-                stigData.display_name ||
-                stigData.stig_name ||
-                jsonData.title ||
-                file.originalname,
+                (stigData.display_name ||
+                  stigData.stig_name ||
+                  jsonData.title ||
+                  file.originalname) ??
+                'Untitled Scan',
               checklistId: stigData.stig_id || jsonData.id || null,
               createdAt: new Date(),
             },
@@ -211,10 +220,6 @@ export class SystemsService {
                   rule.groupId ||
                   rule.vuln_num ||
                   rule.rule_id?.split('-')[0];
-                console.log('JSON Rule fields:', Object.keys(rule), {
-                  groupId,
-                  ruleId: rule.rule_id,
-                });
 
                 findings.push({
                   systemId,
@@ -230,24 +235,25 @@ export class SystemsService {
               }
             }
           }
-        } else {
-          throw new Error('Invalid CKLB JSON format');
+
+          parsedAsJson = true;
         }
-      } catch (jsonError) {
-        // If JSON parsing fails, try XML format
+      } catch {
+        // Ignore here; we'll attempt XML next
+      }
+
+      if (!parsedAsJson) {
+        // Try XML parse fallback
         try {
           const parser = new xml2js.Parser();
           const result = await parser.parseStringPromise(fileContent);
 
-          // Extract checklist information
           const checklist = result?.CHECKLIST;
           if (!checklist) {
             throw new Error('Invalid STIG file format - not valid XML or JSON');
           }
 
-          const asset = checklist.ASSET?.[0];
           const stig = checklist.STIGS?.[0]?.iSTIG?.[0];
-
           if (!stig) {
             throw new Error('No STIG data found in XML file');
           }
@@ -283,17 +289,6 @@ export class SystemsService {
             const status = vuln.STATUS?.[0] || 'Not_Reviewed';
             const comments = vuln.FINDING_DETAILS?.[0] || '';
 
-            console.log('STIG Data Fields:', {
-              ruleId,
-              groupId,
-              ruleTitle,
-              severity,
-              status,
-              availableFields: stigData
-                .map((d) => d.VULN_ATTRIBUTE?.[0])
-                .filter(Boolean),
-            });
-
             if (ruleId) {
               findings.push({
                 systemId,
@@ -310,7 +305,7 @@ export class SystemsService {
           }
         } catch (xmlError) {
           throw new Error(
-            `Invalid file format. Expected CKLB JSON or STIG XML. JSON error: ${jsonError.message}, XML error: ${xmlError.message}`,
+            `Invalid file format. Expected CKLB JSON or STIG XML. XML error: ${xmlError.message}`,
           );
         }
       }

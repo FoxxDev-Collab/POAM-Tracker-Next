@@ -15,7 +15,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Determine which sidebar to show based on current path
   const showVulnerabilityCenterSidebar = pathname?.startsWith("/vulnerability-center")
-  const showNistRmfSidebar = pathname?.startsWith("/nist-rmf")
+  const showNistRmfSidebar = pathname?.startsWith("/rmf-center")
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

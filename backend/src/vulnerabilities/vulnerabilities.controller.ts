@@ -13,12 +13,114 @@ import {
   UploadedFile,
   ParseFilePipe,
   MaxFileSizeValidator,
-  FileTypeValidator,
-  UsePipes,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { VulnerabilitiesService } from './vulnerabilities.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Prisma } from '@prisma/client';
+
+// Type definitions
+interface NessusReportsQuery {
+  package_id?: string;
+  system_id?: string;
+}
+
+interface NessusStatsQuery {
+  package_id?: string;
+  system_id?: string;
+  report_id?: string;
+}
+
+interface NessusVulnerabilitiesQuery {
+  report_id?: string;
+  host_id?: string;
+  severity?: string;
+  plugin_family?: string;
+  limit?: string;
+  offset?: string;
+  system_id?: string;
+}
+
+interface NessusImportRequest {
+  report: {
+    filename: string;
+    scan_name: string;
+    scan_date: string;
+    total_hosts: number;
+    total_vulnerabilities: number;
+    scan_metadata?: string;
+  };
+  hosts: Array<{
+    hostname: string;
+    ip_address: string;
+    mac_address?: string;
+    os_info?: string;
+    total_vulnerabilities: number;
+    critical_count: number;
+    high_count: number;
+    medium_count: number;
+    low_count: number;
+    info_count: number;
+  }>;
+  vulnerabilities: Array<{
+    plugin_id: number;
+    plugin_name: string;
+    plugin_family: string;
+    severity: number;
+    port?: string;
+    protocol?: string;
+    service?: string;
+    description?: string;
+    solution?: string;
+    synopsis?: string;
+    cve?: string;
+    cvss_score?: number;
+    cvss3_score?: number;
+    plugin_output?: string;
+    risk_factor?: string;
+    exploit_available?: boolean;
+    patch_publication_date?: string;
+    vuln_publication_date?: string;
+  }>;
+  package_id?: number;
+  system_id?: number;
+}
+
+interface CklbData {
+  title?: string;
+  checklistId?: string;
+  findings?: StigFindingData[];
+  vulns?: StigFindingData[];
+}
+
+interface StigFindingData {
+  groupId?: string;
+  group_id?: string;
+  ruleId?: string;
+  rule_id?: string;
+  ruleVersion?: string;
+  rule_version?: string;
+  ruleTitle?: string;
+  rule_title?: string;
+  severity: string;
+  status: string;
+  findingDetails?: string;
+  finding_details?: string;
+  checkContent?: string;
+  check_content?: string;
+  fixText?: string;
+  fix_text?: string;
+  cci?: string;
+}
+
+interface MulterFile {
+  originalname: string;
+  buffer: Buffer;
+  fieldname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+}
 
 @Controller('vulnerabilities')
 @UseGuards(JwtAuthGuard)
@@ -58,18 +160,27 @@ export class VulnerabilitiesController {
 
   // Put specific routes first to avoid conflicts
   @Get('reports')
-  async getNessusReports(@Query() query: any) {
+  async getNessusReports(@Query() query: NessusReportsQuery) {
     console.log('=== REPORTS ENDPOINT HIT ===');
     console.log('Reports request query:', query);
-    
+
     const packageId = query.package_id;
     const systemId = query.system_id;
-    
-    const parsedPackageId = packageId && !isNaN(parseInt(packageId)) ? parseInt(packageId) : undefined;
-    const parsedSystemId = systemId && !isNaN(parseInt(systemId)) ? parseInt(systemId) : undefined;
-    
-    console.log('Parsed - packageId:', parsedPackageId, 'systemId:', parsedSystemId);
-    
+
+    const parsedPackageId =
+      packageId && !isNaN(parseInt(packageId))
+        ? parseInt(packageId)
+        : undefined;
+    const parsedSystemId =
+      systemId && !isNaN(parseInt(systemId)) ? parseInt(systemId) : undefined;
+
+    console.log(
+      'Parsed - packageId:',
+      parsedPackageId,
+      'systemId:',
+      parsedSystemId,
+    );
+
     return this.vulnerabilitiesService.findNessusReports({
       packageId: parsedPackageId,
       systemId: parsedSystemId,
@@ -77,9 +188,9 @@ export class VulnerabilitiesController {
   }
 
   @Get('nessus/stats')
-  async getNessusStats(@Query() query: any) {
+  async getNessusStats(@Query() query: NessusStatsQuery) {
     console.log('Nessus stats request query:', query);
-    
+
     return this.vulnerabilitiesService.getNessusVulnerabilityStats({
       packageId: query.package_id ? parseInt(query.package_id) : undefined,
       systemId: query.system_id ? parseInt(query.system_id) : undefined,
@@ -88,10 +199,10 @@ export class VulnerabilitiesController {
   }
 
   @Get('nessus')
-  async getNessusVulnerabilities(@Query() query: any) {
+  async getNessusVulnerabilities(@Query() query: NessusVulnerabilitiesQuery) {
     console.log('=== NESSUS ENDPOINT HIT ===');
     console.log('Nessus vulnerabilities request query:', query);
-    
+
     const reportId = query.report_id;
     const hostId = query.host_id;
     const severity = query.severity;
@@ -99,15 +210,17 @@ export class VulnerabilitiesController {
     const limit = query.limit;
     const offset = query.offset;
     const systemId = query.system_id;
-    
+
     // Handle system_id by finding reports for that system first
     let finalReportId = reportId;
-    
+
     if (systemId && !reportId) {
       console.log('Looking for reports for system:', systemId);
-      const systemReports = await this.vulnerabilitiesService.findNessusReports({
-        systemId: parseInt(systemId),
-      });
+      const systemReports = await this.vulnerabilitiesService.findNessusReports(
+        {
+          systemId: parseInt(systemId),
+        },
+      );
       console.log('Found reports:', systemReports.length);
       if (systemReports.length > 0) {
         finalReportId = systemReports[0].id.toString();
@@ -116,9 +229,13 @@ export class VulnerabilitiesController {
     }
 
     return this.vulnerabilitiesService.findNessusVulnerabilities({
-      reportId: finalReportId && !isNaN(parseInt(finalReportId)) ? parseInt(finalReportId) : undefined,
+      reportId:
+        finalReportId && !isNaN(parseInt(finalReportId))
+          ? parseInt(finalReportId)
+          : undefined,
       hostId: hostId && !isNaN(parseInt(hostId)) ? parseInt(hostId) : undefined,
-      severity: severity && !isNaN(parseInt(severity)) ? parseInt(severity) : undefined,
+      severity:
+        severity && !isNaN(parseInt(severity)) ? parseInt(severity) : undefined,
       plugin_family: pluginFamily,
       limit: limit && !isNaN(parseInt(limit)) ? parseInt(limit) : 100,
       offset: offset && !isNaN(parseInt(offset)) ? parseInt(offset) : 0,
@@ -141,7 +258,10 @@ export class VulnerabilitiesController {
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateData: any) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateData: Prisma.StigFindingUpdateInput,
+  ) {
     return this.vulnerabilitiesService.update(id, updateData);
   }
 
@@ -156,13 +276,18 @@ export class VulnerabilitiesController {
         ],
       }),
     )
-    file: any,
+    file: MulterFile,
     @Body('package_id') packageId?: string,
     @Body('system_id') systemId?: string,
   ) {
     // Validate file extension manually since MIME type detection is unreliable for .nessus files
-    if (!file.originalname?.toLowerCase().endsWith('.nessus') && !file.originalname?.toLowerCase().endsWith('.xml')) {
-      throw new Error('Invalid file type. Only .nessus and .xml files are supported.');
+    if (
+      !file.originalname?.toLowerCase().endsWith('.nessus') &&
+      !file.originalname?.toLowerCase().endsWith('.xml')
+    ) {
+      throw new Error(
+        'Invalid file type. Only .nessus and .xml files are supported.',
+      );
     }
 
     return this.vulnerabilitiesService.processNessusUpload(
@@ -175,10 +300,9 @@ export class VulnerabilitiesController {
 
   // Legacy import endpoint (for direct JSON data)
   @Post('import')
-  async importNessusData(@Body() importData: any) {
+  async importNessusData(@Body() importData: NessusImportRequest) {
     return this.vulnerabilitiesService.importNessusData(importData);
   }
-
 
   // TEMPORARY: Cleanup all Nessus data for testing
   @Delete('cleanup/all')
@@ -190,7 +314,6 @@ export class VulnerabilitiesController {
   async deleteNessusReport(@Param('id', ParseIntPipe) id: number) {
     return this.vulnerabilitiesService.deleteNessusReport(id);
   }
-
 }
 
 @Controller('systems')
@@ -221,7 +344,7 @@ export class SystemsStigController {
   @Post(':id/cklb')
   async uploadCklb(
     @Param('id', ParseIntPipe) systemId: number,
-    @Body() body: { data: any },
+    @Body() body: { data: CklbData },
   ) {
     // Create a new scan
     const scan = await this.vulnerabilitiesService.createScan(systemId, {
@@ -232,7 +355,8 @@ export class SystemsStigController {
     });
 
     // Extract findings from CKLB data
-    const findings = body.data.findings || body.data.vulns || [];
+    const findings: StigFindingData[] =
+      body.data.findings || body.data.vulns || [];
 
     // Create findings in bulk
     return this.vulnerabilitiesService.createFindings(

@@ -6,16 +6,16 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards,
-  ParseIntPipe,
   Query,
+  ParseIntPipe,
+  UseGuards,
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SystemsService } from './systems.service';
-import type { CreateSystemDto, UpdateSystemDto } from './systems.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CreateSystemDto, UpdateSystemDto } from './dto';
 
 @Controller('systems')
 @UseGuards(JwtAuthGuard)
@@ -47,10 +47,7 @@ export class SystemsController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateSystemDto: UpdateSystemDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateSystemDto: UpdateSystemDto) {
     return this.systemsService.update(id, updateSystemDto);
   }
 
