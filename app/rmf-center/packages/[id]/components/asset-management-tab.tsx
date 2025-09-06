@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -75,7 +75,7 @@ export function AssetManagementTab({ packageId }: AssetManagementTabProps) {
     type: ''
   })
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [systemsResponse, groupsResponse] = await Promise.all([
         fetch(`/api/packages/${packageId}/systems`),
@@ -97,11 +97,11 @@ export function AssetManagementTab({ packageId }: AssetManagementTabProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [packageId])
 
   useEffect(() => {
     fetchData()
-  }, [packageId])
+  }, [fetchData])
 
   // System handlers
   const handleSystemSubmit = async (e: React.FormEvent) => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, BookOpen, Plus, Search, FileText, Settings, Calendar, Edit, Trash2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -48,14 +48,7 @@ export default function SpacePage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (params.key) {
-      fetchSpace()
-      fetchPages()
-    }
-  }, [params.key])
-
-  const fetchSpace = async () => {
+  const fetchSpace = useCallback(async () => {
     try {
       const response = await fetch(`/api/knowledge-center/spaces/${params.key}`)
       if (response.ok) {
@@ -68,9 +61,9 @@ export default function SpacePage() {
     } catch (error) {
       console.error('Failed to fetch space:', error)
     }
-  }
+  }, [params.key, router])
 
-  const fetchPages = async () => {
+  const fetchPages = useCallback(async () => {
     try {
       const response = await fetch(`/api/knowledge-center/spaces/${params.key}/pages`)
       if (response.ok) {
@@ -82,7 +75,14 @@ export default function SpacePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.key])
+
+  useEffect(() => {
+    if (params.key) {
+      fetchSpace()
+      fetchPages()
+    }
+  }, [params.key, fetchSpace, fetchPages])
 
   const filteredPages = pages.filter(page =>
     page.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

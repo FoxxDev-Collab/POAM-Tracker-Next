@@ -18,7 +18,7 @@ export interface SecurityEvent {
   userAgent?: string;
   resource?: string;
   action?: string;
-  details?: any;
+  details?: Record<string, unknown>;
   correlationId?: string;
 }
 
@@ -30,8 +30,8 @@ export interface AuditEvent {
   userEmail: string;
   ipAddress?: string;
   userAgent?: string;
-  oldValues?: any;
-  newValues?: any;
+  oldValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
   correlationId?: string;
 }
 
@@ -89,7 +89,7 @@ export class AppLoggerService implements LoggerService {
           format: 'YYYY-MM-DD HH:mm:ss.SSS',
         }),
         winston.format.json(),
-        winston.format.printf(({ timestamp, level, message, ...meta }) => {
+        winston.format.printf(({ timestamp, level: _level, message, ...meta }) => {
           const logEntry = {
             timestamp,
             level: 'SECURITY',
@@ -119,7 +119,7 @@ export class AppLoggerService implements LoggerService {
           format: 'YYYY-MM-DD HH:mm:ss.SSS',
         }),
         winston.format.json(),
-        winston.format.printf(({ timestamp, level, message, ...meta }) => {
+        winston.format.printf(({ timestamp, level: _level, message, ...meta }) => {
           const logEntry = {
             timestamp,
             level: 'AUDIT',

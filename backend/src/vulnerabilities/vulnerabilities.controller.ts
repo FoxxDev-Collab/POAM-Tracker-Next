@@ -81,8 +81,6 @@ export class VulnerabilitiesController {
   // Put specific routes first to avoid conflicts
   @Get('reports')
   async getNessusReports(@Query() query: NessusReportsQueryDto) {
-    console.log('=== REPORTS ENDPOINT HIT ===');
-    console.log('Reports request query:', query);
 
     const packageId = query.package_id;
     const systemId = query.system_id;
@@ -94,12 +92,6 @@ export class VulnerabilitiesController {
     const parsedSystemId =
       systemId && !isNaN(parseInt(systemId)) ? parseInt(systemId) : undefined;
 
-    console.log(
-      'Parsed - packageId:',
-      parsedPackageId,
-      'systemId:',
-      parsedSystemId,
-    );
 
     return this.vulnerabilitiesService.findNessusReports({
       packageId: parsedPackageId,
@@ -109,7 +101,6 @@ export class VulnerabilitiesController {
 
   @Get('nessus/stats')
   async getNessusStats(@Query() query: NessusStatsQueryDto) {
-    console.log('Nessus stats request query:', query);
 
     return this.vulnerabilitiesService.getNessusVulnerabilityStats({
       packageId: query.package_id ? parseInt(query.package_id) : undefined,
@@ -122,8 +113,6 @@ export class VulnerabilitiesController {
   async getNessusVulnerabilities(
     @Query() query: NessusVulnerabilitiesQueryDto,
   ) {
-    console.log('=== NESSUS ENDPOINT HIT ===');
-    console.log('Nessus vulnerabilities request query:', query);
 
     const reportId = query.report_id;
     const hostId = query.host_id;
@@ -137,16 +126,13 @@ export class VulnerabilitiesController {
     let finalReportId = reportId;
 
     if (systemId && !reportId) {
-      console.log('Looking for reports for system:', systemId);
       const systemReports = await this.vulnerabilitiesService.findNessusReports(
         {
           systemId: parseInt(systemId),
         },
       );
-      console.log('Found reports:', systemReports.length);
       if (systemReports.length > 0) {
         finalReportId = systemReports[0].id.toString();
-        console.log('Using report ID:', finalReportId);
       }
     }
 

@@ -32,7 +32,7 @@ export class AuthService {
       (await bcrypt.compare(password, user.passwordHash))
     ) {
       // Remove passwordHash from result
-
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { passwordHash, ...result } = user;
       return result;
     }
@@ -110,6 +110,7 @@ export class AuthService {
       role: registerDto.role || 'Auditor',
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...result } = user;
     return result;
   }

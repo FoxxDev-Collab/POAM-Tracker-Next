@@ -446,11 +446,6 @@ export class VulnerabilitiesService {
       ),
     );
 
-    // Map IP addresses to host IDs for vulnerability association
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const hostMap = new Map(
-      createdHosts.map((host) => [host.ip_address, host.id]),
-    );
 
     // Group vulnerabilities by host IP (assuming one host in our sample)
     const vulnerabilityData = vulnerabilities.map((vuln) => ({
@@ -664,7 +659,6 @@ export class VulnerabilitiesService {
     try {
       const fileSizeBytes = fileBuffer.length;
       const fileSizeMB = Math.round(fileSizeBytes / 1024 / 1024);
-      console.log(`Processing Nessus file: ${filename} (${fileSizeMB}MB)`);
 
       // Memory-optimized XML parsing
       const xmlContent = fileBuffer.toString('utf-8');
@@ -679,11 +673,9 @@ export class VulnerabilitiesService {
         async: true, // Enable async parsing for large files
       });
 
-      console.log('Starting XML parsing...');
       const result = (await parser.parseStringPromise(
         xmlContent,
       )) as NessusXmlReport;
-      console.log('XML parsing completed');
 
       // Extract report metadata
       const reportElement = result.NessusClientData_v2?.Report || result.Report;
@@ -834,7 +826,6 @@ export class VulnerabilitiesService {
       };
 
       // Import the data with optimized batching
-      console.log('Starting database import...');
       const importResult = await this.importNessusDataOptimized({
         report: reportData,
         hosts: hostsData,
@@ -843,7 +834,6 @@ export class VulnerabilitiesService {
         system_id: systemId,
       });
 
-      console.log('Database import completed');
 
       return {
         success: true,
@@ -869,9 +859,6 @@ export class VulnerabilitiesService {
   private async importNessusDataOptimized(data: NessusImportRequestDto) {
     const { report, hosts, vulnerabilities, package_id, system_id } = data;
 
-    console.log(
-      `Importing report with ${hosts.length} hosts and ${vulnerabilities.length} vulnerabilities`,
-    );
 
     // Create the report
     const createdReport = await this.prisma.nessusReport.create({
@@ -882,7 +869,6 @@ export class VulnerabilitiesService {
       },
     });
 
-    console.log(`Report created with ID: ${createdReport.id}`);
 
     // Batch create hosts in chunks to avoid memory issues
     const BATCH_SIZE = 100;
@@ -895,9 +881,6 @@ export class VulnerabilitiesService {
         reportId: createdReport.id,
       }));
 
-      console.log(
-        `Creating host batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(hosts.length / BATCH_SIZE)}`,
-      );
 
       // Use raw query for better performance with large batches
       for (const hostData of batchData) {
@@ -908,7 +891,6 @@ export class VulnerabilitiesService {
       }
     }
 
-    console.log(`Created ${createdHosts.length} hosts`);
 
     // Create vulnerabilities in larger batches since they're simpler
     const VULN_BATCH_SIZE = 500;
@@ -924,9 +906,6 @@ export class VulnerabilitiesService {
         hostId: createdHosts[0]?.id || 0, // Associate with first host
       }));
 
-      console.log(
-        `Creating vulnerability batch ${Math.floor(i / VULN_BATCH_SIZE) + 1}/${Math.ceil(vulnerabilities.length / VULN_BATCH_SIZE)}`,
-      );
 
       // Use createMany for bulk insert efficiency
       await this.prisma.nessusVulnerability.createMany({
@@ -937,7 +916,6 @@ export class VulnerabilitiesService {
       vulnerabilitiesCreated += batch.length;
     }
 
-    console.log(`Created ${vulnerabilitiesCreated} vulnerabilities`);
 
     return {
       report: createdReport,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, FileText, Save, Eye } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -52,13 +52,7 @@ export default function EditPagePage() {
     version_comment: ''
   })
 
-  useEffect(() => {
-    if (params.key && params.slug) {
-      fetchData()
-    }
-  }, [params.key, params.slug])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       // Fetch space info
       const spaceResponse = await fetch(`/api/knowledge-center/spaces/${params.key}`)
@@ -97,7 +91,13 @@ export default function EditPagePage() {
     } finally {
       setInitialLoading(false)
     }
-  }
+  }, [params.key, params.slug, router])
+
+  useEffect(() => {
+    if (params.key && params.slug) {
+      fetchData()
+    }
+  }, [params.key, params.slug, fetchData])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

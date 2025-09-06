@@ -2,13 +2,11 @@
 
 import { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { Upload, FileText, Download, Trash2, Eye } from "lucide-react"
+import { Upload, FileText, Download, Trash2 } from "lucide-react"
 import { useDropzone } from "react-dropzone"
 
 interface TopologyFile {
@@ -28,7 +26,6 @@ interface TopologyTabProps {
 export function TopologyTab({ packageId }: TopologyTabProps) {
   const [files, setFiles] = useState<TopologyFile[]>([])
   const [uploading, setUploading] = useState(false)
-  const [loading, setLoading] = useState(true)
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setUploading(true)

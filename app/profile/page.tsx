@@ -33,7 +33,6 @@ export default function ProfilePage() {
     setUserData(editData)
     setIsEditing(false)
     // TODO: Implement API call to save profile changes
-    console.log("Profile saved:", editData)
   }
 
   const handleCancelEdit = () => {
@@ -47,14 +46,12 @@ export default function ProfilePage() {
       return
     }
     // TODO: Implement password change API call
-    console.log("Password change requested")
     setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
     setIsChangingPassword(false)
   }
 
   const handleAvatarUpload = () => {
     // TODO: Implement avatar upload functionality
-    console.log("Avatar upload clicked")
   }
 
   return (

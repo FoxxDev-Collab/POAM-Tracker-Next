@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, FileText, Edit, Clock, MessageSquare, History } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -56,13 +56,7 @@ export default function PageViewPage() {
   const [newComment, setNewComment] = useState('')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (params.key && params.slug) {
-      fetchData()
-    }
-  }, [params.key, params.slug])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       // Fetch space info
       const spaceResponse = await fetch(`/api/knowledge-center/spaces/${params.key}`)
@@ -93,7 +87,13 @@ export default function PageViewPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.key, params.slug, router])
+
+  useEffect(() => {
+    if (params.key && params.slug) {
+      fetchData()
+    }
+  }, [params.key, params.slug, fetchData])
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault()

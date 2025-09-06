@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, FileText, Save } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,14 +39,7 @@ export default function NewPagePage() {
     parent_id: null as number | null
   })
 
-  useEffect(() => {
-    if (params.key) {
-      fetchSpace()
-      fetchPages()
-    }
-  }, [params.key])
-
-  const fetchSpace = async () => {
+  const fetchSpace = useCallback(async () => {
     try {
       const response = await fetch(`/api/knowledge-center/spaces/${params.key}`)
       if (response.ok) {
@@ -56,9 +49,9 @@ export default function NewPagePage() {
     } catch (error) {
       console.error('Failed to fetch space:', error)
     }
-  }
+  }, [params.key])
 
-  const fetchPages = async () => {
+  const fetchPages = useCallback(async () => {
     try {
       const response = await fetch(`/api/knowledge-center/spaces/${params.key}/pages`)
       if (response.ok) {
@@ -68,7 +61,14 @@ export default function NewPagePage() {
     } catch (error) {
       console.error('Failed to fetch pages:', error)
     }
-  }
+  }, [params.key])
+
+  useEffect(() => {
+    if (params.key) {
+      fetchSpace()
+      fetchPages()
+    }
+  }, [params.key, fetchSpace, fetchPages])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

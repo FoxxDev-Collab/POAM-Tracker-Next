@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import { Shield, ArrowLeft } from "lucide-react"
 import Link from "next/link"
@@ -58,7 +58,7 @@ export default function PackageManagementPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'details')
 
-  const fetchPackage = async () => {
+  const fetchPackage = useCallback(async () => {
     setLoading(true)
     try {
       const response = await fetch(`/api/packages/${packageId}`)
@@ -74,11 +74,11 @@ export default function PackageManagementPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [packageId])
 
   useEffect(() => {
     fetchPackage()
-  }, [packageId])
+  }, [fetchPackage])
 
 
   const getRmfStepColor = (step: string) => {

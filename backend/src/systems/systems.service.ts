@@ -13,7 +13,7 @@ export interface StigData {
   display_name?: string;
   stig_name?: string;
   stig_id?: string;
-  rules?: any[];
+  rules?: Record<string, unknown>[];
 }
 
 export interface JsonData {
@@ -150,7 +150,7 @@ export class SystemsService {
     return { items: findings };
   }
 
-  async getStigScans(systemId: number): Promise<{ items: any[] }> {
+  async getStigScans(systemId: number): Promise<{ items: Record<string, unknown>[] }> {
     const scans = await this.prisma.stigScan.findMany({
       where: { systemId },
       orderBy: { createdAt: 'desc' },
@@ -182,8 +182,8 @@ export class SystemsService {
       }
 
       const fileContent = file.buffer.toString('utf-8');
-      const findings: any[] = [];
-      let stigScan: any;
+      const findings: Record<string, unknown>[] = [];
+      let stigScan: Record<string, unknown> | undefined;
 
       // Try parsing as JSON first (CKLB format). If this fails or content is invalid, fallback to XML parsing.
       let parsedAsJson = false;
@@ -310,17 +310,14 @@ export class SystemsService {
         }
       }
 
-      console.log('Processed findings count:', findings.length);
-      console.log('Sample finding:', findings[0]);
 
       // Batch insert findings
       if (findings.length > 0) {
         try {
-          const result = await this.prisma.stigFinding.createMany({
+          await this.prisma.stigFinding.createMany({
             data: findings,
             skipDuplicates: true,
           });
-          console.log('Database insert result:', result);
         } catch (insertError) {
           console.error('Database insert failed:', insertError);
           throw new Error(`Database insert failed: ${insertError.message}`);
@@ -343,7 +340,7 @@ export class SystemsService {
     }
   }
 
-  private extractStigInfo(stigInfo: any[], attribute: string): string | null {
+  private extractStigInfo(stigInfo: Record<string, unknown>[], attribute: string): string | null {
     if (!Array.isArray(stigInfo)) return null;
 
     for (const info of stigInfo) {
@@ -362,7 +359,7 @@ export class SystemsService {
   }
 
   private extractVulnAttribute(
-    stigData: any[],
+    stigData: Record<string, unknown>[],
     attribute: string,
   ): string | null {
     if (!Array.isArray(stigData)) return null;

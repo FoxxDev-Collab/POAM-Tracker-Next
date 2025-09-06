@@ -32,8 +32,8 @@ export class LoggingMiddleware implements NestMiddleware {
     if (this.isSensitiveEndpoint(req.originalUrl)) {
       this.logger.logSecurityEvent({
         eventType: 'DATA_ACCESS',
-        userId: (req as any).user?.id,
-        userEmail: (req as any).user?.email,
+        userId: (req as Request & { user?: { id: number; email: string } }).user?.id,
+        userEmail: (req as Request & { user?: { id: number; email: string } }).user?.email,
         ipAddress: this.getClientIp(req),
         userAgent: req.get('User-Agent'),
         resource: req.originalUrl,
@@ -52,7 +52,7 @@ export class LoggingMiddleware implements NestMiddleware {
       const duration = Date.now() - startTime;
 
       // Log response
-      const logger = (req as any).logger || new AppLoggerService(); // Fallback, though this shouldn't happen
+      const logger = (req as RequestWithCorrelation & { logger?: AppLoggerService }).logger || new AppLoggerService(); // Fallback, though this shouldn't happen
 
       logger.log(
         `Response ${res.statusCode} ${req.method} ${req.originalUrl} - ${duration}ms`,

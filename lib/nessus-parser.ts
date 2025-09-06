@@ -66,10 +66,7 @@ export interface ParsedNessusData {
  */
 export async function parseNessusFile(xmlContent: string, filename: string): Promise<ParsedNessusData> {
   try {
-    // Check file size to provide early warning
-    const fileSizeBytes = new Blob([xmlContent]).size;
-    const fileSizeMB = Math.round(fileSizeBytes / 1024 / 1024);
-    console.log(`Parsing Nessus file: ${filename} (${fileSizeMB}MB)`);
+    // Parsing Nessus file for processing
 
     const result = await parseXML(xmlContent, {
       explicitArray: false,

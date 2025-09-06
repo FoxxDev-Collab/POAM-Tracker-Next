@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, Settings, Users, Trash2, Save } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -50,13 +50,7 @@ export default function SpaceSettingsPage() {
     visibility: 'public' as 'public' | 'restricted' | 'private'
   })
 
-  useEffect(() => {
-    if (params.key) {
-      fetchData()
-    }
-  }, [params.key])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       // Fetch space
       const spaceResponse = await fetch(`/api/knowledge-center/spaces/${params.key}`)
@@ -81,7 +75,13 @@ export default function SpaceSettingsPage() {
     } catch (error) {
       console.error('Failed to fetch data:', error)
     }
-  }
+  }, [params.key])
+
+  useEffect(() => {
+    if (params.key) {
+      fetchData()
+    }
+  }, [params.key, fetchData])
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault()

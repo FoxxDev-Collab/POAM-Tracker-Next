@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { Plus, Edit, Trash2, Users, Eye, EyeOff, CheckCircle, XCircle, AlertCircle } from "lucide-react"
+import { Plus, Edit, Trash2, Users, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react"
 
 interface User {
   id: number
@@ -144,9 +144,9 @@ export function UserManagementTab() {
       toast.success(editingUser ? "User updated successfully" : "User created successfully")
       fetchUsers()
       handleCloseDialog()
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving user:', error)
-      toast.error(error.message || "Failed to save user")
+      toast.error(error instanceof Error ? error.message : "Failed to save user")
     }
   }
 

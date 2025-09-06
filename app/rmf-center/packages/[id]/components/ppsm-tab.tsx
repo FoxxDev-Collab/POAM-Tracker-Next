@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -50,7 +50,7 @@ export function PPSMTab({ packageId }: PPSMTabProps) {
     status: 'Active'
   })
 
-  const fetchEntries = async () => {
+  const fetchEntries = useCallback(async () => {
     try {
       const response = await fetch(`/api/packages/${packageId}/ppsm`)
       if (response.ok) {
@@ -63,11 +63,11 @@ export function PPSMTab({ packageId }: PPSMTabProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [packageId])
 
   useEffect(() => {
     fetchEntries()
-  }, [packageId])
+  }, [fetchEntries])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

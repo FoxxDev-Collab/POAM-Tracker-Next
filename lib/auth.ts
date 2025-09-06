@@ -185,7 +185,7 @@ async function logSecurityEvent(event: string, data: Record<string, unknown> = {
     `).run(logEntry.event, logEntry.timestamp, logEntry.data, logEntry.ip_address, logEntry.user_agent, logEntry.user_id)
     
     // Also log to console for monitoring
-    console.log(`SECURITY_EVENT: ${event}`, data)
+    console.error(`SECURITY_EVENT: ${event}`, data)
   } catch (error) {
     console.error("Failed to log security event:", error)
   }

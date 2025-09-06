@@ -35,15 +35,13 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       })
 
-      console.log('Response status:', response.status, response.ok)
       const result = await response.json()
-      console.log('Login response:', result)
 
       if (response.ok && result.success) {
         // Check for redirect parameter
         const urlParams = new URLSearchParams(window.location.search)
         const redirect = urlParams.get('redirect') || '/dashboard'
-        console.log('Redirecting to:', redirect)
+        // Redirect to specified or default location
         
         // Use window.location for more reliable redirect
         window.location.href = redirect

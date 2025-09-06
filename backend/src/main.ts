@@ -6,14 +6,20 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { json, urlencoded } from 'express';
 
+const MAX_PAYLOAD_SIZE = '50mb';
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const RATE_LIMIT_MAX_REQUESTS = 100;
+const DEFAULT_PORT = 3001;
+const DEV_FRONTEND_PORT = 3000;
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
 
   // Increase payload size limits for large file uploads (e.g., Nessus files)
-  app.use(json({ limit: '50mb' }));
-  app.use(urlencoded({ limit: '50mb', extended: true }));
+  app.use(json({ limit: MAX_PAYLOAD_SIZE }));
+  app.use(urlencoded({ limit: MAX_PAYLOAD_SIZE, extended: true }));
 
   // Security middleware
   app.use(helmet());
@@ -21,8 +27,8 @@ async function bootstrap() {
   // Rate limiting for DOD compliance
   app.use(
     rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 100, // limit each IP to 100 requests per windowMs
+      windowMs: RATE_LIMIT_WINDOW_MS,
+      max: RATE_LIMIT_MAX_REQUESTS, // limit each IP to 100 requests per windowMs
       message: 'Too many requests from this IP, please try again later.',
       standardHeaders: true,
       legacyHeaders: false,
@@ -43,11 +49,11 @@ async function bootstrap() {
 
   // Enable CORS for frontend
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || `http://localhost:${DEV_FRONTEND_PORT}`,
     credentials: true,
   });
 
-  const port = process.env.PORT ?? 3001;
+  const port = process.env.PORT ?? DEFAULT_PORT;
   await app.listen(port);
 
   const logger = app.get(AppLoggerService);
@@ -59,4 +65,4 @@ async function bootstrap() {
     details: { port, environment: process.env.NODE_ENV || 'development' },
   });
 }
-void bootstrap();
+bootstrap();

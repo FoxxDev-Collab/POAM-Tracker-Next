@@ -25,13 +25,13 @@ export const db = {
   // Mock functions that return empty results for now
   // These should be replaced with proper API calls to your NestJS backend
   
-  prepare: (sql: string) => ({
+  prepare: (_sql: string) => ({
     all: () => [],
     get: () => null,
     run: () => ({ changes: 0 }),
   }),
   
-  exec: (sql: string) => null,
+  exec: (_sql: string) => null,
   
   // Helper functions for common operations
   async getPackages() {

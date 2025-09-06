@@ -4,6 +4,7 @@ import {
   ExecutionContext,
   CallHandler,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -19,7 +20,7 @@ export class AuditInterceptor implements NestInterceptor {
     private readonly prisma: PrismaService,
   ) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const auditOptions = this.reflector.get<AuditOptions>(
       AUDIT_KEY,
       context.getHandler(),
@@ -79,7 +80,7 @@ export class AuditInterceptor implements NestInterceptor {
     );
   }
 
-  private getClientIp(request: any): string {
+  private getClientIp(request: Request): string {
     return (
       request.headers['x-forwarded-for'] ||
       request.headers['x-real-ip'] ||

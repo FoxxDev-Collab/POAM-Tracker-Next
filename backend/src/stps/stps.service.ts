@@ -4,8 +4,6 @@ import { Prisma } from '@prisma/client';
 import {
   CreateStpDto,
   UpdateStpDto,
-  UploadTestCaseEvidenceDto,
-  AddTestCaseCommentDto,
 } from './dto';
 
 @Injectable()
@@ -320,7 +318,7 @@ export class StpsService {
   }
 
   // Comments management (using existing schema if available)
-  async getTestCaseComments(testCaseId: number) {
+  async getTestCaseComments(_testCaseId: number) {
     // For now, return empty array since we might not have a comments table
     // This can be implemented when the comments schema is added
     return { items: [] };

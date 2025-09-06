@@ -57,7 +57,7 @@ export function TopNav() {
   const pathname = usePathname()
   const router = useRouter()
   const { dark, toggleDark } = useThemePalette()
-  const { user, isAdmin } = useAuth()
+  const { isAdmin } = useAuth()
 
   const getActiveSection = () => {
     for (const item of topNavItems) {

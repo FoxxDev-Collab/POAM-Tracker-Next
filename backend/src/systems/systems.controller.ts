@@ -74,7 +74,7 @@ export class SystemsController {
   @UseInterceptors(FileInterceptor('file'))
   uploadStigFile(
     @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file: any,
+    @UploadedFile() file: Express.Multer.File,
   ) {
     return this.systemsService.uploadStigFile(id, file);
   }

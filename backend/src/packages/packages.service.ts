@@ -58,20 +58,22 @@ export class PackagesService {
     updatePackageDto: UpdatePackageDto,
   ): Promise<{ item: Package }> {
     // Filter out read-only and relation fields that shouldn't be updated
+    /* eslint-disable @typescript-eslint/no-unused-vars */
     const {
       // Remove read-only fields
-      id: _id,
-      createdAt: _createdAt,
-      updatedAt: _updatedAt,
+      id,
+      createdAt,
+      updatedAt,
       // Remove relation fields
-      team: _team,
-      groups: _groups,
-      systems: _systems,
-      stps: _stps,
-      poams: _poams,
+      team,
+      groups,
+      systems,
+      stps,
+      poams,
       // Keep only updateable fields
       ...validUpdateData
-    } = updatePackageDto as any;
+    } = updatePackageDto as UpdatePackageDto & Record<string, unknown>;
+    /* eslint-enable @typescript-eslint/no-unused-vars */
 
     // Convert enum string values to match Prisma schema format
     const normalizedData = this.normalizeEnumFields(validUpdateData);
@@ -92,7 +94,7 @@ export class PackagesService {
     return { item: packageItem };
   }
 
-  private normalizeEnumFields(data: any): any {
+  private normalizeEnumFields(data: Record<string, unknown>): Record<string, unknown> {
     const normalized = { ...data };
 
     // Convert ImpactLevel enums (LOW/MODERATE/HIGH -> Low/Moderate/High)
@@ -141,7 +143,7 @@ export class PackagesService {
 
   // Ensure only fields defined on the Prisma Package model are sent to Prisma,
   // and map common alias fields from the request payload to schema fields.
-  private sanitizeAndMapPackageData(data: any): any {
+  private sanitizeAndMapPackageData(data: Record<string, unknown>): Record<string, unknown> {
     const allowedKeys = new Set([
       'name',
       'description',
@@ -205,7 +207,7 @@ export class PackagesService {
       'nessusReports',
     ]);
 
-    const mapped: any = { ...data };
+    const mapped: Record<string, unknown> = { ...data };
 
     // Map aliases from incoming payload to schema fields
     if (mapped.authorizedOfficialName && !mapped.authorizingOfficial) {
@@ -225,7 +227,7 @@ export class PackagesService {
     }
 
     // Drop fields not recognized by the Package model
-    const sanitized: any = {};
+    const sanitized: Record<string, unknown> = {};
     for (const key of Object.keys(mapped)) {
       if (allowedKeys.has(key)) {
         sanitized[key] = mapped[key];
