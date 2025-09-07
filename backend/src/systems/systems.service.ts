@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { System, StigFinding } from '@prisma/client';
+import { System, StigFinding, StigScan, Prisma } from '@prisma/client';
 import * as xml2js from 'xml2js';
 import { CreateSystemDto, UpdateSystemDto } from './dto';
 
@@ -182,8 +182,8 @@ export class SystemsService {
       }
 
       const fileContent = file.buffer.toString('utf-8');
-      const findings: Record<string, unknown>[] = [];
-      let stigScan: Record<string, unknown> | undefined;
+      const findings: Prisma.StigFindingCreateManyInput[] = [];
+      let stigScan: StigScan | undefined;
 
       // Try parsing as JSON first (CKLB format). If this fails or content is invalid, fallback to XML parsing.
       let parsedAsJson = false;
@@ -219,17 +219,17 @@ export class SystemsService {
                   rule.group_id ||
                   rule.groupId ||
                   rule.vuln_num ||
-                  rule.rule_id?.split('-')[0];
+                  (rule.rule_id as string)?.split('-')[0];
 
                 findings.push({
                   systemId,
                   scanId: stigScan.id,
-                  groupId: groupId || null,
-                  ruleId: rule.rule_id,
-                  ruleTitle: rule.rule_title || rule.rule_id,
-                  severity: this.normalizeSeverity(rule.severity || ''),
-                  status: this.normalizeStatus(rule.status || 'Not_Reviewed'),
-                  findingDetails: rule.comments || rule.finding_details || null,
+                  groupId: (groupId as string) || null,
+                  ruleId: rule.rule_id as string,
+                  ruleTitle: (rule.rule_title as string) || (rule.rule_id as string),
+                  severity: this.normalizeSeverity((rule.severity as string) || ''),
+                  status: this.normalizeStatus((rule.status as string) || 'Not_Reviewed'),
+                  findingDetails: (rule.comments as string) || (rule.finding_details as string) || null,
                   lastSeen: new Date(),
                 });
               }
@@ -329,7 +329,7 @@ export class SystemsService {
       return {
         success: true,
         message: `Successfully imported ${findings.length} STIG findings`,
-        scanId: stigScan.id,
+        scanId: stigScan?.id,
       };
     } catch (error) {
       console.error('Error processing STIG file:', error);

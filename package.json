@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "begin": "podman compose up -d && cd /backend && npm run start:dev"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

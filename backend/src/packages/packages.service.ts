@@ -61,7 +61,7 @@ export class PackagesService {
     /* eslint-disable @typescript-eslint/no-unused-vars */
     const {
       // Remove read-only fields
-      id,
+      id: _id,
       createdAt,
       updatedAt,
       // Remove relation fields
@@ -94,7 +94,7 @@ export class PackagesService {
     return { item: packageItem };
   }
 
-  private normalizeEnumFields(data: Record<string, unknown>): Record<string, unknown> {
+  private normalizeEnumFields(data: any): Record<string, unknown> {
     const normalized = { ...data };
 
     // Convert ImpactLevel enums (LOW/MODERATE/HIGH -> Low/Moderate/High)
@@ -105,37 +105,37 @@ export class PackagesService {
       'overallCategorization',
     ];
     impactFields.forEach((field) => {
-      if (normalized[field]) {
-        normalized[field] = this.normalizeImpactLevel(normalized[field]);
+      if (normalized[field] && typeof normalized[field] === 'string') {
+        normalized[field] = this.normalizeImpactLevel(normalized[field] as string);
       }
     });
 
     // Convert AuthorizationStatus enum
-    if (normalized.authorizationStatus) {
+    if (normalized.authorizationStatus && typeof normalized.authorizationStatus === 'string') {
       normalized.authorizationStatus = this.normalizeAuthorizationStatus(
-        normalized.authorizationStatus,
+        normalized.authorizationStatus as string,
       );
     }
 
     // Convert other enum fields as needed
-    if (normalized.systemType) {
-      normalized.systemType = this.normalizeSystemType(normalized.systemType);
+    if (normalized.systemType && typeof normalized.systemType === 'string') {
+      normalized.systemType = this.normalizeSystemType(normalized.systemType as string);
     }
 
-    if (normalized.residualRiskLevel) {
+    if (normalized.residualRiskLevel && typeof normalized.residualRiskLevel === 'string') {
       normalized.residualRiskLevel = this.normalizeResidualRiskLevel(
-        normalized.residualRiskLevel,
+        normalized.residualRiskLevel as string,
       );
     }
 
-    if (normalized.dataClassification) {
+    if (normalized.dataClassification && typeof normalized.dataClassification === 'string') {
       normalized.dataClassification = this.normalizeDataClassification(
-        normalized.dataClassification,
+        normalized.dataClassification as string,
       );
     }
 
-    if (normalized.rmfStep) {
-      normalized.rmfStep = this.normalizeRmfStep(normalized.rmfStep);
+    if (normalized.rmfStep && typeof normalized.rmfStep === 'string') {
+      normalized.rmfStep = this.normalizeRmfStep(normalized.rmfStep as string);
     }
 
     return normalized;
@@ -143,7 +143,7 @@ export class PackagesService {
 
   // Ensure only fields defined on the Prisma Package model are sent to Prisma,
   // and map common alias fields from the request payload to schema fields.
-  private sanitizeAndMapPackageData(data: Record<string, unknown>): Record<string, unknown> {
+  private sanitizeAndMapPackageData(data: Record<string, unknown>): any {
     const allowedKeys = new Set([
       'name',
       'description',
@@ -220,9 +220,9 @@ export class PackagesService {
       mapped.issoName = mapped.isssoName;
     }
     // Map generic impactLevel -> overallCategorization if provided
-    if (mapped.impactLevel && !mapped.overallCategorization) {
+    if (mapped.impactLevel && !mapped.overallCategorization && typeof mapped.impactLevel === 'string') {
       mapped.overallCategorization = this.normalizeImpactLevel(
-        mapped.impactLevel,
+        mapped.impactLevel as string,
       );
     }
 

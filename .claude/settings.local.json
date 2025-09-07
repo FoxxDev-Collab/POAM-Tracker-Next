@@ -5,7 +5,10 @@
       "Bash(node:*)",
       "Bash(del test-nessus-parser.js)",
       "Read/*",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

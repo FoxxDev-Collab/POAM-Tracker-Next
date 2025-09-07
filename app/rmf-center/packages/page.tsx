@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Package, Shield, Users } from "lucide-react"
+import { Plus, Package, Shield, Users, Edit, Trash2, MoreVertical } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -37,6 +38,7 @@ const RMF_STEPS = [
 ]
 
 export default function RmfPackagesPage() {
+  const router = useRouter()
   const [packages, setPackages] = useState<Package[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -105,6 +107,32 @@ export default function RmfPackagesPage() {
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200'
     }
+  }
+
+  const handleDeletePackage = async (packageId: number, packageName: string) => {
+    if (!confirm(`Are you sure you want to delete the package "${packageName}"? This will also delete all associated systems, groups, and data.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/packages/${packageId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete package')
+      }
+
+      toast.success("Package deleted successfully")
+      fetchPackages()
+    } catch (error) {
+      console.error('Error deleting package:', error)
+      toast.error("Failed to delete package")
+    }
+  }
+
+  const handleEditPackage = (packageId: number) => {
+    router.push(`/rmf-center/packages/${packageId}?tab=details&edit=true`)
   }
 
   return (
@@ -287,12 +315,28 @@ export default function RmfPackagesPage() {
 
                   {/* Actions */}
                   <div className="pt-3 border-t">
-                    <Link href={`/rmf-center/packages/${pkg.id}`}>
-                      <Button className="w-full" variant="outline">
-                        <Shield className="h-4 w-4 mr-2" />
-                        Manage Package
+                    <div className="flex gap-2">
+                      <Link href={`/rmf-center/packages/${pkg.id}`} className="flex-1">
+                        <Button className="w-full" variant="outline">
+                          <Shield className="h-4 w-4 mr-2" />
+                          View
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => handleEditPackage(pkg.id)}
+                      >
+                        <Edit className="h-4 w-4" />
                       </Button>
-                    </Link>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => handleDeletePackage(pkg.id, pkg.name)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>

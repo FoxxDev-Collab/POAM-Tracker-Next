@@ -16,6 +16,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { SystemsService } from './systems.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateSystemDto, UpdateSystemDto } from './dto';
+import type { Express } from 'express';
 
 @Controller('systems')
 @UseGuards(JwtAuthGuard)

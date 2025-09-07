@@ -29,7 +29,7 @@ export interface SiemConfig {
 @Injectable()
 export class SiemLoggerService extends AppLoggerService {
   private splunkLogger?: winston.Logger;
-  private graylogClient?: unknown;
+  private graylogClient?: any;
   private siemConfig: SiemConfig;
 
   constructor() {
@@ -266,7 +266,7 @@ export class SiemLoggerService extends AppLoggerService {
       ) {
         Object.assign(
           flattened,
-          this.flattenForGraylog(obj[key], `${prefix}${key}_`),
+          this.flattenForGraylog(obj[key] as Record<string, unknown>, `${prefix}${key}_`),
         );
       } else {
         flattened[`${prefix}${key}`] = obj[key];

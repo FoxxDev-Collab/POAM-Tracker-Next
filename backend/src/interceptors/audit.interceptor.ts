@@ -81,9 +81,15 @@ export class AuditInterceptor implements NestInterceptor {
   }
 
   private getClientIp(request: Request): string {
+    const forwarded = request.headers['x-forwarded-for'];
+    const realIp = request.headers['x-real-ip'];
+    
+    if (typeof forwarded === 'string') return forwarded;
+    if (Array.isArray(forwarded)) return forwarded[0];
+    if (typeof realIp === 'string') return realIp;
+    if (Array.isArray(realIp)) return realIp[0];
+    
     return (
-      request.headers['x-forwarded-for'] ||
-      request.headers['x-real-ip'] ||
       request.connection.remoteAddress ||
       request.socket.remoteAddress ||
       'unknown'

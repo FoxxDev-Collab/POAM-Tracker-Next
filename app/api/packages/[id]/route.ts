@@ -1,19 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
-
-async function getAuthHeaders() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('token');
-  
-  return token ? {
-    'Authorization': `Bearer ${token.value}`,
-    'Content-Type': 'application/json'
-  } : {
-    'Content-Type': 'application/json'
-  };
-}
+import { getAuthHeaders, BACKEND_URL } from "@/lib/api-helpers";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
