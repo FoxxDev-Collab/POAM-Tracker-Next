@@ -191,11 +191,14 @@ model System {
 
 model User {
   id           Int      @id @default(autoincrement())
-  name         String
+  firstName    String   @default("") @map("first_name")
+  lastName     String   @default("") @map("last_name")
+  name         String?  // Computed field for compatibility
   email        String   @unique
   role         UserRole
-  passwordHash String?  @map("password_hash")
-  active       Boolean  @default(true)
+  password     String?  @map("password_hash")
+  isActive     Boolean  @default(true) @map("active")
+  lastLogin    DateTime? @map("last_login")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

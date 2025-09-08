@@ -16,6 +16,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { PoamsModule } from './poams/poams.module';
 import { TeamsModule } from './teams/teams.module';
 import { VulnerabilitiesModule } from './vulnerabilities/vulnerabilities.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { VulnerabilitiesModule } from './vulnerabilities/vulnerabilities.module'
     PoamsModule,
     TeamsModule,
     VulnerabilitiesModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

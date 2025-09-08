@@ -22,8 +22,8 @@ async function main() {
       where: { email: adminEmail },
       data: {
         name: adminName,
-        passwordHash: hashedPassword,
-        active: true,
+        password: hashedPassword,
+        isActive: true,
       },
     });
     console.log('Updated existing admin user');
@@ -34,8 +34,8 @@ async function main() {
         email: adminEmail,
         name: adminName,
         role: 'Admin',
-        passwordHash: hashedPassword,
-        active: true,
+        password: hashedPassword,
+        isActive: true,
       },
     });
     console.log('Created new admin user');

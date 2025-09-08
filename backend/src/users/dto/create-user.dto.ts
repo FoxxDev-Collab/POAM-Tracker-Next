@@ -15,12 +15,12 @@ export class CreateUserDto {
   email: string;
 
   @IsString()
-  passwordHash: string;
+  password: string;
 
   @IsEnum(UserRole)
   role: UserRole;
 
   @IsOptional()
   @IsBoolean()
-  active?: boolean;
+  isActive?: boolean;
 }

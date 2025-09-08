@@ -28,12 +28,12 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
     if (
       user &&
-      user.passwordHash &&
-      (await bcrypt.compare(password, user.passwordHash))
+      user.password &&
+      (await bcrypt.compare(password, user.password))
     ) {
-      // Remove passwordHash from result
+      // Remove password from result
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { passwordHash, ...result } = user;
+      const { password, ...result } = user;
       return result;
     }
     return null;
@@ -79,7 +79,7 @@ export class AuthService {
           name: user.name,
           email: user.email,
           role: user.role,
-          active: user.active,
+          isActive: user.isActive,
         },
       };
     } catch (error) {
@@ -106,12 +106,12 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(registerDto.password, 12);
     const user = await this.usersService.create({
       ...registerDto,
-      passwordHash: hashedPassword,
+      password: hashedPassword,
       role: registerDto.role || 'Auditor',
     });
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, ...result } = user;
+    const { password, ...result } = user;
     return result;
   }
 }

@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { User } from '@prisma/client';
 import { CreateUserDto, UpdateUserDto } from './dto';
 
-export type SafeUser = Omit<User, 'passwordHash'>;
+export type SafeUser = Omit<User, 'password'>;
 
 @Injectable()
 export class UsersService {
@@ -19,13 +19,16 @@ export class UsersService {
     return this.prisma.user.findMany({
       select: {
         id: true,
+        firstName: true,
+        lastName: true,
         name: true,
         email: true,
         role: true,
-        active: true,
+        isActive: true,
+        lastLogin: true,
         createdAt: true,
         updatedAt: true,
-        passwordHash: false,
+        password: false,
       },
     });
   }
@@ -35,13 +38,16 @@ export class UsersService {
       where: { id },
       select: {
         id: true,
+        firstName: true,
+        lastName: true,
         name: true,
         email: true,
         role: true,
-        active: true,
+        isActive: true,
+        lastLogin: true,
         createdAt: true,
         updatedAt: true,
-        passwordHash: false,
+        password: false,
       },
     });
   }
@@ -58,13 +64,16 @@ export class UsersService {
       data: updateUserDto,
       select: {
         id: true,
+        firstName: true,
+        lastName: true,
         name: true,
         email: true,
         role: true,
-        active: true,
+        isActive: true,
+        lastLogin: true,
         createdAt: true,
         updatedAt: true,
-        passwordHash: false,
+        password: false,
       },
     });
   }
@@ -72,16 +81,19 @@ export class UsersService {
   async remove(id: number): Promise<SafeUser> {
     return this.prisma.user.update({
       where: { id },
-      data: { active: false },
+      data: { isActive: false },
       select: {
         id: true,
+        firstName: true,
+        lastName: true,
         name: true,
         email: true,
         role: true,
-        active: true,
+        isActive: true,
+        lastLogin: true,
         createdAt: true,
         updatedAt: true,
-        passwordHash: false,
+        password: false,
       },
     });
   }
