@@ -36,10 +36,17 @@ export async function POST(
     const headers = await getAuthHeaders();
     const body = await req.json();
     
-    const response = await fetch(`${BACKEND_URL}/packages/${id}/systems`, {
+    // Add packageId to the body for the backend
+    const payload = {
+      ...body,
+      packageId: parseInt(id)
+    };
+    
+    // Use the /systems endpoint instead of /packages/{id}/systems
+    const response = await fetch(`${BACKEND_URL}/systems`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(body)
+      body: JSON.stringify(payload)
     });
     
     if (!response.ok) {

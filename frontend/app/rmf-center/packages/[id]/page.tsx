@@ -84,34 +84,34 @@ export default function PackageManagementPage() {
   const getRmfStepColor = (step: string) => {
     switch (step) {
       case 'Categorize':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
+        return 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20'
       case 'Select':
-        return 'bg-purple-100 text-purple-800 border-purple-200'
+        return 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20'
       case 'Implement':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+        return 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20'
       case 'Assess':
-        return 'bg-orange-100 text-orange-800 border-orange-200'
+        return 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20'
       case 'Authorize':
-        return 'bg-green-100 text-green-800 border-green-200'
+        return 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20'
       case 'Monitor':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200'
+        return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200'
+        return 'bg-muted'
     }
   }
 
   const getClassificationColor = (classification: string | null) => {
     switch (classification) {
       case 'Top_Secret':
-        return 'bg-red-100 text-red-800 border-red-200'
+        return 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20'
       case 'Secret':
-        return 'bg-orange-100 text-orange-800 border-orange-200'
+        return 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20'
       case 'Confidential':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+        return 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20'
       case 'Unclassified':
-        return 'bg-green-100 text-green-800 border-green-200'
+        return 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20'
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200'
+        return 'bg-muted'
     }
   }
 
@@ -127,8 +127,8 @@ export default function PackageManagementPage() {
     return (
       <div className="container mx-auto p-6">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-muted rounded w-1/2"></div>
+          <div className="h-64 bg-muted rounded"></div>
         </div>
       </div>
     )
@@ -166,7 +166,7 @@ export default function PackageManagementPage() {
           </Link>
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Shield className="h-8 w-8 text-blue-600" />
+              <Shield className="h-8 w-8 text-primary" />
               {packageData.name}
             </h1>
             <p className="text-muted-foreground">

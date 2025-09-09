@@ -9,7 +9,8 @@ export async function GET(
     const { id, groupId } = await params;
     const headers = await getAuthHeaders();
     
-    const response = await fetch(`${BACKEND_URL}/packages/${id}/groups/${groupId}`, {
+    // Use the /groups/{id} endpoint instead of nested route
+    const response = await fetch(`${BACKEND_URL}/groups/${groupId}`, {
       method: 'GET',
       headers,
     });
@@ -36,7 +37,8 @@ export async function PATCH(
     const headers = await getAuthHeaders();
     const body = await req.json();
     
-    const response = await fetch(`${BACKEND_URL}/packages/${id}/groups/${groupId}`, {
+    // Use the /groups/{id} endpoint instead of nested route
+    const response = await fetch(`${BACKEND_URL}/groups/${groupId}`, {
       method: 'PATCH',
       headers,
       body: JSON.stringify(body)
@@ -63,7 +65,8 @@ export async function DELETE(
     const { id, groupId } = await params;
     const headers = await getAuthHeaders();
     
-    const response = await fetch(`${BACKEND_URL}/packages/${id}/groups/${groupId}`, {
+    // Use the /groups/{id} endpoint instead of nested route
+    const response = await fetch(`${BACKEND_URL}/groups/${groupId}`, {
       method: 'DELETE',
       headers,
     });

@@ -2,7 +2,7 @@ import { Injectable, ConflictException, NotFoundException } from '@nestjs/common
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './dto';
 import * as bcrypt from 'bcrypt';
-import { User } from '@prisma/client';
+import { User, UserRole } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -68,7 +68,7 @@ export class UsersService {
         lastName: createUserDto.lastName,
         email: createUserDto.email,
         password: hashedPassword,
-        role: createUserDto.role || 'User',
+        role: createUserDto.role ?? UserRole.Auditor,
         isActive: createUserDto.isActive ?? true,
       },
       select: {

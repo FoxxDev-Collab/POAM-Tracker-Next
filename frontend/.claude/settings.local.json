@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/Dev Projects/POAM-Tracker-Next/backend/prisma/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

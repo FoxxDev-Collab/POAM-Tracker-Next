@@ -9,7 +9,8 @@ export async function GET(
     const { id, systemId } = await params;
     const headers = await getAuthHeaders();
     
-    const response = await fetch(`${BACKEND_URL}/packages/${id}/systems/${systemId}`, {
+    // Use the /systems/{id} endpoint instead of nested route
+    const response = await fetch(`${BACKEND_URL}/systems/${systemId}`, {
       method: 'GET',
       headers,
     });
@@ -36,7 +37,8 @@ export async function PATCH(
     const headers = await getAuthHeaders();
     const body = await req.json();
     
-    const response = await fetch(`${BACKEND_URL}/packages/${id}/systems/${systemId}`, {
+    // Use the /systems/{id} endpoint instead of nested route
+    const response = await fetch(`${BACKEND_URL}/systems/${systemId}`, {
       method: 'PATCH',
       headers,
       body: JSON.stringify(body)
@@ -63,7 +65,8 @@ export async function DELETE(
     const { id, systemId } = await params;
     const headers = await getAuthHeaders();
     
-    const response = await fetch(`${BACKEND_URL}/packages/${id}/systems/${systemId}`, {
+    // Use the /systems/{id} endpoint instead of nested route
+    const response = await fetch(`${BACKEND_URL}/systems/${systemId}`, {
       method: 'DELETE',
       headers,
     });
