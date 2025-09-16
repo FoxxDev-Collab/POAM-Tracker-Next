@@ -71,7 +71,7 @@ export class SystemsService {
     return { items: systems };
   }
 
-  async findByPackage(packageId: number): Promise<{ items: System[] }> {
+  async findByPackage(packageId: number): Promise<{ items: any[] }> {
     const systems = await this.prisma.system.findMany({
       where: { packageId },
       include: {
@@ -86,10 +86,77 @@ export class SystemsService {
       },
     });
 
-    return { items: systems };
+    // Enrich systems with vulnerability counts by severity
+    const enrichedSystems = await Promise.all(
+      systems.map(async (system) => {
+        // Get vulnerability counts by severity for this system
+        const vulnerabilityCounts = await this.prisma.stigFinding.groupBy({
+          by: ['severity'],
+          where: {
+            systemId: system.id,
+          },
+          _count: {
+            severity: true,
+          },
+        });
+
+        // Calculate totals
+        let total = 0;
+        let high = 0;
+        let medium = 0;
+        let low = 0;
+
+        vulnerabilityCounts.forEach((count) => {
+          const severity = count.severity?.toLowerCase() || '';
+          const countValue = count._count.severity;
+
+          total += countValue;
+
+          if (severity.includes('high') || severity.includes('cat') && severity.includes('i')) {
+            high += countValue;
+          } else if (severity.includes('medium') || severity.includes('cat') && severity.includes('ii')) {
+            medium += countValue;
+          } else if (severity.includes('low') || severity.includes('cat') && severity.includes('iii')) {
+            low += countValue;
+          }
+        });
+
+        // Calculate compliance score and other stats
+        const complianceScore = total > 0
+          ? Math.max(0, 100 - Math.min(100, total * 2))
+          : 100;
+
+        // Get last scan date
+        const lastScan = await this.prisma.stigScan.findFirst({
+          where: { systemId: system.id },
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true },
+        });
+
+        return {
+          ...system,
+          total,
+          high,
+          medium,
+          low,
+          stats: {
+            totalFindings: total,
+            criticalFindings: high, // Treating high as critical for now
+            highFindings: high,
+            mediumFindings: medium,
+            lowFindings: low,
+            openFindings: total, // All findings are considered open for now
+            lastScanned: lastScan?.createdAt?.toISOString() || null,
+            complianceScore: complianceScore,
+          }
+        };
+      })
+    );
+
+    return { items: enrichedSystems };
   }
 
-  async findByGroup(groupId: number): Promise<{ items: System[] }> {
+  async findByGroup(groupId: number): Promise<{ items: any[] }> {
     const systems = await this.prisma.system.findMany({
       where: { groupId },
       include: {
@@ -105,7 +172,74 @@ export class SystemsService {
       },
     });
 
-    return { items: systems };
+    // Enrich systems with vulnerability counts by severity
+    const enrichedSystems = await Promise.all(
+      systems.map(async (system) => {
+        // Get vulnerability counts by severity for this system
+        const vulnerabilityCounts = await this.prisma.stigFinding.groupBy({
+          by: ['severity'],
+          where: {
+            systemId: system.id,
+          },
+          _count: {
+            severity: true,
+          },
+        });
+
+        // Calculate totals
+        let total = 0;
+        let high = 0;
+        let medium = 0;
+        let low = 0;
+
+        vulnerabilityCounts.forEach((count) => {
+          const severity = count.severity?.toLowerCase() || '';
+          const countValue = count._count.severity;
+
+          total += countValue;
+
+          if (severity.includes('high') || severity.includes('cat') && severity.includes('i')) {
+            high += countValue;
+          } else if (severity.includes('medium') || severity.includes('cat') && severity.includes('ii')) {
+            medium += countValue;
+          } else if (severity.includes('low') || severity.includes('cat') && severity.includes('iii')) {
+            low += countValue;
+          }
+        });
+
+        // Calculate compliance score and other stats
+        const complianceScore = total > 0
+          ? Math.max(0, 100 - Math.min(100, total * 2))
+          : 100;
+
+        // Get last scan date
+        const lastScan = await this.prisma.stigScan.findFirst({
+          where: { systemId: system.id },
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true },
+        });
+
+        return {
+          ...system,
+          total,
+          high,
+          medium,
+          low,
+          stats: {
+            totalFindings: total,
+            criticalFindings: high, // Treating high as critical for now
+            highFindings: high,
+            mediumFindings: medium,
+            lowFindings: low,
+            openFindings: total, // All findings are considered open for now
+            lastScanned: lastScan?.createdAt?.toISOString() || null,
+            complianceScore: complianceScore,
+          }
+        };
+      })
+    );
+
+    return { items: enrichedSystems };
   }
 
   async findOne(id: number): Promise<System | null> {

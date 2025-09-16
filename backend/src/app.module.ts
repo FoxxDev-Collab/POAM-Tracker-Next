@@ -17,11 +17,17 @@ import { PoamsModule } from './poams/poams.module';
 import { TeamsModule } from './teams/teams.module';
 import { VulnerabilitiesModule } from './vulnerabilities/vulnerabilities.module';
 import { AdminModule } from './admin/admin.module';
+import { FileManagerModule } from './file-manager/file-manager.module';
+import { CatalogModule } from './catalog/catalog.module';
+import { RedisModule } from './redis/redis.module';
+import { QueuesModule } from './queues/queues.module';
 
 @Module({
   imports: [
     LoggerModule,
     PrismaModule,
+    RedisModule,
+    QueuesModule,
     AuthModule,
     UsersModule,
     PackagesModule,
@@ -33,6 +39,8 @@ import { AdminModule } from './admin/admin.module';
     TeamsModule,
     VulnerabilitiesModule,
     AdminModule,
+    CatalogModule,
+    FileManagerModule,
   ],
   controllers: [AppController],
   providers: [

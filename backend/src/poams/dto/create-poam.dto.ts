@@ -1,9 +1,13 @@
-import { IsString, IsOptional, IsInt, IsEnum, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsEnum, IsNumber, IsBoolean, IsDateString } from 'class-validator';
 import {
   PoamSeverity,
   PoamStatus,
   PoamPriority,
   ResidualRiskLevel,
+  ThreatLevel,
+  RiskLikelihood,
+  RiskImpact,
+  ApprovalStatus,
 } from '@prisma/client';
 
 export class CreatePoamDto {
@@ -40,25 +44,59 @@ export class CreatePoamDto {
   @IsEnum(PoamPriority)
   priority?: PoamPriority;
 
+  // Risk Management Fields
+  @IsOptional()
+  @IsNumber()
+  inherentRiskScore?: number;
+
+  @IsOptional()
+  @IsNumber()
+  residualRiskScore?: number;
+
   @IsOptional()
   @IsEnum(ResidualRiskLevel)
   residualRiskLevel?: ResidualRiskLevel;
 
   @IsOptional()
+  @IsEnum(ThreatLevel)
+  threatLevel?: ThreatLevel;
+
+  @IsOptional()
+  @IsEnum(RiskLikelihood)
+  likelihood?: RiskLikelihood;
+
+  @IsOptional()
+  @IsEnum(RiskImpact)
+  impact?: RiskImpact;
+
+  @IsOptional()
   @IsString()
+  riskStatement?: string;
+
+  @IsOptional()
+  @IsString()
+  mitigationStrategy?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  riskAcceptance?: boolean;
+
+  @IsOptional()
+  @IsString()
+  riskAcceptanceRationale?: string;
+
+  // Date Fields
+  @IsOptional()
+  @IsDateString()
   targetCompletionDate?: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   actualCompletionDate?: string;
 
   @IsOptional()
-  @IsNumber()
-  estimatedCost?: number;
-
-  @IsOptional()
-  @IsNumber()
-  actualCost?: number;
+  @IsDateString()
+  scheduledReviewDate?: string;
 
   @IsOptional()
   @IsString()
@@ -71,6 +109,18 @@ export class CreatePoamDto {
   @IsOptional()
   @IsString()
   pocPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  altPocName?: string;
+
+  @IsOptional()
+  @IsString()
+  altPocEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  altPocPhone?: string;
 
   @IsOptional()
   @IsInt()

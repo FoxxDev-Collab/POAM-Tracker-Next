@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import {
@@ -7,6 +7,8 @@ import {
   CreatePoamMilestoneDto,
   UpdatePoamMilestoneDto,
   CreatePoamCommentDto,
+  CreatePoamEvidenceDto,
+  CreatePoamReviewDto,
 } from './dto';
 
 @Injectable()
@@ -36,6 +38,20 @@ export class PoamsService {
             email: true,
           },
         },
+        riskAcceptor: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        approver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         milestones: {
           include: {
             assignedUser: {
@@ -50,6 +66,28 @@ export class PoamsService {
         comments: {
           include: {
             creator: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        evidences: {
+          include: {
+            uploader: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        reviews: {
+          include: {
+            reviewer: {
               select: {
                 id: true,
                 name: true,
@@ -79,6 +117,20 @@ export class PoamsService {
             email: true,
           },
         },
+        riskAcceptor: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        approver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         milestones: {
           include: {
             assignedUser: {
@@ -88,11 +140,35 @@ export class PoamsService {
                 email: true,
               },
             },
+            evidences: true,
           },
         },
         comments: {
           include: {
             creator: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        evidences: {
+          include: {
+            uploader: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            milestone: true,
+          },
+        },
+        reviews: {
+          include: {
+            reviewer: {
               select: {
                 id: true,
                 name: true,
@@ -111,6 +187,15 @@ export class PoamsService {
   }
 
   async create(createPoamDto: CreatePoamDto) {
+    // Calculate risk score if likelihood and impact are provided
+    let inherentRiskScore = createPoamDto.inherentRiskScore;
+    if (!inherentRiskScore && createPoamDto.likelihood && createPoamDto.impact) {
+      inherentRiskScore = this.calculateRiskScore(
+        createPoamDto.likelihood,
+        createPoamDto.impact,
+      );
+    }
+
     const data: Prisma.PoamCreateInput = {
       poamNumber: createPoamDto.poamNumber,
       title: createPoamDto.title,
@@ -119,14 +204,39 @@ export class PoamsService {
       severity: createPoamDto.severity || 'Medium',
       status: createPoamDto.status || 'Draft',
       priority: createPoamDto.priority || 'Medium',
+
+      // Risk Management
+      inherentRiskScore,
+      residualRiskScore: createPoamDto.residualRiskScore,
       residualRiskLevel: createPoamDto.residualRiskLevel,
-      targetCompletionDate: createPoamDto.targetCompletionDate,
-      actualCompletionDate: createPoamDto.actualCompletionDate,
-      estimatedCost: createPoamDto.estimatedCost,
-      actualCost: createPoamDto.actualCost,
+      threatLevel: createPoamDto.threatLevel,
+      likelihood: createPoamDto.likelihood,
+      impact: createPoamDto.impact,
+      riskStatement: createPoamDto.riskStatement,
+      mitigationStrategy: createPoamDto.mitigationStrategy,
+      riskAcceptance: createPoamDto.riskAcceptance || false,
+      riskAcceptanceRationale: createPoamDto.riskAcceptanceRationale,
+
+      // Dates
+      targetCompletionDate: createPoamDto.targetCompletionDate
+        ? new Date(createPoamDto.targetCompletionDate)
+        : undefined,
+      actualCompletionDate: createPoamDto.actualCompletionDate
+        ? new Date(createPoamDto.actualCompletionDate)
+        : undefined,
+      scheduledReviewDate: createPoamDto.scheduledReviewDate
+        ? new Date(createPoamDto.scheduledReviewDate)
+        : undefined,
+
+      // Points of Contact
       pocName: createPoamDto.pocName,
       pocEmail: createPoamDto.pocEmail,
       pocPhone: createPoamDto.pocPhone,
+      altPocName: createPoamDto.altPocName,
+      altPocEmail: createPoamDto.altPocEmail,
+      altPocPhone: createPoamDto.altPocPhone,
+
+      // Relationships
       package: {
         connect: { id: createPoamDto.packageId },
       },
@@ -163,6 +273,15 @@ export class PoamsService {
   }
 
   async update(id: number, updatePoamDto: UpdatePoamDto) {
+    // Calculate risk score if likelihood and impact are updated
+    let inherentRiskScore = updatePoamDto.inherentRiskScore;
+    if (!inherentRiskScore && updatePoamDto.likelihood && updatePoamDto.impact) {
+      inherentRiskScore = this.calculateRiskScore(
+        updatePoamDto.likelihood,
+        updatePoamDto.impact,
+      );
+    }
+
     const data: Prisma.PoamUpdateInput = {
       ...(updatePoamDto.title && { title: updatePoamDto.title }),
       ...(updatePoamDto.weaknessDescription !== undefined && {
@@ -174,21 +293,64 @@ export class PoamsService {
       ...(updatePoamDto.severity && { severity: updatePoamDto.severity }),
       ...(updatePoamDto.status && { status: updatePoamDto.status }),
       ...(updatePoamDto.priority && { priority: updatePoamDto.priority }),
+
+      // Risk Management
+      ...(inherentRiskScore !== undefined && { inherentRiskScore }),
+      ...(updatePoamDto.residualRiskScore !== undefined && {
+        residualRiskScore: updatePoamDto.residualRiskScore,
+      }),
       ...(updatePoamDto.residualRiskLevel !== undefined && {
         residualRiskLevel: updatePoamDto.residualRiskLevel,
       }),
+      ...(updatePoamDto.threatLevel && { threatLevel: updatePoamDto.threatLevel }),
+      ...(updatePoamDto.likelihood && { likelihood: updatePoamDto.likelihood }),
+      ...(updatePoamDto.impact && { impact: updatePoamDto.impact }),
+      ...(updatePoamDto.riskStatement !== undefined && {
+        riskStatement: updatePoamDto.riskStatement,
+      }),
+      ...(updatePoamDto.mitigationStrategy !== undefined && {
+        mitigationStrategy: updatePoamDto.mitigationStrategy,
+      }),
+      ...(updatePoamDto.riskAcceptance !== undefined && {
+        riskAcceptance: updatePoamDto.riskAcceptance,
+      }),
+      ...(updatePoamDto.riskAcceptanceRationale !== undefined && {
+        riskAcceptanceRationale: updatePoamDto.riskAcceptanceRationale,
+      }),
+      ...(updatePoamDto.riskAcceptedBy !== undefined && {
+        riskAcceptor: updatePoamDto.riskAcceptedBy
+          ? { connect: { id: updatePoamDto.riskAcceptedBy } }
+          : { disconnect: true },
+      }),
+      ...(updatePoamDto.riskAcceptedDate !== undefined && {
+        riskAcceptedDate: updatePoamDto.riskAcceptedDate
+          ? new Date(updatePoamDto.riskAcceptedDate)
+          : null,
+      }),
+
+      // Dates
       ...(updatePoamDto.targetCompletionDate !== undefined && {
-        targetCompletionDate: updatePoamDto.targetCompletionDate,
+        targetCompletionDate: updatePoamDto.targetCompletionDate
+          ? new Date(updatePoamDto.targetCompletionDate)
+          : null,
       }),
       ...(updatePoamDto.actualCompletionDate !== undefined && {
-        actualCompletionDate: updatePoamDto.actualCompletionDate,
+        actualCompletionDate: updatePoamDto.actualCompletionDate
+          ? new Date(updatePoamDto.actualCompletionDate)
+          : null,
       }),
-      ...(updatePoamDto.estimatedCost !== undefined && {
-        estimatedCost: updatePoamDto.estimatedCost,
+      ...(updatePoamDto.scheduledReviewDate !== undefined && {
+        scheduledReviewDate: updatePoamDto.scheduledReviewDate
+          ? new Date(updatePoamDto.scheduledReviewDate)
+          : null,
       }),
-      ...(updatePoamDto.actualCost !== undefined && {
-        actualCost: updatePoamDto.actualCost,
+      ...(updatePoamDto.lastReviewedDate !== undefined && {
+        lastReviewedDate: updatePoamDto.lastReviewedDate
+          ? new Date(updatePoamDto.lastReviewedDate)
+          : null,
       }),
+
+      // Points of Contact
       ...(updatePoamDto.pocName !== undefined && {
         pocName: updatePoamDto.pocName,
       }),
@@ -198,6 +360,40 @@ export class PoamsService {
       ...(updatePoamDto.pocPhone !== undefined && {
         pocPhone: updatePoamDto.pocPhone,
       }),
+      ...(updatePoamDto.altPocName !== undefined && {
+        altPocName: updatePoamDto.altPocName,
+      }),
+      ...(updatePoamDto.altPocEmail !== undefined && {
+        altPocEmail: updatePoamDto.altPocEmail,
+      }),
+      ...(updatePoamDto.altPocPhone !== undefined && {
+        altPocPhone: updatePoamDto.altPocPhone,
+      }),
+
+      // Approval Workflow
+      ...(updatePoamDto.approvalStatus !== undefined && {
+        approvalStatus: updatePoamDto.approvalStatus,
+      }),
+      ...(updatePoamDto.submittedForApprovalAt !== undefined && {
+        submittedForApprovalAt: updatePoamDto.submittedForApprovalAt
+          ? new Date(updatePoamDto.submittedForApprovalAt)
+          : null,
+      }),
+      ...(updatePoamDto.approvedBy !== undefined && {
+        approver: updatePoamDto.approvedBy
+          ? { connect: { id: updatePoamDto.approvedBy } }
+          : { disconnect: true },
+      }),
+      ...(updatePoamDto.approvedAt !== undefined && {
+        approvedAt: updatePoamDto.approvedAt
+          ? new Date(updatePoamDto.approvedAt)
+          : null,
+      }),
+      ...(updatePoamDto.approvalComments !== undefined && {
+        approvalComments: updatePoamDto.approvalComments,
+      }),
+
+      // Relationships
       ...(updatePoamDto.groupId !== undefined && {
         group: updatePoamDto.groupId
           ? { connect: { id: updatePoamDto.groupId } }
@@ -218,6 +414,20 @@ export class PoamsService {
         group: true,
         assignedTeam: true,
         creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        riskAcceptor: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        approver: {
           select: {
             id: true,
             name: true,
@@ -246,9 +456,10 @@ export class PoamsService {
             email: true,
           },
         },
+        evidences: true,
       },
       orderBy: {
-        createdAt: 'asc',
+        targetDate: 'asc',
       },
     });
   }
@@ -257,16 +468,27 @@ export class PoamsService {
     poamId: number,
     createMilestoneDto: CreatePoamMilestoneDto,
   ) {
+    // Validate milestone date against POAM target date
+    if (createMilestoneDto.targetDate) {
+      await this.validateMilestoneDate(poamId, createMilestoneDto.targetDate);
+    }
+
     const data: Prisma.PoamMilestoneCreateInput = {
       title: createMilestoneDto.title,
       description: createMilestoneDto.description,
-      targetDate: createMilestoneDto.targetDate,
-      actualDate: createMilestoneDto.actualDate,
+      targetDate: createMilestoneDto.targetDate
+        ? new Date(createMilestoneDto.targetDate)
+        : undefined,
+      actualDate: createMilestoneDto.actualDate
+        ? new Date(createMilestoneDto.actualDate)
+        : undefined,
       status: createMilestoneDto.status || 'Pending',
       milestoneType: createMilestoneDto.milestoneType || 'Implementation',
       deliverables: createMilestoneDto.deliverables,
       successCriteria: createMilestoneDto.successCriteria,
       completionPercentage: createMilestoneDto.completionPercentage || 0,
+      blockers: createMilestoneDto.blockers,
+      dependencies: createMilestoneDto.dependencies,
       poam: {
         connect: { id: poamId },
       },
@@ -295,16 +517,37 @@ export class PoamsService {
     id: number,
     updateMilestoneDto: UpdatePoamMilestoneDto,
   ) {
+    // Get the milestone to find the POAM ID
+    const milestone = await this.prisma.poamMilestone.findUnique({
+      where: { id },
+    });
+
+    if (!milestone) {
+      throw new BadRequestException('Milestone not found');
+    }
+
+    // Validate milestone date against POAM target date
+    if (updateMilestoneDto.targetDate) {
+      await this.validateMilestoneDate(
+        milestone.poamId,
+        updateMilestoneDto.targetDate,
+      );
+    }
+
     const data: Prisma.PoamMilestoneUpdateInput = {
       ...(updateMilestoneDto.title && { title: updateMilestoneDto.title }),
       ...(updateMilestoneDto.description !== undefined && {
         description: updateMilestoneDto.description,
       }),
       ...(updateMilestoneDto.targetDate !== undefined && {
-        targetDate: updateMilestoneDto.targetDate,
+        targetDate: updateMilestoneDto.targetDate
+          ? new Date(updateMilestoneDto.targetDate)
+          : null,
       }),
       ...(updateMilestoneDto.actualDate !== undefined && {
-        actualDate: updateMilestoneDto.actualDate,
+        actualDate: updateMilestoneDto.actualDate
+          ? new Date(updateMilestoneDto.actualDate)
+          : null,
       }),
       ...(updateMilestoneDto.status && { status: updateMilestoneDto.status }),
       ...(updateMilestoneDto.milestoneType !== undefined && {
@@ -318,6 +561,12 @@ export class PoamsService {
       }),
       ...(updateMilestoneDto.completionPercentage !== undefined && {
         completionPercentage: updateMilestoneDto.completionPercentage,
+      }),
+      ...(updateMilestoneDto.blockers !== undefined && {
+        blockers: updateMilestoneDto.blockers,
+      }),
+      ...(updateMilestoneDto.dependencies !== undefined && {
+        dependencies: updateMilestoneDto.dependencies,
       }),
       ...(updateMilestoneDto.assignedUserId !== undefined && {
         assignedUser: updateMilestoneDto.assignedUserId
@@ -393,5 +642,197 @@ export class PoamsService {
         },
       },
     });
+  }
+
+  // Evidence Management
+  async findEvidences(poamId: number) {
+    return this.prisma.poamEvidence.findMany({
+      where: { poamId },
+      include: {
+        uploader: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        milestone: true,
+      },
+      orderBy: {
+        uploadedAt: 'desc',
+      },
+    });
+  }
+
+  async createEvidence(
+    poamId: number,
+    createEvidenceDto: CreatePoamEvidenceDto,
+  ) {
+    const data: Prisma.PoamEvidenceCreateInput = {
+      fileName: createEvidenceDto.fileName,
+      filePath: createEvidenceDto.filePath,
+      fileSize: createEvidenceDto.fileSize,
+      mimeType: createEvidenceDto.mimeType,
+      evidenceType: createEvidenceDto.evidenceType || 'Document',
+      description: createEvidenceDto.description,
+      poam: {
+        connect: { id: poamId },
+      },
+      uploader: {
+        connect: { id: createEvidenceDto.uploadedBy },
+      },
+      ...(createEvidenceDto.milestoneId && {
+        milestone: {
+          connect: { id: createEvidenceDto.milestoneId },
+        },
+      }),
+    };
+
+    return this.prisma.poamEvidence.create({
+      data,
+      include: {
+        uploader: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        milestone: true,
+      },
+    });
+  }
+
+  async deleteEvidence(id: number) {
+    return this.prisma.poamEvidence.delete({
+      where: { id },
+    });
+  }
+
+  // Review Management
+  async findReviews(poamId: number) {
+    return this.prisma.poamReview.findMany({
+      where: { poamId },
+      include: {
+        reviewer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        reviewDate: 'desc',
+      },
+    });
+  }
+
+  async createReview(poamId: number, createReviewDto: CreatePoamReviewDto) {
+    const data: Prisma.PoamReviewCreateInput = {
+      reviewType: createReviewDto.reviewType,
+      reviewDate: new Date(createReviewDto.reviewDate),
+      findings: createReviewDto.findings,
+      recommendations: createReviewDto.recommendations,
+      nextReviewDate: createReviewDto.nextReviewDate
+        ? new Date(createReviewDto.nextReviewDate)
+        : undefined,
+      poam: {
+        connect: { id: poamId },
+      },
+      reviewer: {
+        connect: { id: createReviewDto.reviewedBy },
+      },
+    };
+
+    // Update POAM's last reviewed date
+    await this.prisma.poam.update({
+      where: { id: poamId },
+      data: {
+        lastReviewedDate: new Date(createReviewDto.reviewDate),
+      },
+    });
+
+    return this.prisma.poamReview.create({
+      data,
+      include: {
+        reviewer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+
+  // Helper Methods
+  private async validateMilestoneDate(poamId: number, milestoneDate: string) {
+    const poam = await this.prisma.poam.findUnique({
+      where: { id: poamId },
+      select: { targetCompletionDate: true },
+    });
+
+    if (poam?.targetCompletionDate) {
+      const milestoneDateTime = new Date(milestoneDate);
+      const poamTargetDate = new Date(poam.targetCompletionDate);
+
+      if (milestoneDateTime > poamTargetDate) {
+        throw new BadRequestException(
+          `Milestone target date cannot exceed POAM target completion date (${poam.targetCompletionDate.toISOString()})`,
+        );
+      }
+    }
+  }
+
+  private calculateRiskScore(
+    likelihood: string,
+    impact: string,
+  ): number {
+    const likelihoodScores = {
+      Very_Unlikely: 1,
+      Unlikely: 2,
+      Possible: 3,
+      Likely: 4,
+      Very_Likely: 5,
+    };
+
+    const impactScores = {
+      Negligible: 1,
+      Minor: 2,
+      Moderate: 3,
+      Major: 4,
+      Severe: 5,
+    };
+
+    const likelihoodScore = likelihoodScores[likelihood] || 3;
+    const impactScore = impactScores[impact] || 3;
+
+    // Calculate risk score on a scale of 1-100
+    return (likelihoodScore * impactScore * 100) / 25;
+  }
+
+  async findStps(poamId: number) {
+    const poamStps = await this.prisma.poamStp.findMany({
+      where: { poamId },
+      include: {
+        stp: {
+          include: {
+            system: true,
+            assignedTeam: true,
+            testCases: true,
+            evidence: true,
+          },
+        },
+      },
+    });
+
+    return {
+      items: poamStps.map((poamStp) => ({
+        ...poamStp.stp,
+        contributionPercentage: poamStp.contributionPercentage,
+      })),
+    };
   }
 }

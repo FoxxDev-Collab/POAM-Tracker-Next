@@ -176,6 +176,8 @@ model System {
   stigFindings StigFinding[]
   stps         Stp[]
   nessusReports NessusReport[]
+  fileAssociations FileAssociation[]
+  vulnerabilityScans VulnerabilityScan[]
 
   @@index([packageId])
   @@index([groupId])
@@ -208,16 +210,27 @@ model User {
   stpTestCasesAssigned StpTestCase[]          @relation("TestCaseAssignedTo")
   stpEvidenceUploaded  StpEvidence[]          @relation("EvidenceUploadedBy")
   poamsCreated         Poam[]                 @relation("PoamCreatedBy")
+  poamsRiskAccepted    Poam[]                 @relation("PoamRiskAcceptedBy")
+  poamsApproved        Poam[]                 @relation("PoamApprovedBy")
   poamMilestonesAssigned PoamMilestone[]
   poamComments           PoamComment[]
+  poamEvidences        PoamEvidence[]
+  poamReviews          PoamReview[]
   auditLogs            AuditLog[]
+  uploadedFiles        File[]
+  createdFileVersions  FileVersion[]
+  fileAuditLogs        FileAuditLog[]
   kcSpacesCreated      KcSpace[]              @relation("KcSpaceCreatedBy")
   kcPagesCreated       KcPage[]               @relation("KcPageCreatedBy")
+  notifications        Notification[]
+  vulnerabilityScans   VulnerabilityScan[]
   kcPagesUpdated       KcPage[]               @relation("KcPageUpdatedBy")
   kcPageVersions       KcPageVersion[]
   kcComments           KcComment[]
   kcAttachments        KcAttachment[]
   kcSpacePermissions   KcSpacePermission[]
+  controlAssessments   NistControl[]       @relation("ControlAssessedBy")
+  cciAssessments       NistControlCci[]    @relation("CciAssessedBy")
 
   @@map("users")
 }
@@ -324,6 +337,8 @@ model Stp {
   evidence       StpEvidence[]
   poams          PoamStp[]
 
+  fileAssociations FileAssociation[]
+
   @@index([systemId])
   @@index([packageId])
   @@index([status])
@@ -347,6 +362,8 @@ model StpTestCase {
   stp           Stp    @relation(fields: [stpId], references: [id], onDelete: Cascade)
   assignedUser  User?  @relation("TestCaseAssignedTo", fields: [assignedUserId], references: [id], onDelete: SetNull)
   evidence      StpEvidence[]
+
+  fileAssociations FileAssociation[]
 
   @@index([stpId])
   @@index([status])
@@ -389,14 +406,43 @@ model Poam {
   severity              PoamSeverity @default(Medium)
   status                PoamStatus @default(Draft)
   priority              PoamPriority @default(Medium)
+
+  // Risk Management
+  inherentRiskScore     Float?    @map("inherent_risk_score") // 1-100 scale
+  residualRiskScore     Float?    @map("residual_risk_score") // After mitigation
   residualRiskLevel     ResidualRiskLevel? @map("residual_risk_level")
-  targetCompletionDate  String?   @map("target_completion_date")
-  actualCompletionDate  String?   @map("actual_completion_date")
-  estimatedCost         Float?    @map("estimated_cost")
-  actualCost            Float?    @map("actual_cost")
+  threatLevel           ThreatLevel? @default(Medium) @map("threat_level")
+  likelihood            RiskLikelihood? @default(Possible)
+  impact                RiskImpact? @default(Moderate)
+  riskStatement         String?   @map("risk_statement")
+  mitigationStrategy    String?   @map("mitigation_strategy")
+  riskAcceptance        Boolean   @default(false) @map("risk_acceptance")
+  riskAcceptanceRationale String? @map("risk_acceptance_rationale")
+  riskAcceptedBy        Int?      @map("risk_accepted_by")
+  riskAcceptedDate      DateTime? @map("risk_accepted_date")
+
+  // Enhanced Date Management
+  targetCompletionDate  DateTime? @map("target_completion_date")
+  actualCompletionDate  DateTime? @map("actual_completion_date")
+  scheduledReviewDate   DateTime? @map("scheduled_review_date")
+  lastReviewedDate      DateTime? @map("last_reviewed_date")
+
+  // Points of Contact
   pocName               String?   @map("poc_name")
   pocEmail              String?   @map("poc_email")
   pocPhone              String?   @map("poc_phone")
+  altPocName            String?   @map("alt_poc_name")
+  altPocEmail           String?   @map("alt_poc_email")
+  altPocPhone           String?   @map("alt_poc_phone")
+
+  // Approval Workflow
+  approvalStatus        ApprovalStatus @default(Pending) @map("approval_status")
+  submittedForApprovalAt DateTime? @map("submitted_for_approval_at")
+  approvedBy            Int?      @map("approved_by")
+  approvedAt            DateTime? @map("approved_at")
+  approvalComments      String?   @map("approval_comments")
+
+  // Metadata
   assignedTeamId        Int?      @map("assigned_team_id")
   createdBy             Int       @map("created_by")
   createdAt             DateTime  @default(now()) @map("created_at")
@@ -406,9 +452,14 @@ model Poam {
   group        Group?          @relation(fields: [groupId], references: [id], onDelete: SetNull)
   assignedTeam Team?           @relation(fields: [assignedTeamId], references: [id], onDelete: SetNull)
   creator      User            @relation("PoamCreatedBy", fields: [createdBy], references: [id])
+  riskAcceptor User?           @relation("PoamRiskAcceptedBy", fields: [riskAcceptedBy], references: [id])
+  approver     User?           @relation("PoamApprovedBy", fields: [approvedBy], references: [id])
   stps         PoamStp[]
   milestones   PoamMilestone[]
   comments     PoamComment[]
+  evidences    PoamEvidence[]
+  reviews      PoamReview[]
+  fileAssociations FileAssociation[]
 
   @@index([packageId])
   @@index([groupId])
@@ -440,19 +491,22 @@ model PoamMilestone {
   poamId                Int                 @map("poam_id")
   title                 String
   description           String?             @default("")
-  targetDate            String?             @map("target_date")
-  actualDate            String?             @map("actual_date")
+  targetDate            DateTime?           @map("target_date")
+  actualDate            DateTime?           @map("actual_date")
   status                PoamMilestoneStatus @default(Pending)
   milestoneType         PoamMilestoneType?  @default(Implementation) @map("milestone_type")
   deliverables          String?             @default("")
   successCriteria       String?             @default("") @map("success_criteria")
   assignedUserId        Int?                @map("assigned_user_id")
   completionPercentage  Float?              @default(0) @map("completion_percentage")
+  blockers              String?             // Description of any blocking issues
+  dependencies          String?             // Other milestones or tasks this depends on
   createdAt             DateTime            @default(now()) @map("created_at")
   updatedAt             DateTime            @updatedAt @map("updated_at")
 
   poam         Poam  @relation(fields: [poamId], references: [id], onDelete: Cascade)
   assignedUser User? @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+  evidences    PoamEvidence[]
 
   @@index([poamId])
   @@index([status])
@@ -478,6 +532,49 @@ model PoamComment {
   @@index([milestoneId])
   @@index([createdBy])
   @@map("poam_comments")
+}
+
+model PoamEvidence {
+  id            Int          @id @default(autoincrement())
+  poamId        Int          @map("poam_id")
+  milestoneId   Int?         @map("milestone_id")
+  fileName      String       @map("file_name")
+  filePath      String?      @map("file_path")
+  fileSize      Int?         @map("file_size")
+  mimeType      String?      @map("mime_type")
+  evidenceType  EvidenceType @default(Document) @map("evidence_type")
+  description   String?
+  uploadedBy    Int          @map("uploaded_by")
+  uploadedAt    DateTime     @default(now()) @map("uploaded_at")
+
+  poam      Poam           @relation(fields: [poamId], references: [id], onDelete: Cascade)
+  milestone PoamMilestone? @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  uploader  User           @relation(fields: [uploadedBy], references: [id])
+
+  @@index([poamId])
+  @@index([milestoneId])
+  @@index([uploadedBy])
+  @@map("poam_evidences")
+}
+
+model PoamReview {
+  id             Int            @id @default(autoincrement())
+  poamId         Int            @map("poam_id")
+  reviewType     String         @map("review_type") // Quarterly, Annual, Risk_Review, etc.
+  reviewDate     DateTime       @map("review_date")
+  reviewedBy     Int            @map("reviewed_by")
+  findings       String?
+  recommendations String?
+  nextReviewDate DateTime?      @map("next_review_date")
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  poam     Poam @relation(fields: [poamId], references: [id], onDelete: Cascade)
+  reviewer User @relation(fields: [reviewedBy], references: [id])
+
+  @@index([poamId])
+  @@index([reviewedBy])
+  @@index([reviewDate])
+  @@map("poam_reviews")
 }
 
 // ---
@@ -722,8 +819,160 @@ model NessusVulnerability {
 }
 
 // ---
+// NIST Control Catalog Models
+// ---
+
+model NistControl {
+  id             Int      @id @default(autoincrement())
+  controlId      String   @unique @map("control_id") // e.g., "AC-1", "AC-11(1)"
+  name           String
+  controlText    String   @db.Text @map("control_text")
+  discussion     String?  @db.Text
+  complianceStatus ComplianceStatus? @default(NOT_ASSESSED) @map("compliance_status")
+  complianceNotes  String? @db.Text @map("compliance_notes")
+  assessedBy       Int? @map("assessed_by")
+  assessedAt       DateTime? @map("assessed_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  relatedControls NistControlRelation[] @relation("SourceControl")
+  ccis            NistControlCci[]
+  assessor        User? @relation("ControlAssessedBy", fields: [assessedBy], references: [id], onDelete: SetNull)
+
+  @@index([controlId])
+  @@index([complianceStatus])
+  @@map("nist_controls")
+}
+
+model NistControlRelation {
+  id                Int    @id @default(autoincrement())
+  sourceControlId   Int    @map("source_control_id")
+  relatedControlId  String @map("related_control_id") // Store as string since related control might not exist yet
+
+  sourceControl NistControl @relation("SourceControl", fields: [sourceControlId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceControlId, relatedControlId])
+  @@index([sourceControlId])
+  @@index([relatedControlId])
+  @@map("nist_control_relations")
+}
+
+model NistControlCci {
+  id          Int    @id @default(autoincrement())
+  controlId   Int    @map("control_id")
+  cci         String // e.g., "CCI-000002"
+  definition  String @db.Text
+  complianceStatus ComplianceStatus? @default(NOT_ASSESSED) @map("compliance_status")
+  complianceNotes  String? @db.Text @map("compliance_notes")
+  assessedBy       Int? @map("assessed_by")
+  assessedAt       DateTime? @map("assessed_at")
+
+  control NistControl @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  assessor User? @relation("CciAssessedBy", fields: [assessedBy], references: [id], onDelete: SetNull)
+
+  @@unique([controlId, cci])
+  @@index([controlId])
+  @@index([cci])
+  @@index([complianceStatus])
+  @@map("nist_control_ccis")
+}
+
+// ---
+// File Manager Models
+// ---
+
+model File {
+  id               Int      @id @default(autoincrement())
+  filename         String
+  originalFilename String   @map("original_filename")
+  fileSize         Int      @map("file_size")
+  mimeType         String?  @map("mime_type")
+  filePath         String   @map("file_path")
+  description      String?  @default("")
+  uploadedBy       Int      @map("uploaded_by")
+  uploadedAt       DateTime @default(now()) @map("uploaded_at")
+  lastModified     DateTime @updatedAt @map("last_modified")
+  
+  uploader     User     @relation(fields: [uploadedBy], references: [id])
+  versions     FileVersion[]
+  associations FileAssociation[]
+  auditLogs    FileAuditLog[]
+  
+  @@index([uploadedBy])
+  @@map("files")
+}
+
+model FileVersion {
+  id          Int      @id @default(autoincrement())
+  fileId      Int      @map("file_id")
+  version     Int
+  filename    String
+  fileSize    Int      @map("file_size")
+  mimeType    String?  @map("mime_type")
+  filePath    String   @map("file_path")
+  description String?  @default("")
+  createdBy   Int      @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  comment     String?  @default("")
+  
+  file      File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  creator   User @relation(fields: [createdBy], references: [id])
+  
+  @@unique([fileId, version])
+  @@index([fileId])
+  @@index([version])
+  @@map("file_versions")
+}
+
+model FileAssociation {
+  id             Int            @id @default(autoincrement())
+  fileId         Int            @map("file_id")
+  associationType FileAssociationType @map("association_type")
+  stpId          Int?           @map("stp_id")
+  testCaseId     Int?           @map("test_case_id")
+  poamId         Int?           @map("poam_id")
+  systemId       Int?           @map("system_id")
+  description    String?        @default("")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  
+  file    File    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  stp     Stp?    @relation(fields: [stpId], references: [id], onDelete: Cascade)
+  testCase StpTestCase? @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  poam    Poam?   @relation(fields: [poamId], references: [id], onDelete: Cascade)
+  system  System? @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  
+  @@index([fileId])
+  @@index([associationType])
+  @@index([stpId])
+  @@index([testCaseId])
+  @@index([poamId])
+  @@index([systemId])
+  @@map("file_associations")
+}
+
+model FileAuditLog {
+  id        Int      @id @default(autoincrement())
+  fileId    Int      @map("file_id")
+  action    FileAuditAction
+  userId    Int?     @map("user_id")
+  details   String?  @default("")
+  timestamp DateTime @default(now())
+  ipAddress String?  @map("ip_address")
+  
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([fileId])
+  @@index([action])
+  @@index([userId])
+  @@index([timestamp])
+  @@map("file_audit_logs")
+}
+
+// ---
 // ENUMS
 // ---
+
 
 enum SystemType {
   Major_Application
@@ -899,6 +1148,48 @@ enum PoamCommentType {
   Management_Decision
 }
 
+enum ThreatLevel {
+  Very_Low
+  Low
+  Medium
+  High
+  Critical
+}
+
+enum RiskLikelihood {
+  Very_Unlikely
+  Unlikely
+  Possible
+  Likely
+  Very_Likely
+}
+
+enum RiskImpact {
+  Negligible
+  Minor
+  Moderate
+  Major
+  Severe
+}
+
+enum ApprovalStatus {
+  Pending
+  Under_Review
+  Approved
+  Rejected
+  Returned_For_Revision
+}
+
+enum EvidenceType {
+  Screenshot
+  Document
+  Test_Result
+  Scan_Report
+  Configuration_File
+  Log_File
+  Other
+}
+
 // ---
 // New RMF and System Management Enums
 // ---
@@ -1051,4 +1342,80 @@ enum SystemCriticality {
   Medium
   Low
   Non_Essential
+}
+
+enum FileAssociationType {
+  STP_EVIDENCE
+  TEST_CASE_EVIDENCE
+  POAM_EVIDENCE
+  SYSTEM_EVIDENCE
+  GENERAL
+}
+
+enum FileAuditAction {
+  UPLOADED
+  DOWNLOADED
+  UPDATED
+  DELETED
+  VERSION_CREATED
+  ASSOCIATED
+  DISASSOCIATED
+}
+
+enum ComplianceStatus {
+  NOT_ASSESSED
+  NC_U  // Non-Compliant Unofficial
+  NC_O  // Non-Compliant Official
+  CU    // Compliant Unofficial
+  CO    // Compliant Official
+  NA_U  // Not Applicable Unofficial
+  NA_O  // Not Applicable Official
+}
+
+// ---
+// Notification Model
+// ---
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    Int      @map("user_id")
+  type      String
+  message   String
+  priority  String   @default("low")
+  metadata  Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ---
+// Vulnerability Scan Model
+// ---
+
+model VulnerabilityScan {
+  id                   String   @id @default(uuid())
+  systemId             Int      @map("system_id")
+  scanType             String   @map("scan_type")
+  status               String
+  startedAt            DateTime @map("started_at")
+  completedAt          DateTime? @map("completed_at")
+  vulnerabilitiesFound Int      @default(0) @map("vulnerabilities_found")
+  userId               Int      @map("user_id")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  system System @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([systemId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("vulnerability_scans")
 }

@@ -18,6 +18,8 @@ import {
   CreatePoamMilestoneDto,
   UpdatePoamMilestoneDto,
   CreatePoamCommentDto,
+  CreatePoamEvidenceDto,
+  CreatePoamReviewDto,
 } from './dto';
 
 @Controller('poams')
@@ -98,5 +100,44 @@ export class PoamsController {
     @Body() createCommentDto: CreatePoamCommentDto,
   ) {
     return this.poamsService.createComment(id, createCommentDto);
+  }
+
+  // Evidence endpoints
+  @Get(':id/evidences')
+  findEvidences(@Param('id', ParseIntPipe) id: number) {
+    return this.poamsService.findEvidences(id);
+  }
+
+  @Post(':id/evidences')
+  createEvidence(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createEvidenceDto: CreatePoamEvidenceDto,
+  ) {
+    return this.poamsService.createEvidence(id, createEvidenceDto);
+  }
+
+  @Delete('evidences/:evidenceId')
+  deleteEvidence(@Param('evidenceId', ParseIntPipe) id: number) {
+    return this.poamsService.deleteEvidence(id);
+  }
+
+  // Review endpoints
+  @Get(':id/reviews')
+  findReviews(@Param('id', ParseIntPipe) id: number) {
+    return this.poamsService.findReviews(id);
+  }
+
+  @Post(':id/reviews')
+  createReview(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() createReviewDto: CreatePoamReviewDto,
+  ) {
+    return this.poamsService.createReview(id, createReviewDto);
+  }
+
+  // STPs endpoints
+  @Get(':id/stps')
+  findStps(@Param('id', ParseIntPipe) id: number) {
+    return this.poamsService.findStps(id);
   }
 }

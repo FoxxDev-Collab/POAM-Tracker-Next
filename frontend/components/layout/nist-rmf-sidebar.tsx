@@ -20,7 +20,7 @@ const nistRmfItems: SidebarItem[] = [
     description: "Authorization to Operate Packages"
   },
   { 
-    href: "/rmf-center/controls", 
+    href: "/rmf-center/control-catalog", 
     label: "Control Catalog", 
     icon: FileCheck,
     description: "View and manage security controls"

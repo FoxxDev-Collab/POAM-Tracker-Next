@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt, IsEnum, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsEnum, IsNumber, IsDateString } from 'class-validator';
 import { PoamMilestoneStatus, PoamMilestoneType } from '@prisma/client';
 
 export class UpdatePoamMilestoneDto {
@@ -11,11 +11,11 @@ export class UpdatePoamMilestoneDto {
   description?: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   targetDate?: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   actualDate?: string;
 
   @IsOptional()
@@ -41,4 +41,12 @@ export class UpdatePoamMilestoneDto {
   @IsOptional()
   @IsNumber()
   completionPercentage?: number;
+
+  @IsOptional()
+  @IsString()
+  blockers?: string;
+
+  @IsOptional()
+  @IsString()
+  dependencies?: string;
 }
