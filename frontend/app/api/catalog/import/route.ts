@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+import { BACKEND_URL, getAuthHeaders } from '@/lib/server-api-helpers';
 
 export async function POST(request: NextRequest) {
   try {
+    const headers = await getAuthHeaders();
+
     const response = await fetch(`${BACKEND_URL}/catalog/import`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     const data = await response.json();

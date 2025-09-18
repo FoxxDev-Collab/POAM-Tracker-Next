@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+import { BACKEND_URL, getAuthHeaders } from '@/lib/server-api-helpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,10 +16,10 @@ export async function GET(request: NextRequest) {
       ...(family && { family }),
     });
 
+    const headers = await getAuthHeaders();
+
     const response = await fetch(`${BACKEND_URL}/catalog/controls?${params}`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     const data = await response.json();

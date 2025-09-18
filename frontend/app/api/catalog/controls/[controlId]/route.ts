@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+import { BACKEND_URL, getAuthHeaders } from '@/lib/server-api-helpers';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { controlId: string } }
+  { params }: { params: Promise<{ controlId: string }> }
 ) {
   try {
-    const { controlId } = params;
+    const { controlId } = await params;
+
+    const headers = await getAuthHeaders();
 
     const response = await fetch(`${BACKEND_URL}/catalog/controls/${encodeURIComponent(controlId)}`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     const data = await response.json();
