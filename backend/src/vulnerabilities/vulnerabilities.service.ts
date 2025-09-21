@@ -381,11 +381,11 @@ export class VulnerabilitiesService {
       (f) => f.status === 'Not_Applicable',
     ).length;
 
-    const highSeverity = findings.filter((f) => f.severity === 'high').length;
-    const mediumSeverity = findings.filter(
-      (f) => f.severity === 'medium',
+    const catISeverity = findings.filter((f) => f.severity === 'CAT_I').length;
+    const catIISeverity = findings.filter(
+      (f) => f.severity === 'CAT_II',
     ).length;
-    const lowSeverity = findings.filter((f) => f.severity === 'low').length;
+    const catIIISeverity = findings.filter((f) => f.severity === 'CAT_III').length;
 
     const systemsWithFindings = systems.filter(
       (s) => s._count.stigFindings > 0,
@@ -402,9 +402,9 @@ export class VulnerabilitiesService {
       totalFindings,
       openFindings,
       closedFindings,
-      highSeverity,
-      mediumSeverity,
-      lowSeverity,
+      catISeverity,
+      catIISeverity,
+      catIIISeverity,
       complianceRate,
       systemsWithFindings,
       totalSystems: systems.length,

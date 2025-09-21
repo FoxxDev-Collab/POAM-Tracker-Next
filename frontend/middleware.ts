@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getIronSession } from "iron-session"
 import type { SessionData } from "@/lib/session"
 
-// Rate limiting storage (in production, use Redis or similar)
+// In-memory rate limiting for Edge Runtime compatibility
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 
 export async function middleware(request: NextRequest) {
@@ -15,11 +15,16 @@ export async function middleware(request: NextRequest) {
   // Rate limiting
   const rateLimitResult = checkRateLimit(request)
   if (!rateLimitResult.allowed) {
-    return new NextResponse("Too Many Requests", { 
+    return new NextResponse(JSON.stringify({
+      error: "Too Many Requests",
+      message: "Rate limit exceeded. Please try again later.",
+      retryAfter: 60
+    }), {
       status: 429,
       headers: {
+        "Content-Type": "application/json",
         "Retry-After": "60",
-        "X-RateLimit-Limit": "100",
+        "X-RateLimit-Limit": rateLimitResult.limit.toString(),
         "X-RateLimit-Remaining": "0"
       }
     })
@@ -87,13 +92,14 @@ export async function middleware(request: NextRequest) {
 
 function addSecurityHeaders(response: NextResponse) {
   // Content Security Policy
-  response.headers.set('Content-Security-Policy', 
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+  response.headers.set('Content-Security-Policy',
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: blob:; " +
     "font-src 'self'; " +
-    "connect-src 'self'; " +
+    `connect-src 'self' ${backendUrl}; ` +
     "frame-ancestors 'none'; " +
     "base-uri 'self'"
   )
@@ -130,20 +136,39 @@ function checkRateLimit(request: NextRequest): { allowed: boolean; limit: number
   const key = `${ip}:${request.nextUrl.pathname}`
   const now = Date.now()
   const windowMs = 60 * 1000 // 1 minute window
-  const limit = request.nextUrl.pathname.startsWith('/api/auth') ? 5 : 100 // Stricter for auth endpoints
-  
+
+  // Different limits for different endpoints
+  let limit = 100 // Default limit
+  if (request.nextUrl.pathname.startsWith('/api/auth')) {
+    limit = 5 // Stricter for auth endpoints
+  } else if (request.nextUrl.pathname.includes('/vulnerability-center/')) {
+    limit = 1000 // Much higher limit for vulnerability center operations (STIG imports)
+  } else if (request.nextUrl.pathname.includes('/api/')) {
+    limit = 300 // Higher limit for general API calls
+  }
+
+  // Clean up old entries periodically
+  if (Math.random() < 0.01) { // 1% chance to clean up
+    const cutoff = now - windowMs;
+    for (const [key, value] of rateLimitMap.entries()) {
+      if (value.resetTime < cutoff) {
+        rateLimitMap.delete(key);
+      }
+    }
+  }
+
   const current = rateLimitMap.get(key)
-  
+
   if (!current || now > current.resetTime) {
     // New window
     rateLimitMap.set(key, { count: 1, resetTime: now + windowMs })
     return { allowed: true, limit, remaining: limit - 1 }
   }
-  
+
   if (current.count >= limit) {
     return { allowed: false, limit, remaining: 0 }
   }
-  
+
   current.count++
   return { allowed: true, limit, remaining: limit - current.count }
 }

@@ -61,26 +61,26 @@ export class GroupsService {
             });
 
             let total = 0;
-            let high = 0;
-            let medium = 0;
-            let low = 0;
+            let catI = 0;
+            let catII = 0;
+            let catIII = 0;
 
             vulnerabilityCounts.forEach((count) => {
-              const severity = count.severity?.toLowerCase() || '';
+              const severity = count.severity || '';
               const countValue = count._count.severity;
 
               total += countValue;
 
-              if (severity.includes('high') || severity.includes('cat') && severity.includes('i')) {
-                high += countValue;
-              } else if (severity.includes('medium') || severity.includes('cat') && severity.includes('ii')) {
-                medium += countValue;
-              } else if (severity.includes('low') || severity.includes('cat') && severity.includes('iii')) {
-                low += countValue;
+              if (severity === 'CAT_I') {
+                catI += countValue;
+              } else if (severity === 'CAT_II') {
+                catII += countValue;
+              } else if (severity === 'CAT_III') {
+                catIII += countValue;
               }
             });
 
-            return { total, high, medium, low };
+            return { total, catI, catII, catIII };
           })
         );
 
@@ -88,11 +88,11 @@ export class GroupsService {
         const groupStats = systemVulnCounts.reduce(
           (acc, systemStats) => ({
             total: acc.total + systemStats.total,
-            high: acc.high + systemStats.high,
-            medium: acc.medium + systemStats.medium,
-            low: acc.low + systemStats.low,
+            catI: acc.catI + systemStats.catI,
+            catII: acc.catII + systemStats.catII,
+            catIII: acc.catIII + systemStats.catIII,
           }),
-          { total: 0, high: 0, medium: 0, low: 0 }
+          { total: 0, catI: 0, catII: 0, catIII: 0 }
         );
 
         // Calculate compliance score (placeholder logic)
@@ -104,10 +104,9 @@ export class GroupsService {
           ...group,
           stats: {
             totalFindings: groupStats.total,
-            criticalFindings: groupStats.high, // Treating high as critical for now
-            highFindings: groupStats.high,
-            mediumFindings: groupStats.medium,
-            lowFindings: groupStats.low,
+            catIFindings: groupStats.catI,
+            catIIFindings: groupStats.catII,
+            catIIIFindings: groupStats.catIII,
             openFindings: groupStats.total, // All findings are considered open for now
             complianceScore: complianceScore,
           }

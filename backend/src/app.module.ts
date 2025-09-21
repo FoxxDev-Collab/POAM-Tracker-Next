@@ -19,6 +19,7 @@ import { VulnerabilitiesModule } from './vulnerabilities/vulnerabilities.module'
 import { AdminModule } from './admin/admin.module';
 import { FileManagerModule } from './file-manager/file-manager.module';
 import { CatalogModule } from './catalog/catalog.module';
+import { VulnerabilityCenterModule } from './vulnerability-center/vulnerability-center.module';
 import { RedisModule } from './redis/redis.module';
 import { QueuesModule } from './queues/queues.module';
 
@@ -40,6 +41,7 @@ import { QueuesModule } from './queues/queues.module';
     VulnerabilitiesModule,
     AdminModule,
     CatalogModule,
+    VulnerabilityCenterModule,
     FileManagerModule,
   ],
   controllers: [AppController],

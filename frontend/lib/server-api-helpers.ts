@@ -2,6 +2,10 @@ import { cookies } from "next/headers";
 
 export const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
+export function serverApiUrl() {
+  return BACKEND_URL;
+}
+
 // Server-side auth headers helper
 export async function getAuthHeaders(): Promise<Record<string, string>> {
   const cookieStore = await cookies();

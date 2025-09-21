@@ -86,10 +86,10 @@ export class SystemsService {
       },
     });
 
-    // Enrich systems with vulnerability counts by severity
+    // Enrich systems with STIG finding counts by category
     const enrichedSystems = await Promise.all(
       systems.map(async (system) => {
-        // Get vulnerability counts by severity for this system
+        // Get STIG finding counts by category for this system
         const vulnerabilityCounts = await this.prisma.stigFinding.groupBy({
           by: ['severity'],
           where: {
@@ -100,24 +100,24 @@ export class SystemsService {
           },
         });
 
-        // Calculate totals
+        // Calculate totals for STIG categories only
         let total = 0;
-        let high = 0;
-        let medium = 0;
-        let low = 0;
+        let catI = 0;
+        let catII = 0;
+        let catIII = 0;
 
         vulnerabilityCounts.forEach((count) => {
-          const severity = count.severity?.toLowerCase() || '';
+          const severity = count.severity || '';
           const countValue = count._count.severity;
 
           total += countValue;
 
-          if (severity.includes('high') || severity.includes('cat') && severity.includes('i')) {
-            high += countValue;
-          } else if (severity.includes('medium') || severity.includes('cat') && severity.includes('ii')) {
-            medium += countValue;
-          } else if (severity.includes('low') || severity.includes('cat') && severity.includes('iii')) {
-            low += countValue;
+          if (severity === 'CAT_I') {
+            catI += countValue;
+          } else if (severity === 'CAT_II') {
+            catII += countValue;
+          } else if (severity === 'CAT_III') {
+            catIII += countValue;
           }
         });
 
@@ -136,15 +136,14 @@ export class SystemsService {
         return {
           ...system,
           total,
-          high,
-          medium,
-          low,
+          catI,
+          catII,
+          catIII,
           stats: {
             totalFindings: total,
-            criticalFindings: high, // Treating high as critical for now
-            highFindings: high,
-            mediumFindings: medium,
-            lowFindings: low,
+            catIFindings: catI,
+            catIIFindings: catII,
+            catIIIFindings: catIII,
             openFindings: total, // All findings are considered open for now
             lastScanned: lastScan?.createdAt?.toISOString() || null,
             complianceScore: complianceScore,
@@ -172,10 +171,10 @@ export class SystemsService {
       },
     });
 
-    // Enrich systems with vulnerability counts by severity
+    // Enrich systems with STIG finding counts by category
     const enrichedSystems = await Promise.all(
       systems.map(async (system) => {
-        // Get vulnerability counts by severity for this system
+        // Get STIG finding counts by category for this system
         const vulnerabilityCounts = await this.prisma.stigFinding.groupBy({
           by: ['severity'],
           where: {
@@ -186,24 +185,24 @@ export class SystemsService {
           },
         });
 
-        // Calculate totals
+        // Calculate totals for STIG categories only
         let total = 0;
-        let high = 0;
-        let medium = 0;
-        let low = 0;
+        let catI = 0;
+        let catII = 0;
+        let catIII = 0;
 
         vulnerabilityCounts.forEach((count) => {
-          const severity = count.severity?.toLowerCase() || '';
+          const severity = count.severity || '';
           const countValue = count._count.severity;
 
           total += countValue;
 
-          if (severity.includes('high') || severity.includes('cat') && severity.includes('i')) {
-            high += countValue;
-          } else if (severity.includes('medium') || severity.includes('cat') && severity.includes('ii')) {
-            medium += countValue;
-          } else if (severity.includes('low') || severity.includes('cat') && severity.includes('iii')) {
-            low += countValue;
+          if (severity === 'CAT_I') {
+            catI += countValue;
+          } else if (severity === 'CAT_II') {
+            catII += countValue;
+          } else if (severity === 'CAT_III') {
+            catIII += countValue;
           }
         });
 
@@ -222,15 +221,14 @@ export class SystemsService {
         return {
           ...system,
           total,
-          high,
-          medium,
-          low,
+          catI,
+          catII,
+          catIII,
           stats: {
             totalFindings: total,
-            criticalFindings: high, // Treating high as critical for now
-            highFindings: high,
-            mediumFindings: medium,
-            lowFindings: low,
+            catIFindings: catI,
+            catIIFindings: catII,
+            catIIIFindings: catIII,
             openFindings: total, // All findings are considered open for now
             lastScanned: lastScan?.createdAt?.toISOString() || null,
             complianceScore: complianceScore,

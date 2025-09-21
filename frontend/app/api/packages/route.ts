@@ -30,8 +30,18 @@ export async function GET() {
       return NextResponse.json({ error: errorMessage }, { status: response.status });
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    const text = await response.text();
+    if (!text) {
+      return NextResponse.json([]);
+    }
+
+    try {
+      const data = JSON.parse(text);
+      return NextResponse.json(data);
+    } catch (parseError) {
+      console.error('Failed to parse backend response:', parseError);
+      return NextResponse.json({ error: "Invalid response from backend" }, { status: 500 });
+    }
   } catch (error) {
     console.error('Packages fetch error:', error);
     return NextResponse.json({ error: "Failed to fetch packages" }, { status: 500 });

@@ -83,6 +83,8 @@ model Package {
   stps   Stp[]
   poams  Poam[]
   nessusReports NessusReport[]
+  packageScores PackageScore[]
+  controlPackageStatus ControlPackageStatus[]
 
   @@map("packages")
 }
@@ -97,6 +99,9 @@ model Group {
   package Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
   systems System[]
   poams   Poam[]
+  groupScores GroupScore[]
+  controlGroupStatus ControlGroupStatus[]
+  worstGroupForPackage PackageScore[] @relation("PackageWorstGroup")
 
   @@unique([packageId, name])
   @@map("groups")
@@ -170,14 +175,18 @@ model System {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  package      Package       @relation(fields: [packageId], references: [id], onDelete: Cascade)
-  group        Group?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  stigScans    StigScan[]
-  stigFindings StigFinding[]
-  stps         Stp[]
-  nessusReports NessusReport[]
-  fileAssociations FileAssociation[]
-  vulnerabilityScans VulnerabilityScan[]
+  package              Package              @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  group                Group?               @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  stigScans            StigScan[]
+  stigFindings         StigFinding[]
+  systemScores         SystemScore[]
+  controlSystemStatus  ControlSystemStatus[]
+  stps                 Stp[]
+  nessusReports        NessusReport[]
+  fileAssociations     FileAssociation[]
+  vulnerabilityScans   VulnerabilityScan[]
+  worstSystemForGroup  GroupScore[]         @relation("GroupWorstSystem")
+  worstSystemForPackage PackageScore[]      @relation("PackageWorstSystem")
 
   @@index([packageId])
   @@index([groupId])
@@ -224,13 +233,15 @@ model User {
   kcPagesCreated       KcPage[]               @relation("KcPageCreatedBy")
   notifications        Notification[]
   vulnerabilityScans   VulnerabilityScan[]
+  stigScansImported    StigScan[]
+  stigFindingsReviewed StigFinding[]          @relation("StigFindingReviewer")
   kcPagesUpdated       KcPage[]               @relation("KcPageUpdatedBy")
   kcPageVersions       KcPageVersion[]
   kcComments           KcComment[]
   kcAttachments        KcAttachment[]
   kcSpacePermissions   KcSpacePermission[]
-  controlAssessments   NistControl[]       @relation("ControlAssessedBy")
-  cciAssessments       NistControlCci[]    @relation("CciAssessedBy")
+  controlAssessments   NistControl[]          @relation("ControlAssessedBy")
+  cciAssessments       NistControlCci[]       @relation("CciAssessedBy")
 
   @@map("users")
 }
@@ -276,10 +287,16 @@ model StigScan {
   systemId    Int      @map("system_id")
   title       String?
   checklistId String?  @map("checklist_id")
+  filename    String?
+  importedBy  Int?     @map("imported_by")
+  findingCount Int?    @map("finding_count")
+  version     Int      @default(1)
   createdAt   DateTime @default(now()) @map("created_at")
 
   system       System        @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  importer     User?         @relation(fields: [importedBy], references: [id])
   stigFindings StigFinding[]
+  systemScores SystemScore[]
 
   @@map("stig_scans")
 }
@@ -290,22 +307,31 @@ model StigFinding {
   scanId        Int      @map("scan_id")
   groupId       String?  @map("group_id")
   ruleId        String   @map("rule_id")
+  vulnId        String?  @map("vuln_id")
   ruleVersion   String?  @map("rule_version")
   ruleTitle     String?  @map("rule_title")
   severity      String?
   status        String?
+  controlId     String?  @map("control_id")
+  stpStatus     String   @default("None") @map("stp_status")
+  lastStpId     Int?     @map("last_stp_id")
   findingDetails String?  @map("finding_details")
   checkContent  String?  @map("check_content")
   fixText       String?  @map("fix_text")
   cci           String?
+  reviewedAt    DateTime? @map("reviewed_at")
+  reviewedBy    Int?     @map("reviewed_by")
+  justification String?  @db.Text
   firstSeen     DateTime @default(now()) @map("first_seen")
   lastSeen      DateTime @updatedAt @map("last_seen")
 
-  system System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
-  scan   StigScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  system   System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  scan     StigScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  reviewer User?    @relation("StigFindingReviewer", fields: [reviewedBy], references: [id])
 
   @@unique([systemId, ruleId])
   @@index([systemId])
+  @@index([controlId])
   @@index([severity])
   @@index([status])
   @@map("stig_findings")
@@ -1418,4 +1444,198 @@ model VulnerabilityScan {
   @@index([status])
   @@index([createdAt])
   @@map("vulnerability_scans")
+}
+
+// ---
+// Additional STIG Tracking Models
+// ---
+
+model CciControlMapping {
+  id           Int      @id @default(autoincrement())
+  cci          String   @unique
+  controlId    String   @map("control_id")
+  controlTitle String   @map("control_title")
+  definition   String   @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("cci_control_mappings")
+}
+
+model SystemScore {
+  id                    Int      @id @default(autoincrement())
+  systemId              Int      @map("system_id")
+  scanId                Int      @map("scan_id")
+  assessmentProgress    Float    @map("assessment_progress")
+  complianceScore       Float    @map("compliance_score")
+  totalFindings         Int      @map("total_findings")
+  openFindings          Int      @map("open_findings")
+  notReviewedFindings   Int      @map("not_reviewed_findings")
+  catIOpen              Int      @map("cat_i_open")
+  catIIOpen             Int      @map("cat_ii_open")
+  catIIIOpen            Int      @map("cat_iii_open")
+  calculatedAt          DateTime @default(now()) @map("calculated_at")
+
+  system System   @relation(fields: [systemId], references: [id])
+  scan   StigScan @relation(fields: [scanId], references: [id])
+
+  @@unique([systemId, scanId])
+  @@map("system_scores")
+}
+
+model ControlSystemStatus {
+  id              Int         @id @default(autoincrement())
+  controlId       String      @map("control_id")
+  systemId        Int         @map("system_id")
+  hasFindings     Boolean     @map("has_findings")
+  openCount       Int         @map("open_count")
+  criticalCount   Int         @map("critical_count")
+  lastAssessed    DateTime    @map("last_assessed")
+
+  system          System      @relation(fields: [systemId], references: [id])
+
+  @@unique([controlId, systemId])
+  @@map("control_system_status")
+}
+
+model GroupScore {
+  id                    Int      @id @default(autoincrement())
+  groupId               Int      @map("group_id")
+
+  // Overall metrics (based on worst system)
+  assessmentCompleteness Float   @map("assessment_completeness") // 0-100%
+  overallCompliance      Float   @map("overall_compliance")      // 0-100% (worst system score)
+
+  // System aggregation
+  totalSystems          Int      @map("total_systems")
+  completeAssessments   Int      @map("complete_assessments")
+  highestSystemScore    Float    @map("highest_system_score")
+  lowestSystemScore     Float    @map("lowest_system_score")
+  worstSystemId         Int?     @map("worst_system_id")        // Track which system is worst
+  worstSystemName       String?  @map("worst_system_name")
+
+  // Finding aggregation by category (from worst system)
+  totalFindings         Int      @map("total_findings")
+  openFindings          Int      @map("open_findings")
+  notReviewedFindings   Int      @map("not_reviewed_findings")
+  catITotal             Int      @map("cat_i_total")
+  catIOpen              Int      @map("cat_i_open")
+  catIITotal            Int      @map("cat_ii_total")
+  catIIOpen             Int      @map("cat_ii_open")
+  catIIITotal           Int      @map("cat_iii_total")
+  catIIIOpen            Int      @map("cat_iii_open")
+
+  // Control mapping metrics
+  controlsAffected      Int      @map("controls_affected")
+  controlsCompliant     Int      @map("controls_compliant")
+
+  calculatedAt          DateTime @default(now()) @map("calculated_at")
+
+  group Group @relation(fields: [groupId], references: [id])
+  worstSystem System? @relation("GroupWorstSystem", fields: [worstSystemId], references: [id])
+
+  @@map("group_scores")
+}
+
+model PackageScore {
+  id                    Int      @id @default(autoincrement())
+  packageId             Int      @map("package_id")
+
+  // Overall metrics (based on worst group/system)
+  assessmentCompleteness Float   @map("assessment_completeness") // 0-100%
+  overallCompliance      Float   @map("overall_compliance")      // 0-100% (worst group score)
+
+  // Group aggregation
+  totalGroups           Int      @map("total_groups")
+  completeGroups        Int      @map("complete_groups")
+  highestGroupScore     Float    @map("highest_group_score")
+  lowestGroupScore      Float    @map("lowest_group_score")
+  worstGroupId          Int?     @map("worst_group_id")         // Track which group is worst
+  worstGroupName        String?  @map("worst_group_name")
+
+  // System aggregation
+  totalSystems          Int      @map("total_systems")
+  completeAssessments   Int      @map("complete_assessments")
+  worstSystemId         Int?     @map("worst_system_id")        // Track worst system overall
+  worstSystemName       String?  @map("worst_system_name")
+
+  // Finding aggregation by category (from worst system)
+  totalFindings         Int      @map("total_findings")
+  openFindings          Int      @map("open_findings")
+  notReviewedFindings   Int      @map("not_reviewed_findings")
+  catITotal             Int      @map("cat_i_total")
+  catIOpen              Int      @map("cat_i_open")
+  catIITotal            Int      @map("cat_ii_total")
+  catIIOpen             Int      @map("cat_ii_open")
+  catIIITotal           Int      @map("cat_iii_total")
+  catIIIOpen            Int      @map("cat_iii_open")
+
+  // Control mapping metrics
+  controlsAffected      Int      @map("controls_affected")
+  controlsCompliant     Int      @map("controls_compliant")
+
+  calculatedAt          DateTime @default(now()) @map("calculated_at")
+
+  package Package @relation(fields: [packageId], references: [id])
+  worstGroup Group? @relation("PackageWorstGroup", fields: [worstGroupId], references: [id])
+  worstSystem System? @relation("PackageWorstSystem", fields: [worstSystemId], references: [id])
+
+  @@map("package_scores")
+}
+
+model ControlGroupStatus {
+  id              Int         @id @default(autoincrement())
+  controlId       String      @map("control_id")
+  groupId         Int         @map("group_id")
+
+  // Aggregated system metrics
+  systemsAffected      Int     @map("systems_affected")
+  systemsCompliant     Int     @map("systems_compliant")
+  assessmentComplete   Boolean @map("assessment_complete")
+
+  // Finding counts
+  totalFindings        Int     @map("total_findings")
+  openFindings         Int     @map("open_findings")
+  catIOpen             Int     @map("cat_i_open")
+  catIIOpen            Int     @map("cat_ii_open")
+  catIIIOpen           Int     @map("cat_iii_open")
+
+  // Compliance status
+  status              String   @map("status") // Compliant, Non_Compliant, Assessment_Incomplete
+  lastAssessed        DateTime @map("last_assessed")
+
+  group Group @relation(fields: [groupId], references: [id])
+
+  @@unique([controlId, groupId])
+  @@map("control_group_status")
+}
+
+model ControlPackageStatus {
+  id              Int         @id @default(autoincrement())
+  controlId       String      @map("control_id")
+  packageId       Int         @map("package_id")
+
+  // Aggregated group metrics
+  groupsAffected       Int     @map("groups_affected")
+  groupsCompliant      Int     @map("groups_compliant")
+
+  // Aggregated system metrics
+  systemsAffected      Int     @map("systems_affected")
+  systemsCompliant     Int     @map("systems_compliant")
+  assessmentComplete   Boolean @map("assessment_complete")
+
+  // Finding counts
+  totalFindings        Int     @map("total_findings")
+  openFindings         Int     @map("open_findings")
+  catIOpen             Int     @map("cat_i_open")
+  catIIOpen            Int     @map("cat_ii_open")
+  catIIIOpen           Int     @map("cat_iii_open")
+
+  // Compliance status
+  status              String   @map("status") // Compliant, Non_Compliant, Assessment_Incomplete
+  lastAssessed        DateTime @map("last_assessed")
+
+  package Package @relation(fields: [packageId], references: [id])
+
+  @@unique([controlId, packageId])
+  @@map("control_package_status")
 }

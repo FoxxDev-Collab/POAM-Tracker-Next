@@ -6,7 +6,13 @@ import { EmailProcessor } from './processors/email.processor';
 import { ReportProcessor } from './processors/report.processor';
 import { NotificationProcessor } from './processors/notification.processor';
 import { VulnerabilityScanProcessor } from './processors/vulnerability-scan.processor';
+import { StigImportProcessor } from './processors/stig-import.processor';
+import { CciMappingProcessor } from './processors/cci-mapping.processor';
 import { PrismaModule } from '../prisma/prisma.module';
+import { CciMapperService } from '../services/cci-mapper.service';
+import { StigImportService } from '../services/stig-import.service';
+import { ControlComplianceService } from '../services/control-compliance.service';
+import { ScoringService } from '../services/scoring.service';
 
 @Module({
   imports: [
@@ -22,7 +28,10 @@ import { PrismaModule } from '../prisma/prisma.module';
       { name: 'email' },
       { name: 'report' },
       { name: 'notification' },
-      { name: 'vulnerability-scan' }
+      { name: 'vulnerability-scan' },
+      { name: 'stig-import' },
+      { name: 'cci-mapping' },
+      { name: 'score-calculation' }
     ),
   ],
   controllers: [QueuesController],
@@ -32,6 +41,12 @@ import { PrismaModule } from '../prisma/prisma.module';
     ReportProcessor,
     NotificationProcessor,
     VulnerabilityScanProcessor,
+    StigImportProcessor,
+    CciMappingProcessor,
+    CciMapperService,
+    StigImportService,
+    ControlComplianceService,
+    ScoringService,
   ],
   exports: [QueuesService, BullModule],
 })

@@ -9,10 +9,10 @@ export class DashboardService {
     // Get CAT I and CAT II findings count
     const [catI, catII] = await Promise.all([
       this.prisma.stigFinding.count({
-        where: { severity: 'high' },
+        where: { severity: 'CAT_I' },
       }),
       this.prisma.stigFinding.count({
-        where: { severity: 'medium' },
+        where: { severity: 'CAT_II' },
       }),
     ]);
 
