@@ -8,7 +8,7 @@ export function getRedisClient(): Redis {
     try {
       const redisHost = process.env.REDIS_HOST || 'localhost';
       const redisPort = parseInt(process.env.REDIS_PORT || '6379');
-      const redisPassword = process.env.REDIS_PASSWORD;
+      const redisPassword = process.env.REDIS_PASSWORD || 'redis123';
 
       // Validate that we have required environment variables
       if (!redisHost || isNaN(redisPort)) {

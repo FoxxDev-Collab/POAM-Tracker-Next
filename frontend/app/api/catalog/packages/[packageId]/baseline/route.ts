@@ -3,12 +3,13 @@ import { BACKEND_URL, getAuthHeaders } from '@/lib/server-api-helpers';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { packageId: string } }
+  { params }: { params: Promise<{ packageId: string }> }
 ) {
   try {
+    const { packageId } = await params;
     const headers = await getAuthHeaders();
 
-    const response = await fetch(`${BACKEND_URL}/catalog/packages/${params.packageId}/baseline`, {
+    const response = await fetch(`${BACKEND_URL}/catalog/packages/${packageId}/baseline`, {
       headers,
     });
 
@@ -33,13 +34,14 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { packageId: string } }
+  { params }: { params: Promise<{ packageId: string }> }
 ) {
   try {
+    const { packageId } = await params;
     const body = await request.json();
     const headers = await getAuthHeaders();
 
-    const response = await fetch(`${BACKEND_URL}/catalog/packages/${params.packageId}/baseline/initialize`, {
+    const response = await fetch(`${BACKEND_URL}/catalog/packages/${packageId}/baseline/initialize`, {
       method: 'POST',
       headers: {
         ...headers,

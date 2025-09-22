@@ -8,7 +8,7 @@ import { json, urlencoded } from 'express';
 
 const MAX_PAYLOAD_SIZE = '50mb';
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const RATE_LIMIT_MAX_REQUESTS = 100;
+const RATE_LIMIT_MAX_REQUESTS = 1000; // Increased to align with frontend
 const DEFAULT_PORT = 3001;
 const DEV_FRONTEND_PORT = 3000;
 

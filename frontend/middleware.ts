@@ -2,8 +2,58 @@ import { NextRequest, NextResponse } from "next/server"
 import { getIronSession } from "iron-session"
 import type { SessionData } from "@/lib/session"
 
-// In-memory rate limiting for Edge Runtime compatibility
+// In-memory rate limiting with very generous limits
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+
+function checkSimpleRateLimit(request: NextRequest): { allowed: boolean; limit: number; remaining: number; resetTime: number } {
+  const ip = getClientIP(request)
+  const key = `${ip}:${request.nextUrl.pathname}`
+  const now = Date.now()
+  const windowMs = 15 * 60 * 1000 // 15 minutes
+
+  // Very generous limits to avoid blocking legitimate usage
+  let limit = 10000 // Default limit - very generous
+  if (request.nextUrl.pathname.startsWith('/api/auth')) {
+    limit = 100 // Still reasonable for auth endpoints
+  } else if (request.nextUrl.pathname.includes('/vulnerability-center/')) {
+    limit = 50000 // Very high limit for vulnerability center operations
+  } else if (request.nextUrl.pathname.includes('/api/')) {
+    limit = 20000 // Very high limit for general API calls
+  }
+
+  // Clean up old entries periodically
+  if (Math.random() < 0.01) { // 1% chance to clean up
+    const cutoff = now - windowMs;
+    for (const [key, value] of rateLimitMap.entries()) {
+      if (value.resetTime < cutoff) {
+        rateLimitMap.delete(key);
+      }
+    }
+  }
+
+  const current = rateLimitMap.get(key)
+
+  if (!current || now > current.resetTime) {
+    // New window
+    rateLimitMap.set(key, { count: 1, resetTime: now + windowMs })
+    return { allowed: true, limit, remaining: limit - 1, resetTime: now + windowMs }
+  }
+
+  if (current.count >= limit) {
+    return { allowed: false, limit, remaining: 0, resetTime: current.resetTime }
+  }
+
+  current.count++
+  return { allowed: true, limit, remaining: limit - current.count, resetTime: current.resetTime }
+}
+
+function getClientIP(request: NextRequest): string {
+  return (
+    request.headers.get('x-forwarded-for') ||
+    request.headers.get('x-real-ip') ||
+    '127.0.0.1'
+  )
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -12,20 +62,21 @@ export async function middleware(request: NextRequest) {
   // Add security headers
   addSecurityHeaders(response)
   
-  // Rate limiting
-  const rateLimitResult = checkRateLimit(request)
+  // Rate limiting - disabled Redis due to Edge Runtime compatibility issues
+  // Using backend rate limiting instead
+  const rateLimitResult = checkSimpleRateLimit(request)
   if (!rateLimitResult.allowed) {
     return new NextResponse(JSON.stringify({
       error: "Too Many Requests",
       message: "Rate limit exceeded. Please try again later.",
-      retryAfter: 60
+      retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
     }), {
       status: 429,
       headers: {
         "Content-Type": "application/json",
-        "Retry-After": "60",
+        "Retry-After": Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString(),
         "X-RateLimit-Limit": rateLimitResult.limit.toString(),
-        "X-RateLimit-Remaining": "0"
+        "X-RateLimit-Remaining": rateLimitResult.remaining.toString()
       }
     })
   }
@@ -129,56 +180,6 @@ function addSecurityHeaders(response: NextResponse) {
   // Remove server information
   response.headers.delete('Server')
   response.headers.delete('X-Powered-By')
-}
-
-function checkRateLimit(request: NextRequest): { allowed: boolean; limit: number; remaining: number } {
-  const ip = getClientIP(request)
-  const key = `${ip}:${request.nextUrl.pathname}`
-  const now = Date.now()
-  const windowMs = 60 * 1000 // 1 minute window
-
-  // Different limits for different endpoints
-  let limit = 100 // Default limit
-  if (request.nextUrl.pathname.startsWith('/api/auth')) {
-    limit = 5 // Stricter for auth endpoints
-  } else if (request.nextUrl.pathname.includes('/vulnerability-center/')) {
-    limit = 1000 // Much higher limit for vulnerability center operations (STIG imports)
-  } else if (request.nextUrl.pathname.includes('/api/')) {
-    limit = 300 // Higher limit for general API calls
-  }
-
-  // Clean up old entries periodically
-  if (Math.random() < 0.01) { // 1% chance to clean up
-    const cutoff = now - windowMs;
-    for (const [key, value] of rateLimitMap.entries()) {
-      if (value.resetTime < cutoff) {
-        rateLimitMap.delete(key);
-      }
-    }
-  }
-
-  const current = rateLimitMap.get(key)
-
-  if (!current || now > current.resetTime) {
-    // New window
-    rateLimitMap.set(key, { count: 1, resetTime: now + windowMs })
-    return { allowed: true, limit, remaining: limit - 1 }
-  }
-
-  if (current.count >= limit) {
-    return { allowed: false, limit, remaining: 0 }
-  }
-
-  current.count++
-  return { allowed: true, limit, remaining: limit - current.count }
-}
-
-function getClientIP(request: NextRequest): string {
-  return (
-    request.headers.get('x-forwarded-for') ||
-    request.headers.get('x-real-ip') ||
-    '127.0.0.1'
-  )
 }
 
 function isPublicRoute(pathname: string): boolean {
