@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import {
   Shield, Search, FileText, AlertTriangle, CheckCircle, ArrowLeft,
-  Activity, Settings, Package
+  Activity, Settings, Package, Plus, Eye
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,6 +33,13 @@ interface Control {
   type: 'baseline' | 'enhancement'
   complianceStatus?: string
   implementationStatus?: string
+  includeInBaseline?: boolean
+  stigCompliance?: {
+    status: string
+    openFindings: number
+    totalFindings: number
+    systemsAffected: number
+  }
 }
 
 interface ControlFamilyPageProps {
@@ -68,12 +76,14 @@ const IMPLEMENTATION_STATUSES = [
 export default function ControlFamilyPage({ familyId, familyName, familyIconName = 'Shield' }: ControlFamilyPageProps) {
   const FamilyIcon = ICON_MAP[familyIconName as keyof typeof ICON_MAP] || Shield
   const router = useRouter()
+  const { toast } = useToast()
   const [packages, setPackages] = useState<ATOPackage[]>([])
   const [selectedPackageId, setSelectedPackageId] = useState<string>("")
   const [controls, setControls] = useState<Control[]>([])
   const [filteredControls, setFilteredControls] = useState<Control[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+  const [familyCompliance, setFamilyCompliance] = useState<any>(null)
 
   useEffect(() => {
     fetchPackages()
@@ -117,21 +127,57 @@ export default function ControlFamilyPage({ familyId, familyName, familyIconName
   const fetchControls = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/catalog/controls?family=${familyId}&limit=100`)
-      if (response.ok) {
-        const data = await response.json()
+      // Fetch controls for the family
+      const controlsResponse = await fetch(`/api/catalog/controls?family=${familyId}&limit=100`)
+
+      // Fetch package baseline if a package is selected
+      let baselineData: any = null
+      let packageComplianceData: any = null
+
+      if (selectedPackageId) {
+        const [baselineResponse, complianceResponse] = await Promise.all([
+          fetch(`/api/catalog/packages/${selectedPackageId}/baseline`),
+          fetch(`/api/catalog/packages/${selectedPackageId}/control-status`)
+        ])
+
+        if (baselineResponse.ok) {
+          const baseline = await baselineResponse.json()
+          baselineData = baseline.data
+        }
+
+        if (complianceResponse.ok) {
+          const compliance = await complianceResponse.json()
+          packageComplianceData = compliance.data
+          setFamilyCompliance(packageComplianceData?.families?.[familyId])
+        }
+      }
+
+      if (controlsResponse.ok) {
+        const data = await controlsResponse.json()
         const controlsData = data.data?.controls || []
 
-        const processedControls = controlsData.map((control: any) => ({
-          id: control.controlId,
-          name: control.name,
-          family: familyId,
-          controlText: control.controlText,
-          discussion: control.discussion,
-          type: control.controlId.includes('(') ? 'enhancement' : 'baseline',
-          complianceStatus: control.complianceStatus || 'not_reviewed',
-          implementationStatus: control.implementationStatus || 'not_implemented'
-        }))
+        const processedControls = controlsData.map((control: any) => {
+          // Check if control is in baseline
+          const baselineControl = baselineData?.controls?.find(
+            (bc: any) => bc.controlId === control.controlId
+          )
+
+          // Get STIG compliance data for this control
+          const stigCompliance = packageComplianceData?.controlStatus?.[control.controlId]
+
+          return {
+            id: control.controlId,
+            name: control.name,
+            family: familyId,
+            controlText: control.controlText,
+            discussion: control.discussion,
+            type: control.controlId.includes('(') ? 'enhancement' : 'baseline',
+            complianceStatus: baselineControl?.complianceStatus || control.complianceStatus || 'NOT_ASSESSED',
+            implementationStatus: baselineControl?.implementationStatus || 'Not_Implemented',
+            includeInBaseline: baselineControl?.includeInBaseline || false,
+            stigCompliance: stigCompliance
+          }
+        })
 
         setControls(processedControls)
         setFilteredControls(processedControls)
@@ -161,6 +207,53 @@ export default function ControlFamilyPage({ familyId, familyName, familyIconName
 
   const handleControlClick = (controlId: string) => {
     router.push(`/rmf-center/control-catalog/${familyId}/${controlId}`)
+  }
+
+  const addToBaseline = async (controlId: string) => {
+    if (!selectedPackageId) {
+      toast({
+        title: "Error",
+        description: "Please select a package first",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/catalog/packages/${selectedPackageId}/baseline/${controlId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          includeInBaseline: true,
+          tailoringAction: 'Added',
+          tailoringRationale: `Added ${controlId} to package baseline`
+        }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `${controlId} added to baseline successfully`,
+        })
+        // Refresh the controls data to show updated status
+        fetchControls()
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.message || "Failed to add control to baseline",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add control to baseline",
+        variant: "destructive"
+      })
+    }
   }
 
   return (
@@ -248,8 +341,16 @@ export default function ControlFamilyPage({ familyId, familyName, familyIconName
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">0%</div>
-              <p className="text-xs text-muted-foreground mt-1">To be implemented</p>
+              <div className="text-2xl font-bold" style={{
+                color: familyCompliance?.compliancePercentage >= 90 ? '#10b981' :
+                       familyCompliance?.compliancePercentage >= 70 ? '#f59e0b' :
+                       familyCompliance?.compliancePercentage >= 50 ? '#ef4444' : '#6b7280'
+              }}>
+                {familyCompliance?.compliancePercentage || 0}%
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {familyCompliance?.compliantControls || 0} of {familyCompliance?.totalControls || 0} compliant
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -294,9 +395,11 @@ export default function ControlFamilyPage({ familyId, familyName, familyIconName
                   <TableHead className="w-[100px]">Control ID</TableHead>
                   <TableHead>Control Name</TableHead>
                   <TableHead className="w-[120px]">Type</TableHead>
+                  <TableHead className="w-[100px]">In Baseline</TableHead>
                   <TableHead className="w-[180px]">Implementation Status</TableHead>
                   <TableHead className="w-[180px]">Compliance Status</TableHead>
-                  <TableHead className="w-[120px]">Actions</TableHead>
+                  <TableHead className="w-[120px]">STIG Findings</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -316,23 +419,80 @@ export default function ControlFamilyPage({ familyId, familyName, familyIconName
                         </Badge>
                       </TableCell>
                       <TableCell>
+                        {control.includeInBaseline ? (
+                          <Badge variant="outline" className="bg-green-50">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Yes
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">No</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <span className={`text-sm font-medium ${implStatus.color}`}>
                           {implStatus.text}
                         </span>
                       </TableCell>
                       <TableCell>
-                        {getComplianceStatusBadge(control.complianceStatus || 'not_reviewed')}
+                        {getComplianceStatusBadge(control.complianceStatus || 'NOT_ASSESSED')}
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="ghost" disabled>
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" disabled>
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" disabled>
-                            <AlertTriangle className="h-4 w-4" />
+                        {control.stigCompliance ? (
+                          <div className="text-xs space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className={control.stigCompliance.openFindings > 0 ? 'text-red-600 font-medium' : 'text-green-600 font-medium'}>
+                                {control.stigCompliance.openFindings} open
+                              </span>
+                              <span className="text-muted-foreground">
+                                / {control.stigCompliance.totalFindings} total
+                              </span>
+                            </div>
+                            {control.stigCompliance.openFindings > 0 && (
+                              <div className="flex gap-2 text-xs">
+                                {control.stigCompliance.catIOpen > 0 && (
+                                  <span className="text-red-600 font-medium">CAT I: {control.stigCompliance.catIOpen}</span>
+                                )}
+                                {control.stigCompliance.catIIOpen > 0 && (
+                                  <span className="text-orange-600 font-medium">CAT II: {control.stigCompliance.catIIOpen}</span>
+                                )}
+                                {control.stigCompliance.catIIIOpen > 0 && (
+                                  <span className="text-yellow-600 font-medium">CAT III: {control.stigCompliance.catIIIOpen}</span>
+                                )}
+                              </div>
+                            )}
+                            <div className="text-muted-foreground">
+                              {control.stigCompliance.systemsAffected} system{control.stigCompliance.systemsAffected !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">No STIG data</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {!control.includeInBaseline && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                addToBaseline(control.id)
+                              }}
+                              title="Add to Baseline"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleControlClick(control.id)
+                            }}
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>

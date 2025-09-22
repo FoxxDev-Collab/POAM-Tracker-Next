@@ -85,6 +85,7 @@ model Package {
   nessusReports NessusReport[]
   packageScores PackageScore[]
   controlPackageStatus ControlPackageStatus[]
+  packageControlBaselines PackageControlBaseline[]
 
   @@map("packages")
 }
@@ -1638,4 +1639,46 @@ model ControlPackageStatus {
 
   @@unique([controlId, packageId])
   @@map("control_package_status")
+}
+
+// Package-specific control baseline and tailoring
+model PackageControlBaseline {
+  id              Int         @id @default(autoincrement())
+  packageId       Int         @map("package_id")
+  controlId       String      @map("control_id") // e.g., "AC-1", "AC-11(1)"
+
+  // Baseline selection
+  includeInBaseline Boolean   @default(false) @map("include_in_baseline")
+  baselineSource   String?    @map("baseline_source") // "Low", "Moderate", "High", "Custom"
+
+  // Tailoring decisions
+  tailoringAction  String?    @map("tailoring_action") // "Added", "Removed", "Modified"
+  tailoringRationale String?  @db.Text @map("tailoring_rationale")
+
+  // Implementation status
+  implementationStatus String? @map("implementation_status") // "Implemented", "Partially_Implemented", "Planned", "Not_Implemented"
+  implementationNotes  String? @db.Text @map("implementation_notes")
+
+  // Compliance status (package-specific)
+  complianceStatus ComplianceStatus? @map("compliance_status")
+  complianceNotes  String? @db.Text @map("compliance_notes")
+
+  // STP tracking
+  stpRequired      Boolean   @default(false) @map("stp_required")
+  stpStatus        String?   @map("stp_status") // "None", "Active", "Passed"
+
+  // Metadata
+  addedBy          Int?      @map("added_by")
+  addedAt          DateTime  @default(now()) @map("added_at")
+  updatedBy        Int?      @map("updated_by")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, controlId])
+  @@index([packageId])
+  @@index([controlId])
+  @@index([includeInBaseline])
+  @@index([complianceStatus])
+  @@map("package_control_baselines")
 }

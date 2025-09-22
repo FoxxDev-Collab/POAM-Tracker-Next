@@ -92,7 +92,8 @@ export class CciMapperService implements OnModuleInit {
         // Look for NIST SP 800-53 references
         for (const ref of references) {
           if (ref.$.title?.includes('NIST') && ref.$.index) {
-            const controlId = ref.$.index;
+            const rawControlId = ref.$.index;
+            const controlId = this.normalizeControlId(rawControlId); // Normalize the control ID
             const controlTitle = ref.$.title || '';
 
             const mapping: CciMapping = {
@@ -131,6 +132,13 @@ export class CciMapperService implements OnModuleInit {
     }
   }
 
+  /**
+   * Normalize control ID by removing spaces around parentheses
+   */
+  private normalizeControlId(controlId: string): string {
+    return controlId.replace(/\s*\(\s*/g, '(').replace(/\s*\)\s*/g, ')');
+  }
+
   mapCciToControl(cci: string): string | null {
     if (!this.initialized) {
       this.logger.warn('CCI Mapper not yet initialized');
@@ -138,7 +146,10 @@ export class CciMapperService implements OnModuleInit {
     }
 
     const mapping = this.cciMappings.get(cci);
-    return mapping?.controlId || null;
+    if (mapping?.controlId) {
+      return this.normalizeControlId(mapping.controlId);
+    }
+    return null;
   }
 
   mapMultipleCcisToControl(ccis: string[]): Map<string, string> {

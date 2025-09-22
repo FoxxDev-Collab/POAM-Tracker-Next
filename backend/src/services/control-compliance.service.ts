@@ -372,6 +372,101 @@ export class ControlComplianceService {
   }
 
   /**
+   * Get CCI compliance data for a control across all groups/systems in a package
+   */
+  async getControlCciCompliance(controlId: string, packageId?: number) {
+    // Get the control with its CCIs
+    const control = await this.prisma.nistControl.findUnique({
+      where: { controlId },
+      include: { ccis: true },
+    });
+
+    if (!control) {
+      return { cciCompliance: {} };
+    }
+
+    // Get package groups and systems if packageId is provided
+    let groups: any[] = [];
+    if (packageId) {
+      const pkg = await this.prisma.package.findUnique({
+        where: { id: packageId },
+        include: {
+          groups: {
+            include: {
+              systems: true,
+            },
+          },
+        },
+      });
+      groups = pkg?.groups || [];
+    }
+
+    const cciCompliance: Record<string, any[]> = {};
+
+    // For each CCI, get compliance data across all groups/systems
+    for (const cci of control.ccis) {
+      const groupCompliance: any[] = [];
+
+      for (const group of groups) {
+        const systemsCompliance: any[] = [];
+
+        // Get STIG findings for each system in the group
+        for (const system of group.systems) {
+          const findings = await this.prisma.stigFinding.findMany({
+            where: {
+              systemId: system.id,
+              cci: { contains: cci.cci },
+              controlId,
+            },
+          });
+
+          if (findings.length > 0) {
+            const openFindings = findings.filter(f => f.status === 'Open').length;
+            const catIOpen = findings.filter(f => f.status === 'Open' && f.severity === 'CAT_I').length;
+            const catIIOpen = findings.filter(f => f.status === 'Open' && f.severity === 'CAT_II').length;
+            const catIIIOpen = findings.filter(f => f.status === 'Open' && f.severity === 'CAT_III').length;
+
+            systemsCompliance.push({
+              systemId: system.id,
+              systemName: system.name,
+              status: openFindings === 0 ? 'Compliant' : 'Non-Compliant',
+              openFindings,
+              totalFindings: findings.length,
+              catIOpen,
+              catIIOpen,
+              catIIIOpen,
+            });
+          }
+        }
+
+        if (systemsCompliance.length > 0) {
+          const totalFindings = systemsCompliance.reduce((sum, s) => sum + s.totalFindings, 0);
+          const openFindings = systemsCompliance.reduce((sum, s) => sum + s.openFindings, 0);
+
+          groupCompliance.push({
+            groupId: group.id,
+            groupName: group.name,
+            systems: systemsCompliance,
+            overallStatus: openFindings === 0 ? 'Compliant' : 'Non-Compliant',
+            openFindings,
+            totalFindings,
+          });
+        }
+      }
+
+      if (groupCompliance.length > 0) {
+        cciCompliance[cci.cci] = groupCompliance;
+      }
+    }
+
+    return {
+      controlId,
+      cciCompliance,
+      totalCcis: control.ccis.length,
+    };
+  }
+
+  /**
    * Triggers control compliance update after STIG import
    */
   async updateComplianceAfterStigImport(systemId: number, scanId: number): Promise<void> {

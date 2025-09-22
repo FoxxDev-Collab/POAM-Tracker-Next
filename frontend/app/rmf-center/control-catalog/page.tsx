@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react"
 import {
   Shield, Package, AlertTriangle, CheckCircle,
-  FileText, TrendingUp, Activity, Settings
+  FileText, TrendingUp, Activity, Settings,
+  Download, RefreshCw, ListChecks, Link2,
+  Eye, ExternalLink, ChevronDown, ChevronUp
 } from "lucide-react"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +14,20 @@ import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/hooks/use-toast"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 
 interface ATOPackage {
   id: number
@@ -19,6 +35,7 @@ interface ATOPackage {
   description: string | null
   rmfStep: string
   impactLevel: string | null
+  securityControlBaseline?: string | null
 }
 
 interface ControlFamily {
@@ -34,6 +51,45 @@ interface CatalogStats {
   totalControls: number
   totalCCIs: number
   controlFamilies: number
+}
+
+interface PackageBaseline {
+  packageId: number
+  controls: any[]
+  summary: {
+    total: number
+    included: number
+    tailored: number
+    implemented: number
+    partiallyImplemented: number
+    notImplemented: number
+  }
+}
+
+interface ComplianceSummary {
+  packageId: number
+  totalControls: number
+  compliancePercentage: number
+  breakdown: {
+    compliant: number
+    nonCompliant: number
+    notApplicable: number
+    notAssessed: number
+  }
+}
+
+interface StigMappedControl {
+  controlId: string
+  controlTitle: string
+  family: string
+  totalFindings: number
+  openFindings: number
+  catIOpen: number
+  catIIOpen: number
+  catIIIOpen: number
+  systemsAffected: number
+  ccis: string[]
+  status: 'Compliant' | 'Non-Compliant' | 'Partially Compliant'
 }
 
 const CONTROL_FAMILIES = [
@@ -60,11 +116,18 @@ const CONTROL_FAMILIES = [
 ]
 
 export default function ControlCatalogDashboard() {
+  const { toast } = useToast()
   const [packages, setPackages] = useState<ATOPackage[]>([])
   const [selectedPackageId, setSelectedPackageId] = useState<string>("")
+  const [selectedPackage, setSelectedPackage] = useState<ATOPackage | null>(null)
   const [catalogStats, setCatalogStats] = useState<CatalogStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [familyStats, setFamilyStats] = useState<Map<string, ControlFamily>>(new Map())
+  const [packageBaseline, setPackageBaseline] = useState<PackageBaseline | null>(null)
+  const [complianceSummary, setComplianceSummary] = useState<ComplianceSummary | null>(null)
+  const [stigMappedControls, setStigMappedControls] = useState<StigMappedControl[]>([])
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [showStigTable, setShowStigTable] = useState(false)
 
   useEffect(() => {
     fetchPackages()
@@ -74,9 +137,14 @@ export default function ControlCatalogDashboard() {
   useEffect(() => {
     if (selectedPackageId) {
       localStorage.setItem('selectedATOPackage', selectedPackageId)
+      const pkg = packages.find(p => p.id.toString() === selectedPackageId)
+      setSelectedPackage(pkg || null)
       fetchPackageControlStatus(selectedPackageId)
+      fetchPackageBaseline(selectedPackageId)
+      fetchComplianceSummary(selectedPackageId)
+      fetchStigMappedControls(selectedPackageId)
     }
-  }, [selectedPackageId])
+  }, [selectedPackageId, packages])
 
   const fetchPackages = async () => {
     try {
@@ -113,22 +181,114 @@ export default function ControlCatalogDashboard() {
     }
   }
 
-  const fetchPackageControlStatus = async (_selectedPackageId: string) => {
-    // This would fetch package-specific control implementation status
-    // For now, we'll use placeholder data
-    const tempStats = new Map<string, ControlFamily>()
-    CONTROL_FAMILIES.forEach(family => {
-      tempStats.set(family.id, {
-        family: family.id,
-        name: family.name,
-        description: "",
-        controlCount: Math.floor(Math.random() * 50) + 10,
-        implementedCount: Math.floor(Math.random() * 40),
-        compliance: Math.floor(Math.random() * 100)
+  const fetchPackageControlStatus = async (packageId: string) => {
+    try {
+      // Fetch package-specific control compliance data from backend
+      const response = await fetch(`/api/catalog/packages/${packageId}/control-status`)
+      if (response.ok) {
+        const data = await response.json()
+        const statsMap = new Map<string, ControlFamily>()
+
+        // Process the control status data by family
+        CONTROL_FAMILIES.forEach(family => {
+          const familyData = data.data?.families?.[family.id] || {
+            totalControls: 0,
+            implementedControls: 0,
+            compliantControls: 0,
+            compliancePercentage: 0
+          }
+
+          statsMap.set(family.id, {
+            family: family.id,
+            name: family.name,
+            description: "",
+            controlCount: familyData.totalControls,
+            implementedCount: familyData.compliantControls,
+            compliance: familyData.compliancePercentage
+          })
+        })
+
+        setFamilyStats(statsMap)
+      } else {
+        // Fallback to empty stats if API fails
+        const emptyStats = new Map<string, ControlFamily>()
+        CONTROL_FAMILIES.forEach(family => {
+          emptyStats.set(family.id, {
+            family: family.id,
+            name: family.name,
+            description: "",
+            controlCount: 0,
+            implementedCount: 0,
+            compliance: 0
+          })
+        })
+        setFamilyStats(emptyStats)
+      }
+    } catch (error) {
+      console.error('Failed to fetch package control status:', error)
+      // Set empty stats on error
+      const emptyStats = new Map<string, ControlFamily>()
+      CONTROL_FAMILIES.forEach(family => {
+        emptyStats.set(family.id, {
+          family: family.id,
+          name: family.name,
+          description: "",
+          controlCount: 0,
+          implementedCount: 0,
+          compliance: 0
+        })
       })
-    })
-    setFamilyStats(tempStats)
+      setFamilyStats(emptyStats)
+    }
   }
+
+  const fetchPackageBaseline = async (packageId: string) => {
+    try {
+      const response = await fetch(`/api/catalog/packages/${packageId}/baseline`)
+      if (response.ok) {
+        const data = await response.json()
+        setPackageBaseline(data.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch package baseline:', error)
+    }
+  }
+
+  const fetchComplianceSummary = async (packageId: string) => {
+    try {
+      const response = await fetch(`/api/catalog/packages/${packageId}/compliance-summary`)
+      if (response.ok) {
+        const data = await response.json()
+        setComplianceSummary(data.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch compliance summary:', error)
+    }
+  }
+
+  const fetchStigMappedControls = async (packageId: string) => {
+    try {
+      const response = await fetch(`/api/catalog/packages/${packageId}/stig-mapped-controls`)
+      if (response.ok) {
+        const data = await response.json()
+        setStigMappedControls(data.data || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch STIG mapped controls:', error)
+      setStigMappedControls([])
+    }
+  }
+
+  const toggleRow = (controlId: string) => {
+    const newExpanded = new Set(expandedRows)
+    if (newExpanded.has(controlId)) {
+      newExpanded.delete(controlId)
+    } else {
+      newExpanded.add(controlId)
+    }
+    setExpandedRows(newExpanded)
+  }
+
 
   const getComplianceColor = (percentage: number) => {
     if (percentage >= 90) return "text-green-600"
@@ -173,65 +333,78 @@ export default function ControlCatalogDashboard() {
         </div>
       </div>
 
-      {/* Overview Stats */}
-      {selectedPackageId && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Controls
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{catalogStats?.totalControls || 0}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                NIST 800-53 Rev 5
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Implemented
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">0</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Fully implemented controls
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                In Progress
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">0</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Being implemented
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                POA&Ms
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">0</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Open action items
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Package Baseline Overview */}
+      {selectedPackageId && packageBaseline && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Package Baseline Overview</span>
+              <Badge variant="outline" className="text-sm">
+                {selectedPackage?.securityControlBaseline || 'Custom'} Baseline
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              Control implementation and compliance status for {selectedPackage?.name}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Total Controls</p>
+                <p className="text-2xl font-bold">{packageBaseline.summary.total}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">In Baseline</p>
+                <p className="text-2xl font-bold">{packageBaseline.summary.included}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Tailored</p>
+                <p className="text-2xl font-bold text-blue-600">{packageBaseline.summary.tailored}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Implemented</p>
+                <p className="text-2xl font-bold text-green-600">{packageBaseline.summary.implemented}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Partial</p>
+                <p className="text-2xl font-bold text-yellow-600">{packageBaseline.summary.partiallyImplemented}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Not Implemented</p>
+                <p className="text-2xl font-bold text-red-600">{packageBaseline.summary.notImplemented}</p>
+              </div>
+            </div>
+            {complianceSummary && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Overall Compliance</span>
+                  <span className="font-medium">
+                    {Math.round(complianceSummary.compliancePercentage)}%
+                  </span>
+                </div>
+                <Progress value={complianceSummary.compliancePercentage} className="h-3" />
+                <div className="grid grid-cols-4 gap-2 text-xs">
+                  <div className="text-center p-2 bg-green-50 rounded">
+                    <p className="font-medium text-green-700">{complianceSummary.breakdown.compliant}</p>
+                    <p className="text-green-600">Compliant</p>
+                  </div>
+                  <div className="text-center p-2 bg-red-50 rounded">
+                    <p className="font-medium text-red-700">{complianceSummary.breakdown.nonCompliant}</p>
+                    <p className="text-red-600">Non-Compliant</p>
+                  </div>
+                  <div className="text-center p-2 bg-gray-50 rounded">
+                    <p className="font-medium text-gray-700">{complianceSummary.breakdown.notApplicable}</p>
+                    <p className="text-gray-600">N/A</p>
+                  </div>
+                  <div className="text-center p-2 bg-blue-50 rounded">
+                    <p className="font-medium text-blue-700">{complianceSummary.breakdown.notAssessed}</p>
+                    <p className="text-blue-600">Not Assessed</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Control Families Grid */}
@@ -273,7 +446,7 @@ export default function ControlCatalogDashboard() {
                         <Progress value={compliancePercentage} className="h-2" />
                         <div className="flex items-center justify-between">
                           <span className={`text-sm font-medium ${getComplianceColor(compliancePercentage)}`}>
-                            {Math.round(compliancePercentage)}% Complete
+                            {Math.round(compliancePercentage)}% Compliant
                           </span>
                           {getComplianceBadge(compliancePercentage)}
                         </div>
@@ -291,6 +464,196 @@ export default function ControlCatalogDashboard() {
         </div>
       </div>
 
+      {/* STIG to NIST Control Mapping Table */}
+      {selectedPackageId && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Link2 className="h-5 w-5" />
+                  STIG to NIST Control Mapping
+                </CardTitle>
+                <CardDescription>
+                  Controls with STIG findings from vulnerability scans
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowStigTable(!showStigTable)}
+              >
+                {showStigTable ? (
+                  <><ChevronUp className="h-4 w-4 mr-2" /> Hide Table</>
+                ) : (
+                  <><ChevronDown className="h-4 w-4 mr-2" /> Show Table</>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          {showStigTable && (
+            <CardContent>
+              {stigMappedControls.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No STIG findings mapped to controls for this package.
+                  <p className="text-sm mt-2">Import STIG scans to see control mappings.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full" />
+                        <span>Compliant ({stigMappedControls.filter(c => c.status === 'Compliant').length})</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-red-500 rounded-full" />
+                        <span>Non-Compliant ({stigMappedControls.filter(c => c.status === 'Non-Compliant').length})</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-yellow-500 rounded-full" />
+                        <span>Partially Compliant ({stigMappedControls.filter(c => c.status === 'Partially Compliant').length})</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Total: {stigMappedControls.length} controls with STIG findings
+                    </p>
+                  </div>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[120px]">Control ID</TableHead>
+                          <TableHead>Control Title</TableHead>
+                          <TableHead className="w-[100px]">Family</TableHead>
+                          <TableHead className="w-[120px]">STIG Findings</TableHead>
+                          <TableHead className="w-[150px]">Severity Breakdown</TableHead>
+                          <TableHead className="w-[100px]">Systems</TableHead>
+                          <TableHead className="w-[100px]">Status</TableHead>
+                          <TableHead className="w-[80px]">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {stigMappedControls.map((control) => (
+                          <Collapsible key={control.controlId} open={expandedRows.has(control.controlId)}>
+                            <TableRow className="hover:bg-muted/50">
+                              <TableCell className="font-medium">
+                                <CollapsibleTrigger
+                                  className="flex items-center gap-1 hover:text-primary cursor-pointer"
+                                  onClick={() => toggleRow(control.controlId)}
+                                >
+                                  {expandedRows.has(control.controlId) ?
+                                    <ChevronUp className="h-3 w-3" /> :
+                                    <ChevronDown className="h-3 w-3" />
+                                  }
+                                  {control.controlId}
+                                </CollapsibleTrigger>
+                              </TableCell>
+                              <TableCell className="text-sm">{control.controlTitle}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{control.family}</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="space-y-1">
+                                  <div className="text-sm font-medium">
+                                    <span className={control.openFindings > 0 ? "text-red-600" : "text-green-600"}>
+                                      {control.openFindings} open
+                                    </span>
+                                    <span className="text-muted-foreground"> / {control.totalFindings} total</span>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {control.openFindings > 0 ? (
+                                  <div className="space-y-1 text-xs">
+                                    {control.catIOpen > 0 && (
+                                      <div className="flex items-center gap-1">
+                                        <Badge variant="destructive" className="text-xs px-1 py-0">CAT I</Badge>
+                                        <span>{control.catIOpen}</span>
+                                      </div>
+                                    )}
+                                    {control.catIIOpen > 0 && (
+                                      <div className="flex items-center gap-1">
+                                        <Badge className="bg-orange-500 text-xs px-1 py-0">CAT II</Badge>
+                                        <span>{control.catIIOpen}</span>
+                                      </div>
+                                    )}
+                                    {control.catIIIOpen > 0 && (
+                                      <div className="flex items-center gap-1">
+                                        <Badge className="bg-yellow-500 text-xs px-1 py-0">CAT III</Badge>
+                                        <span>{control.catIIIOpen}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-green-600 text-sm">All Closed</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">{control.systemsAffected}</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={control.status === 'Compliant' ? 'default' :
+                                          control.status === 'Non-Compliant' ? 'destructive' : 'outline'}
+                                  className={control.status === 'Compliant' ? 'bg-green-500' :
+                                            control.status === 'Partially Compliant' ? 'bg-yellow-500' : ''}
+                                >
+                                  {control.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Link href={`/rmf-center/control-catalog/${control.family}/${control.controlId}`}>
+                                  <Button variant="ghost" size="sm">
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                              </TableCell>
+                            </TableRow>
+                            <CollapsibleContent asChild>
+                              <TableRow className="bg-muted/30">
+                                <TableCell colSpan={8}>
+                                  <div className="p-4 space-y-2">
+                                    <div>
+                                      <span className="font-medium text-sm">CCIs Mapped: </span>
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {control.ccis.map(cci => (
+                                          <Badge key={cci} variant="secondary" className="text-xs">
+                                            {cci}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-4 text-sm">
+                                      <Link
+                                        href={`/vulnerability-center/vulnerabilities/systems/${control.systemsAffected > 0 ? '1' : ''}`}
+                                        className="text-primary hover:underline flex items-center gap-1"
+                                      >
+                                        View STIG Findings <ExternalLink className="h-3 w-3" />
+                                      </Link>
+                                      <Link
+                                        href={`/rmf-center/control-catalog/manage/${selectedPackageId}`}
+                                        className="text-primary hover:underline flex items-center gap-1"
+                                      >
+                                        Manage Baseline <ExternalLink className="h-3 w-3" />
+                                      </Link>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      )}
+
       {/* Quick Actions */}
       <Card>
         <CardHeader>
@@ -300,22 +663,36 @@ export default function ControlCatalogDashboard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 flex-wrap">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Button
+              variant="outline"
+              onClick={() => window.location.href = `/rmf-center/control-catalog/manage/${selectedPackageId}`}
+            >
+              <ListChecks className="h-4 w-4 mr-2" />
+              Manage Controls
+            </Button>
             <Button variant="outline" disabled>
               <FileText className="h-4 w-4 mr-2" />
               Generate SSP
             </Button>
-            <Button variant="outline" disabled>
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Run Compliance Check
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (selectedPackageId) {
+                  fetchComplianceSummary(selectedPackageId)
+                  toast({
+                    title: "Compliance Check Complete",
+                    description: "Compliance summary has been updated",
+                  })
+                }
+              }}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Update Compliance
             </Button>
             <Button variant="outline" disabled>
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Export Control Matrix
-            </Button>
-            <Button variant="outline" disabled>
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              View All POA&Ms
+              <Download className="h-4 w-4 mr-2" />
+              Export Matrix
             </Button>
           </div>
         </CardContent>

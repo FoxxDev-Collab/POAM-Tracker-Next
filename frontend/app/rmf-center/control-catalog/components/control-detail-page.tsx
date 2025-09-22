@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import {
   Shield, ArrowLeft, FileText, AlertTriangle, CheckCircle, Clock, Hash,
-  Activity, Settings, Package
+  Activity, Settings, Package, Save, Edit, Plus, ChevronDown, Users, Server
 } from "lucide-react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
@@ -13,6 +13,18 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
 
 interface ATOPackage {
   id: number
@@ -23,8 +35,34 @@ interface ATOPackage {
 }
 
 interface CCI {
+  id?: number
   cci: string
   definition: string
+  complianceStatus?: string
+  complianceNotes?: string
+  assessedBy?: number
+  assessedAt?: string
+  groupCompliance?: GroupCompliance[]
+}
+
+interface GroupCompliance {
+  groupId: number
+  groupName: string
+  systems: SystemCompliance[]
+  overallStatus: string
+  openFindings: number
+  totalFindings: number
+}
+
+interface SystemCompliance {
+  systemId: number
+  systemName: string
+  status: string
+  openFindings: number
+  totalFindings: number
+  catIOpen: number
+  catIIOpen: number
+  catIIIOpen: number
 }
 
 interface Control {
@@ -35,6 +73,8 @@ interface Control {
   discussion: string
   relatedControls?: string[]
   ccis?: CCI[]
+  complianceStatus?: string
+  implementationStatus?: string
 }
 
 interface ControlDetailPageProps {
@@ -53,14 +93,28 @@ const ICON_MAP = {
   Package
 } as const
 
+const COMPLIANCE_STATUSES = [
+  { value: 'CO', label: 'Compliant (Official)', color: 'bg-green-500' },
+  { value: 'CU', label: 'Compliant (Unofficial)', color: 'bg-green-400' },
+  { value: 'NC_O', label: 'Non-Compliant (Official)', color: 'bg-red-500' },
+  { value: 'NC_U', label: 'Non-Compliant (Unofficial)', color: 'bg-yellow-500' },
+  { value: 'NA_O', label: 'Not Applicable (Official)', color: 'bg-gray-500' },
+  { value: 'NA_U', label: 'Not Applicable (Unofficial)', color: 'bg-gray-400' },
+  { value: 'NOT_ASSESSED', label: 'Not Assessed', color: 'bg-blue-500' }
+]
+
 export default function ControlDetailPage({ familyId, familyName, familyIconName = 'Shield' }: ControlDetailPageProps) {
   const FamilyIcon = ICON_MAP[familyIconName as keyof typeof ICON_MAP] || Shield
   const params = useParams()
   const controlId = params.id as string
+  const { toast } = useToast()
   const [packages, setPackages] = useState<ATOPackage[]>([])
   const [selectedPackageId, setSelectedPackageId] = useState<string>("")
   const [control, setControl] = useState<Control | null>(null)
   const [loading, setLoading] = useState(true)
+  const [editingCci, setEditingCci] = useState<CCI | null>(null)
+  const [baselineControl, setBaselineControl] = useState<any>(null)
+  const [cciComplianceData, setCciComplianceData] = useState<Map<string, GroupCompliance[]>>(new Map())
 
   useEffect(() => {
     fetchPackages()
@@ -70,8 +124,10 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
   useEffect(() => {
     if (selectedPackageId) {
       localStorage.setItem('selectedATOPackage', selectedPackageId)
+      fetchBaselineControl()
+      fetchCciComplianceData()
     }
-  }, [selectedPackageId])
+  }, [selectedPackageId, controlId])
 
   const fetchPackages = async () => {
     try {
@@ -110,7 +166,9 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
             controlText: controlData.controlText,
             discussion: controlData.discussion,
             relatedControls: controlData.relatedControls?.map((rc: any) => rc.relatedControlId) || [],
-            ccis: controlData.ccis || []
+            ccis: controlData.ccis || [],
+            complianceStatus: controlData.complianceStatus,
+            implementationStatus: controlData.implementationStatus
           })
         }
       }
@@ -119,6 +177,137 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchBaselineControl = async () => {
+    if (!selectedPackageId) return
+    try {
+      const response = await fetch(`/api/catalog/packages/${selectedPackageId}/baseline`)
+      if (response.ok) {
+        const data = await response.json()
+        const baseline = data.data.controls.find((c: any) => c.controlId === controlId)
+        setBaselineControl(baseline)
+      }
+    } catch (error) {
+      console.error('Failed to fetch baseline control:', error)
+    }
+  }
+
+  const fetchCciComplianceData = async () => {
+    if (!selectedPackageId || !control?.ccis) return
+    try {
+      // Fetch compliance data for CCIs from the package's groups and systems
+      const response = await fetch(`/api/catalog/controls/${controlId}/cci-compliance?packageId=${selectedPackageId}`)
+      if (response.ok) {
+        const data = await response.json()
+        const complianceMap = new Map<string, GroupCompliance[]>()
+
+        // Process the compliance data for each CCI
+        if (data.data?.cciCompliance) {
+          Object.entries(data.data.cciCompliance).forEach(([cci, compliance]: [string, any]) => {
+            complianceMap.set(cci, compliance)
+          })
+        }
+
+        setCciComplianceData(complianceMap)
+      }
+    } catch (error) {
+      console.error('Failed to fetch CCI compliance data:', error)
+    }
+  }
+
+  const updateCciCompliance = async (cci: CCI, updates: Partial<CCI>) => {
+    try {
+      const response = await fetch(`/api/catalog/ccis/${cci.cci}/compliance`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      })
+
+      if (response.ok) {
+        // Update local state
+        setControl(prev => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            ccis: prev.ccis?.map(c =>
+              c.cci === cci.cci ? { ...c, ...updates } : c
+            )
+          }
+        })
+        toast({
+          title: "Success",
+          description: `CCI ${cci.cci} updated successfully`,
+        })
+        setEditingCci(null)
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.message || "Failed to update CCI",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update CCI compliance",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const addToBaseline = async () => {
+    if (!selectedPackageId) {
+      toast({
+        title: "Error",
+        description: "Please select a package first",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/catalog/packages/${selectedPackageId}/baseline/${controlId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          includeInBaseline: true,
+          tailoringAction: 'Added',
+          tailoringRationale: `Added ${controlId} to package baseline`
+        }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `${controlId} added to baseline successfully`,
+        })
+        fetchBaselineControl()
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.message || "Failed to add control to baseline",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add control to baseline",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const getComplianceStatusBadge = (status?: string) => {
+    const config = COMPLIANCE_STATUSES.find(s => s.value === status) || COMPLIANCE_STATUSES[6]
+    return <Badge className={`${config.color} text-white`}>{config.label}</Badge>
   }
 
   const isEnhancement = controlId.includes('(')
@@ -165,14 +354,28 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
         <Badge variant={isEnhancement ? "secondary" : "default"}>
           {isEnhancement ? "Enhancement" : "Baseline"}
         </Badge>
-        <Button variant="outline" size="sm" disabled>
-          <CheckCircle className="h-4 w-4 mr-2" />
-          Control Status
-        </Button>
-        <Button variant="outline" size="sm" disabled>
-          <FileText className="h-4 w-4 mr-2" />
-          Compliance Status - STIG Map
-        </Button>
+        {baselineControl ? (
+          <Badge variant="outline" className="bg-green-50">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            In Baseline
+          </Badge>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={addToBaseline}
+            disabled={!selectedPackageId}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add to Baseline
+          </Button>
+        )}
+        <Link href={`/rmf-center/control-catalog/${familyId}/${controlId}/stig-map?packageId=${selectedPackageId}`}>
+          <Button variant="outline" size="sm" disabled={!selectedPackageId}>
+            <FileText className="h-4 w-4 mr-2" />
+            Compliance Status - STIG Map
+          </Button>
+        </Link>
         <Button variant="outline" size="sm" disabled>
           <AlertTriangle className="h-4 w-4 mr-2" />
           POA&Ms - Create/Track
@@ -223,11 +426,13 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
                 <div className="space-y-4">
                   <div className="flex items-center justify-between py-3 border-b">
                     <span className="font-medium">Implementation Status</span>
-                    <Badge variant="secondary">Not Implemented</Badge>
+                    <Badge variant="secondary">
+                      {baselineControl?.implementationStatus || 'Not Implemented'}
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between py-3 border-b">
                     <span className="font-medium">Compliance Status</span>
-                    <Badge className="bg-blue-500">Not Reviewed</Badge>
+                    {getComplianceStatusBadge(baselineControl?.complianceStatus || control?.complianceStatus)}
                   </div>
                   <div className="flex items-center justify-between py-3 border-b">
                     <span className="font-medium">Last Assessment</span>
@@ -282,6 +487,7 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
                         <TableHead className="w-[120px]">CCI ID</TableHead>
                         <TableHead>Definition</TableHead>
                         <TableHead className="w-[140px]">Status</TableHead>
+                        <TableHead className="w-[200px]">Group/System Compliance</TableHead>
                         <TableHead className="w-[80px] text-center">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -297,12 +503,160 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
                             </p>
                           </TableCell>
                           <TableCell className="align-top">
-                            <Badge variant="outline">Not Reviewed</Badge>
+                            {getComplianceStatusBadge(cci.complianceStatus)}
+                          </TableCell>
+                          <TableCell className="align-top">
+                            {cciComplianceData.get(cci.cci)?.length ? (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm" className="w-full justify-between">
+                                    <span className="flex items-center gap-1">
+                                      <Users className="h-3 w-3" />
+                                      {cciComplianceData.get(cci.cci)?.length || 0} Groups
+                                    </span>
+                                    <ChevronDown className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-[350px]">
+                                  <DropdownMenuLabel>Group Compliance Details</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  {cciComplianceData.get(cci.cci)?.map((group) => (
+                                    <div key={group.groupId} className="px-2 py-2">
+                                      <div className="flex items-center justify-between font-medium">
+                                        <span className="flex items-center gap-1">
+                                          <Users className="h-3 w-3" />
+                                          {group.groupName}
+                                        </span>
+                                        <Badge
+                                          variant={group.openFindings === 0 ? "default" : "destructive"}
+                                          className="text-xs"
+                                        >
+                                          {group.openFindings} open / {group.totalFindings} total
+                                        </Badge>
+                                      </div>
+                                      {group.systems?.length > 0 && (
+                                        <div className="ml-4 mt-2 space-y-1">
+                                          {group.systems.map((system) => (
+                                            <div key={system.systemId} className="flex items-center justify-between text-sm">
+                                              <span className="flex items-center gap-1 text-muted-foreground">
+                                                <Server className="h-3 w-3" />
+                                                {system.systemName}
+                                              </span>
+                                              <div className="flex items-center gap-2">
+                                                {system.catIOpen > 0 && (
+                                                  <span className="text-xs text-red-600 font-medium">
+                                                    CAT I: {system.catIOpen}
+                                                  </span>
+                                                )}
+                                                {system.catIIOpen > 0 && (
+                                                  <span className="text-xs text-orange-600 font-medium">
+                                                    CAT II: {system.catIIOpen}
+                                                  </span>
+                                                )}
+                                                {system.catIIIOpen > 0 && (
+                                                  <span className="text-xs text-yellow-600 font-medium">
+                                                    CAT III: {system.catIIIOpen}
+                                                  </span>
+                                                )}
+                                                {system.openFindings === 0 && (
+                                                  <Badge variant="outline" className="text-xs bg-green-50">
+                                                    Compliant
+                                                  </Badge>
+                                                )}
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">No STIG data</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-center align-top">
-                            <Button size="sm" variant="ghost" disabled>
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setEditingCci(cci)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-2xl">
+                                <DialogHeader>
+                                  <DialogTitle>Edit CCI {cci.cci}</DialogTitle>
+                                  <DialogDescription>
+                                    Update compliance status and notes for this CCI
+                                  </DialogDescription>
+                                </DialogHeader>
+                                {editingCci && (
+                                  <div className="space-y-4 py-4">
+                                    <div className="space-y-2">
+                                      <Label>Compliance Status</Label>
+                                      <Select
+                                        value={editingCci.complianceStatus || 'NOT_ASSESSED'}
+                                        onValueChange={(value) =>
+                                          setEditingCci({ ...editingCci, complianceStatus: value })
+                                        }
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {COMPLIANCE_STATUSES.map(status => (
+                                            <SelectItem key={status.value} value={status.value}>
+                                              {status.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label>Compliance Notes</Label>
+                                      <Textarea
+                                        value={editingCci.complianceNotes || ''}
+                                        onChange={(e) =>
+                                          setEditingCci({
+                                            ...editingCci,
+                                            complianceNotes: e.target.value
+                                          })
+                                        }
+                                        placeholder="Add notes about compliance status..."
+                                        rows={4}
+                                      />
+                                    </div>
+
+                                    <div className="bg-muted p-3 rounded-md">
+                                      <Label className="font-medium">CCI Definition</Label>
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {editingCci.definition}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+                                <DialogFooter>
+                                  <Button
+                                    onClick={() => {
+                                      if (editingCci) {
+                                        updateCciCompliance(cci, {
+                                          complianceStatus: editingCci.complianceStatus,
+                                          complianceNotes: editingCci.complianceNotes
+                                        })
+                                      }
+                                    }}
+                                  >
+                                    <Save className="h-4 w-4 mr-2" />
+                                    Save Changes
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
                           </TableCell>
                         </TableRow>
                       ))}
