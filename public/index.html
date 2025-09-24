@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Bedrock Security Platform - The first RMF-native compliance platform transforming cybersecurity governance from burden to competitive advantage.">
+    <meta name="keywords" content="RMF, NIST, compliance, cybersecurity, governance, CMMC, security platform">
+    <meta name="author" content="Bedrock Security Platform">
+    <title>Bedrock Security Platform - RMF-Native Compliance Solutions</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- JavaScript Libraries -->
+    <script src="ui-framework.js"></script>
+    <script src="icon-library.js"></script>
+    <script src="ui-components.js"></script>
+    <script src="layout-components.js"></script>
+    <script src="theme-manager.js"></script>
+    <script src="navigation.js"></script>
+</head>
+<body data-theme="default">
+    <!-- Header -->
+    <header class="header">
+        <nav class="nav">
+            <a href="index.html" class="nav-brand">
+                <span class="brand-icon" data-icon="target"></span>
+                <span class="brand-text">Bedrock</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html" class="nav-link" data-icon="home">Home</a></li>
+                <li><a href="product.html" class="nav-link" data-icon="settings">Product</a></li>
+                <li><a href="about.html" class="nav-link" data-icon="info">About</a></li>
+                <li><a href="founder.html" class="nav-link" data-icon="user">Founder</a></li>
+                <li><a href="marketing.html" class="nav-link" data-icon="target">Acquisition</a></li>
+                <li><a href="contact.html" class="nav-link" data-icon="mail">Contact</a></li>
+            </ul>
+            <div class="nav-actions">
+                <button id="theme-toggle" class="theme-toggle" data-icon="sun" aria-label="Toggle theme"></button>
+                <button id="nav-mobile-toggle" class="nav-mobile-toggle" data-icon="menu" aria-label="Toggle navigation"></button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-badge" data-animate="fade-in-up">
+                    <span class="badge-icon" data-icon="target"></span>
+                    <span>First-to-Market RMF Platform</span>
+                </div>
+                <h1 class="hero-title" data-animate="fade-in-up" data-delay="100">Transform Compliance from Burden to Competitive Advantage</h1>
+                <p class="hero-subtitle" data-animate="fade-in-up" data-delay="200">The world's first RMF-native platform purpose-built for modern cybersecurity governance. Reduce compliance timelines by 60% while strengthening your security posture.</p>
+                <div class="hero-actions" data-animate="fade-in-up" data-delay="300">
+                    <button id="explore-features-btn" class="btn-primary-dynamic" data-icon="chevron-right" data-variant="primary" data-size="lg">
+                        Explore Features
+                    </button>
+                    <button id="strategic-btn" class="btn-secondary-dynamic" data-icon="target" data-variant="outline" data-size="lg">
+                        View Acquisition
+                    </button>
+                </div>
+                <div class="hero-stats" data-animate="fade-in-up" data-delay="400">
+                    <div class="stat-item">
+                        <span class="stat-number" data-counter="60">0</span>
+                        <span class="stat-label">% Time Reduction</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" data-counter="221000">0</span>
+                        <span class="stat-label">DoD Contractors</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" data-counter="95">0</span>
+                        <span class="stat-label">% Accuracy</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Benefits Section -->
+    <section class="features py-16">
+        <div class="container">
+            <div class="feature-header">
+                <h2 class="feature-title">Why Choose Bedrock?</h2>
+                <p class="feature-description">Built by practitioners, for practitioners. The only platform that understands RMF at its core.</p>
+            </div>
+
+            <div class="feature-grid">
+                <div class="feature-card card p-6">
+                    <div class="feature-icon"><i class="icon icon-target"></i></div>
+                    <h3 class="card-title">RMF-Native Architecture</h3>
+                    <p class="card-description mb-4">The only platform built from the ground up to follow the NIST Risk Management Framework methodology.</p>
+                    <ul class="feature-list">
+                        <li>Complete RMF lifecycle automation</li>
+                        <li>Native NIST 800-53 control catalog</li>
+                        <li>Authentic practitioner-built workflows</li>
+                        <li>Zero legacy system constraints</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card card p-6">
+                    <div class="feature-icon"><i class="icon icon-zap"></i></div>
+                    <h3 class="card-title">Accelerated Timelines</h3>
+                    <p class="card-description mb-4">Reduce compliance timelines from months to weeks with intelligent automation.</p>
+                    <ul class="feature-list">
+                        <li>60% faster implementation</li>
+                        <li>AI-powered control mapping</li>
+                        <li>Automated document generation</li>
+                        <li>Real-time progress tracking</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card card p-6">
+                    <div class="feature-icon"><i class="icon icon-users"></i></div>
+                    <h3 class="card-title">Team Collaboration</h3>
+                    <p class="card-description mb-4">Break down silos between security, compliance, and engineering teams.</p>
+                    <ul class="feature-list">
+                        <li>Integrated knowledge center</li>
+                        <li>Real-time team communication</li>
+                        <li>Role-based access control</li>
+                        <li>Shared dashboards and reporting</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card card p-6">
+                    <div class="feature-icon"><i class="icon icon-shield"></i></div>
+                    <h3 class="card-title">Government-Ready Security</h3>
+                    <p class="card-description mb-4">Built with government-grade security standards from day one.</p>
+                    <ul class="feature-list">
+                        <li>FedRAMP authorization pathway</li>
+                        <li>FIPS 140-2 compliance</li>
+                        <li>Section 508 accessibility</li>
+                        <li>OSCAL compatibility</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card card p-6">
+                    <div class="feature-icon"><i class="icon icon-refresh"></i></div>
+                    <h3 class="card-title">Enterprise Integrations</h3>
+                    <p class="card-description mb-4">Connect seamlessly with your existing security infrastructure.</p>
+                    <ul class="feature-list">
+                        <li>Cloud platform integration</li>
+                        <li>SIEM/SOAR connectivity</li>
+                        <li>Vulnerability scanner imports</li>
+                        <li>Identity management systems</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card card p-6">
+                    <div class="feature-icon"><i class="icon icon-trending-up"></i></div>
+                    <h3 class="card-title">Proven ROI</h3>
+                    <p class="card-description mb-4">Measurable cost savings and efficiency gains from day one.</p>
+                    <ul class="feature-list">
+                        <li>280% three-year ROI</li>
+                        <li>30-50% lower total cost</li>
+                        <li>Reduced manual effort</li>
+                        <li>Faster time to authorization</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Market Opportunity -->
+    <section class="py-16 bg-muted">
+        <div class="container">
+            <div class="feature-header">
+                <h2 class="feature-title">Perfect Timing for Market Entry</h2>
+                <p class="feature-description">CMMC 2.0 enforcement creates unprecedented demand for modern compliance solutions</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="card p-6 text-center">
+                    <div class="text-4xl font-bold text-primary mb-2">$127.7B</div>
+                    <p class="text-muted">GRC Market by 2033</p>
+                </div>
+                <div class="card p-6 text-center">
+                    <div class="text-4xl font-bold text-primary mb-2">221,000</div>
+                    <p class="text-muted">DoD Contractors Need CMMC</p>
+                </div>
+                <div class="card p-6 text-center">
+                    <div class="text-4xl font-bold text-primary mb-2">4%</div>
+                    <p class="text-muted">Currently CMMC Ready</p>
+                </div>
+                <div class="card p-6 text-center">
+                    <div class="text-4xl font-bold text-primary mb-2">14%</div>
+                    <p class="text-muted">Annual Market Growth</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- RMF Progress Section -->
+    <section class="features py-16">
+        <div class="container">
+            <div class="feature-header">
+                <h2 class="feature-title">Complete RMF Implementation</h2>
+                <p class="feature-description">Track our progress as we build the most comprehensive RMF platform available</p>
+            </div>
+
+            <div class="rmf-progress-container">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="card p-6 border-l-4 border-l-green-500">
+                        <div class="flex items-center mb-3">
+                            <span class="badge badge-primary mr-2">1</span>
+                            <h3 class="font-semibold">Categorize</h3>
+                            <span class="ml-auto text-green-600"><i class="icon icon-check icon-inline"></i>Complete</span>
+                        </div>
+                        <ul class="text-sm text-muted space-y-1">
+                            <li>System impact analysis</li>
+                            <li>Data classification workflows</li>
+                            <li>Authorization boundaries</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-6 border-l-4 border-l-green-500">
+                        <div class="flex items-center mb-3">
+                            <span class="badge badge-primary mr-2">2</span>
+                            <h3 class="font-semibold">Select</h3>
+                            <span class="ml-auto text-green-600"><i class="icon icon-check icon-inline"></i>Complete</span>
+                        </div>
+                        <ul class="text-sm text-muted space-y-1">
+                            <li>Control catalog integration</li>
+                            <li>Baseline auto-selection</li>
+                            <li>Control tailoring</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-6 border-l-4 border-l-blue-500">
+                        <div class="flex items-center mb-3">
+                            <span class="badge badge-primary mr-2">3</span>
+                            <h3 class="font-semibold">Implement</h3>
+                            <span class="ml-auto text-blue-600"><i class="icon icon-settings icon-inline"></i>Q1 2025</span>
+                        </div>
+                        <ul class="text-sm text-muted space-y-1">
+                            <li>STP workflow automation</li>
+                            <li>Evidence collection</li>
+                            <li>Progress tracking</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-6 border-l-4 border-l-gray-300">
+                        <div class="flex items-center mb-3">
+                            <span class="badge badge-outline mr-2">4</span>
+                            <h3 class="font-semibold">Assess</h3>
+                            <span class="ml-auto text-muted"><i class="icon icon-file-text icon-inline"></i>Q2 2025</span>
+                        </div>
+                        <ul class="text-sm text-muted space-y-1">
+                            <li>Assessment planning</li>
+                            <li>Finding management</li>
+                            <li>SAR generation</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-6 border-l-4 border-l-gray-300">
+                        <div class="flex items-center mb-3">
+                            <span class="badge badge-outline mr-2">5</span>
+                            <h3 class="font-semibold">Authorize</h3>
+                            <span class="ml-auto text-muted"><i class="icon icon-award icon-inline"></i>Q3 2025</span>
+                        </div>
+                        <ul class="text-sm text-muted space-y-1">
+                            <li>Authorization packages</li>
+                            <li>Risk determination</li>
+                            <li>ATO decision support</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-6 border-l-4 border-l-gray-300">
+                        <div class="flex items-center mb-3">
+                            <span class="badge badge-outline mr-2">6</span>
+                            <h3 class="font-semibold">Monitor</h3>
+                            <span class="ml-auto text-muted"><i class="icon icon-eye icon-inline"></i>Q4 2025</span>
+                        </div>
+                        <ul class="text-sm text-muted space-y-1">
+                            <li>Continuous monitoring</li>
+                            <li>Change management</li>
+                            <li>Risk reporting</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <h2 class="cta-title">Ready to Transform Your Compliance Process?</h2>
+            <p class="cta-description">Join the revolution in cybersecurity governance with the world's first RMF-native platform</p>
+            <div class="cta-actions">
+                <a href="product.html" class="btn btn-primary btn-lg"><i class="icon icon-eye icon-inline"></i>Explore Product Features</a>
+                <a href="marketing.html" class="btn btn-outline btn-lg"><i class="icon icon-briefcase icon-inline"></i>View Acquisition Options</a>
+                <a href="founder.html" class="btn btn-ghost btn-lg"><i class="icon icon-user icon-inline"></i>Meet the Founder</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                    <div>
+                        <h4 class="font-semibold mb-4"><i class="icon icon-building icon-inline"></i>Bedrock</h4>
+                        <p class="text-sm text-muted">The world's first RMF-native compliance platform, transforming cybersecurity governance.</p>
+                    </div>
+                    <div>
+                        <h5 class="font-semibold mb-3">Platform</h5>
+                        <ul class="space-y-2 text-sm">
+                            <li><a href="product.html" class="text-muted hover:text-foreground"><i class="icon icon-package icon-inline"></i>Product Features</a></li>
+                            <li><a href="product.html#integrations" class="text-muted hover:text-foreground"><i class="icon icon-plug icon-inline"></i>Integrations</a></li>
+                            <li><a href="product.html#security" class="text-muted hover:text-foreground"><i class="icon icon-shield icon-inline"></i>Security</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-semibold mb-3">Company</h5>
+                        <ul class="space-y-2 text-sm">
+                            <li><a href="about.html" class="text-muted hover:text-foreground"><i class="icon icon-info icon-inline"></i>About Us</a></li>
+                            <li><a href="founder.html" class="text-muted hover:text-foreground"><i class="icon icon-user icon-inline"></i>Meet the Founder</a></li>
+                            <li><a href="marketing.html" class="text-muted hover:text-foreground"><i class="icon icon-briefcase icon-inline"></i>Acquisition</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-semibold mb-3">Contact</h5>
+                        <ul class="space-y-2 text-sm text-muted">
+                            <li><a href="mailto:foxxdev.collab@gmail.com" class="hover:text-foreground"><i class="icon icon-mail icon-inline"></i>foxxdev.collab@gmail.com</a></li>
+                            <li><a href="tel:+12089011974" class="hover:text-foreground"><i class="icon icon-phone icon-inline"></i>208-901-1974</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="border-t border-border pt-6 text-center text-sm text-muted">
+                    <p>&copy; 2025 Bedrock Security Platform. All rights reserved. Built for the modern compliance landscape.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Header scroll effect
+        window.addEventListener('scroll', function() {
+            const header = document.querySelector('.header');
+            if (window.scrollY > 100) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    const headerOffset = 80;
+                    const elementPosition = target.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+                    window.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Animate cards on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.transform = 'translateY(0)';
+                    entry.target.style.opacity = '1';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards for animation
+        document.querySelectorAll('.feature-card, .card').forEach(card => {
+            card.style.transform = 'translateY(20px)';
+            card.style.opacity = '0';
+            card.style.transition = 'all 0.6s ease-out';
+            observer.observe(card);
+        });
+
+        // Mobile navigation toggle (for future enhancement)
+        const navToggle = document.createElement('button');
+        navToggle.className = 'nav-toggle btn btn-ghost';
+        navToggle.innerHTML = '<i class="icon icon-menu"></i>';
+        navToggle.style.display = 'none';
+
+        // Add mobile responsiveness check
+        function checkMobile() {
+            if (window.innerWidth <= 768) {
+                navToggle.style.display = 'block';
+                document.querySelector('.nav-links').style.display = 'none';
+            } else {
+                navToggle.style.display = 'none';
+                document.querySelector('.nav-links').style.display = 'flex';
+            }
+        }
+
+        window.addEventListener('resize', checkMobile);
+        checkMobile();
+
+        // Initialize modern UI components when libraries are loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeModernUI();
+        });
+
+        function initializeModernUI() {
+            // Initialize UI Framework if available
+            if (window.UI) {
+                console.log('Initializing modern UI components...');
+
+                // Initialize theme manager
+                if (window.ThemeManager) {
+                    const themeManager = new ThemeManager();
+                    const themeToggle = document.getElementById('theme-toggle');
+                    if (themeToggle) {
+                        themeToggle.addEventListener('click', () => {
+                            themeManager.toggleTheme();
+                        });
+                    }
+                }
+
+                // Replace static buttons with dynamic components
+                const exploreBtn = document.getElementById('explore-features-btn');
+                if (exploreBtn && window.ButtonComponent) {
+                    const dynamicBtn = new ButtonComponent({
+                        variant: 'primary',
+                        size: 'lg',
+                        icon: 'chevron-right',
+                        iconPosition: 'right'
+                    }, 'Explore Features');
+
+                    dynamicBtn.element.addEventListener('click', () => {
+                        window.location.href = 'product.html';
+                    });
+
+                    exploreBtn.parentNode.replaceChild(dynamicBtn.element, exploreBtn);
+                }
+
+                const strategicBtn = document.getElementById('strategic-btn');
+                if (strategicBtn && window.ButtonComponent) {
+                    const dynamicBtn = new ButtonComponent({
+                        variant: 'outline',
+                        size: 'lg',
+                        icon: 'target',
+                        iconPosition: 'left'
+                    }, 'View Acquisition');
+
+                    dynamicBtn.element.addEventListener('click', () => {
+                        window.location.href = 'marketing.html';
+                    });
+
+                    strategicBtn.parentNode.replaceChild(dynamicBtn.element, strategicBtn);
+                }
+
+                // Initialize dynamic icons
+                if (window.Icons) {
+                    document.querySelectorAll('[data-icon]').forEach(element => {
+                        const iconName = element.getAttribute('data-icon');
+                        const icon = Icons.create(iconName, {
+                            size: element.classList.contains('nav-link') ? 18 : 24,
+                            className: element.classList.contains('brand-icon') ? 'brand-icon' : 'dynamic-icon'
+                        });
+
+                        if (element.classList.contains('badge-icon') || element.classList.contains('brand-icon')) {
+                            element.innerHTML = '';
+                            element.appendChild(icon);
+                        } else if (element.tagName === 'BUTTON') {
+                            element.insertBefore(icon, element.firstChild);
+                        }
+                    });
+                }
+
+                // Initialize counter animations
+                animateCounters();
+
+                // Initialize scroll animations
+                initializeScrollAnimations();
+            }
+        }
+
+        function animateCounters() {
+            const counters = document.querySelectorAll('[data-counter]');
+            const duration = 2000; // 2 seconds
+
+            counters.forEach(counter => {
+                const target = parseFloat(counter.getAttribute('data-counter'));
+                const isDecimal = target % 1 !== 0;
+                let current = 0;
+                const increment = target / (duration / 16); // 60fps
+
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(timer);
+                    }
+
+                    if (isDecimal) {
+                        counter.textContent = current.toFixed(1);
+                    } else if (target >= 1000) {
+                        counter.textContent = Math.floor(current).toLocaleString();
+                    } else {
+                        counter.textContent = Math.floor(current);
+                    }
+                }, 16);
+            });
+        }
+
+        function initializeScrollAnimations() {
+            const animatedElements = document.querySelectorAll('[data-animate]');
+
+            const animationObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const element = entry.target;
+                        const delay = parseInt(element.getAttribute('data-delay')) || 0;
+
+                        setTimeout(() => {
+                            element.classList.add('animate-in');
+                        }, delay);
+
+                        animationObserver.unobserve(element);
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+
+            animatedElements.forEach(element => {
+                animationObserver.observe(element);
+            });
+        }
+    </script>
+</body>
+</html>
