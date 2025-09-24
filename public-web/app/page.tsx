@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Navigation } from "@/components/navigation";
-import { ArrowRight, Target, Shield, Users, Zap, Eye, Briefcase, Mail } from "lucide-react";
+import { ArrowRight, Mountain, Shield, Users, Zap, Eye, Briefcase, Mail, Target } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
@@ -275,7 +275,7 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <Target className="h-6 w-6 text-primary" />
+                <Mountain className="h-6 w-6 text-primary" />
                 <span className="text-xl font-bold">Bedrock</span>
               </div>
               <p className="text-sm text-muted-foreground">

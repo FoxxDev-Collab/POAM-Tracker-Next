@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Target, Home, Settings, Info, User, Briefcase, Mail, Sun, Moon, Menu} from "lucide-react"
+import { Mountain, Home, Settings, Info, User, Briefcase, Mail, Sun, Moon, Menu} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   NavigationMenu,
@@ -33,7 +33,7 @@ export function Navigation() {
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
-          <Target className="h-6 w-6 text-primary" />
+          <Mountain className="h-6 w-6 text-primary" />
           <span className="text-xl font-bold">Bedrock</span>
         </Link>
 

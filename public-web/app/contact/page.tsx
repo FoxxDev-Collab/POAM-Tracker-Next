@@ -1,11 +1,17 @@
 "use client"
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Navigation } from "@/components/navigation";
-import { Mail, Phone, Clock, Briefcase, Settings, Users, Handshake, Target } from "lucide-react";
+import { Mail, Phone, Clock, Briefcase, Settings, Users, Handshake, Mountain, Send, Loader2, CheckCircle2, Target } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -17,7 +23,59 @@ const staggerChildren = {
   animate: { transition: { staggerChildren: 0.1 } }
 };
 
+type FormData = {
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+};
+
 export default function Contact() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors }
+  } = useForm<FormData>();
+
+  const onSubmit = async (data: FormData) => {
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      setSubmitSuccess(true);
+      toast.success('Message sent successfully!', {
+        description: 'We\'ll get back to you within 1-2 business days.',
+      });
+      reset();
+
+      // Reset success state after 5 seconds
+      setTimeout(() => setSubmitSuccess(false), 5000);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      toast.error('Failed to send message', {
+        description: 'Please try again or contact us directly via email.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navigation />
@@ -188,8 +246,170 @@ export default function Contact() {
         </div>
       </section>
 
-      {/* Professional Context */}
+      {/* Contact Form Section */}
       <section className="py-16 bg-muted/50">
+        <div className="container">
+          <motion.div
+            className="mx-auto max-w-2xl"
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true }}
+            variants={fadeInUp}
+          >
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-4">Send Us a Message</h2>
+              <p className="text-lg text-muted-foreground">
+                Have a specific question or need more information? Fill out the form below and we&apos;ll get back to you promptly.
+              </p>
+            </div>
+
+            <Card className="p-8">
+              {submitSuccess ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center py-12"
+                >
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Message Sent Successfully!</h3>
+                  <p className="text-muted-foreground">
+                    Thank you for contacting us. We&apos;ll get back to you within 1-2 business days.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="mt-6"
+                    onClick={() => setSubmitSuccess(false)}
+                  >
+                    Send Another Message
+                  </Button>
+                </motion.div>
+              ) : (
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">
+                        Name <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="name"
+                        {...register("name", { required: "Name is required" })}
+                        placeholder="John Doe"
+                        disabled={isSubmitting}
+                      />
+                      {errors.name && (
+                        <p className="text-sm text-destructive">{errors.name.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email">
+                        Email <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        {...register("email", {
+                          required: "Email is required",
+                          pattern: {
+                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                            message: "Invalid email address",
+                          },
+                        })}
+                        placeholder="john.doe@company.com"
+                        disabled={isSubmitting}
+                      />
+                      {errors.email && (
+                        <p className="text-sm text-destructive">{errors.email.message}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone (Optional)</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        {...register("phone")}
+                        placeholder="(555) 123-4567"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="subject">Subject (Optional)</Label>
+                      <Input
+                        id="subject"
+                        {...register("subject")}
+                        placeholder="Platform Demo Request"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="message">
+                      Message <span className="text-destructive">*</span>
+                    </Label>
+                    <Textarea
+                      id="message"
+                      {...register("message", {
+                        required: "Message is required",
+                        minLength: {
+                          value: 10,
+                          message: "Message must be at least 10 characters",
+                        },
+                      })}
+                      placeholder="Tell us about your compliance challenges and how we can help..."
+                      rows={6}
+                      disabled={isSubmitting}
+                    />
+                    {errors.message && (
+                      <p className="text-sm text-destructive">{errors.message.message}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      <span className="text-destructive">*</span> Required fields
+                    </p>
+                    <Button type="submit" size="lg" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" />
+                          Send Message
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </Card>
+
+            <div className="mt-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                Prefer to email directly? Reach us at{" "}
+                <a
+                  href="mailto:foxxdev.collab@gmail.com"
+                  className="text-primary hover:underline"
+                >
+                  foxxdev.collab@gmail.com
+                </a>
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Professional Context */}
+      <section className="py-16">
         <div className="container">
           <motion.div
             className="mx-auto max-w-4xl text-center"
@@ -240,7 +460,7 @@ export default function Contact() {
           <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <Target className="h-6 w-6 text-primary" />
+                <Mountain className="h-6 w-6 text-primary" />
                 <span className="text-xl font-bold">Bedrock</span>
               </div>
               <p className="text-sm text-muted-foreground">

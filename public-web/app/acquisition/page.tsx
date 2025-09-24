@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Navigation } from "@/components/navigation";
 import {
-  Target, DollarSign, Rocket, Award, Settings, Clipboard,
+  Mountain, DollarSign, Rocket, Award, Settings, Clipboard,
   Handshake, Clock,
-  CheckCircle2, AlertCircle, Mail, Eye
+  CheckCircle2, AlertCircle, Mail, Eye, Target
 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -539,7 +539,7 @@ export default function Acquisition() {
           <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <Target className="h-6 w-6 text-primary" />
+                <Mountain className="h-6 w-6 text-primary" />
                 <span className="text-xl font-bold">Bedrock</span>
               </div>
               <p className="text-sm text-muted-foreground">
