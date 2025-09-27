@@ -279,7 +279,7 @@ export default function Acquisition() {
                   <CardContent className="space-y-2 text-sm text-muted-foreground">
                     <p><strong>Completed:</strong> Categorize, Select steps with full workflows</p>
                     <p><strong>In Development:</strong> Implement step with STP integration</p>
-                    <p><strong>Planned:</strong> Assess, Authorize, Monitor steps (Q2-Q4 2025)</p>
+                    <p><strong>Planned:</strong> Assess, Authorize, Monitor steps (Nov 2025 - Apr 2026)</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -325,28 +325,28 @@ export default function Acquisition() {
                       <AlertCircle className="h-6 w-6 text-white" />
                     </div>
                     <strong className="text-sm">Implement</strong>
-                    <p className="text-xs text-muted-foreground">Q1 2025</p>
+                    <p className="text-xs text-muted-foreground">Oct 2025</p>
                   </div>
                   <div className="text-center">
                     <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-2">
                       <Clock className="h-6 w-6 text-muted-foreground" />
                     </div>
                     <strong className="text-sm">Assess</strong>
-                    <p className="text-xs text-muted-foreground">Q2 2025</p>
+                    <p className="text-xs text-muted-foreground">Nov-Dec 2025</p>
                   </div>
                   <div className="text-center">
                     <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-2">
                       <Clock className="h-6 w-6 text-muted-foreground" />
                     </div>
                     <strong className="text-sm">Authorize</strong>
-                    <p className="text-xs text-muted-foreground">Q3 2025</p>
+                    <p className="text-xs text-muted-foreground">Jan-Feb 2026</p>
                   </div>
                   <div className="text-center">
                     <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-2">
                       <Clock className="h-6 w-6 text-muted-foreground" />
                     </div>
                     <strong className="text-sm">Monitor</strong>
-                    <p className="text-xs text-muted-foreground">Q4 2025</p>
+                    <p className="text-xs text-muted-foreground">Mar-Apr 2026</p>
                   </div>
                 </div>
               </Card>

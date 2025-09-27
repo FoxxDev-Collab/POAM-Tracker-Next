@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Mountain, Home, Settings, Info, User, Briefcase, Mail, Sun, Moon, Menu} from "lucide-react"
+import { Mountain, Home, Settings, Info, User, Briefcase, Mail, Sun, Moon, Menu, BookOpen} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   NavigationMenu,
@@ -19,6 +19,7 @@ const navigation = [
   { name: "Product", href: "/product", icon: Settings },
   { name: "About", href: "/about", icon: Info },
   { name: "Founder", href: "/founder", icon: User },
+  { name: "Research", href: "/research", icon: BookOpen },
   { name: "Acquisition", href: "/acquisition", icon: Briefcase },
   { name: "Contact", href: "/contact", icon: Mail },
 ]

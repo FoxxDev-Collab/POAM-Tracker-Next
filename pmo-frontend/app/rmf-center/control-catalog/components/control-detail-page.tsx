@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import {
   Shield, ArrowLeft, FileText, AlertTriangle, CheckCircle, Clock, Hash,
-  Activity, Settings, Package, Save, Edit, Plus, ChevronDown, Users, Server
+  Activity, Settings, Package, Save, Edit, Plus, ChevronDown, Users, Server, FileCheck
 } from "lucide-react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
@@ -63,6 +63,14 @@ interface SystemCompliance {
   catIOpen: number
   catIIOpen: number
   catIIIOpen: number
+  activeStps?: number  // Number of active STPs for this system
+  stpsDetails?: Array<{
+    id: number
+    title: string
+    status: string
+    testCasesTotal: number
+    testCasesPassed: number
+  }>
 }
 
 interface Control {
@@ -94,13 +102,13 @@ const ICON_MAP = {
 } as const
 
 const COMPLIANCE_STATUSES = [
-  { value: 'CO', label: 'Compliant (Official)', color: 'bg-green-500' },
-  { value: 'CU', label: 'Compliant (Unofficial)', color: 'bg-green-400' },
-  { value: 'NC_O', label: 'Non-Compliant (Official)', color: 'bg-red-500' },
-  { value: 'NC_U', label: 'Non-Compliant (Unofficial)', color: 'bg-yellow-500' },
-  { value: 'NA_O', label: 'Not Applicable (Official)', color: 'bg-gray-500' },
-  { value: 'NA_U', label: 'Not Applicable (Unofficial)', color: 'bg-gray-400' },
-  { value: 'NOT_ASSESSED', label: 'Not Assessed', color: 'bg-blue-500' }
+  { value: 'CO', label: 'Compliant (Official)', color: 'bg-green-500 dark:bg-green-600' },
+  { value: 'CU', label: 'Compliant (Unofficial)', color: 'bg-green-400 dark:bg-green-500' },
+  { value: 'NC_O', label: 'Non-Compliant (Official)', color: 'bg-red-500 dark:bg-red-600' },
+  { value: 'NC_U', label: 'Non-Compliant (Unofficial)', color: 'bg-yellow-500 dark:bg-yellow-600' },
+  { value: 'NA_O', label: 'Not Applicable (Official)', color: 'bg-gray-500 dark:bg-gray-600' },
+  { value: 'NA_U', label: 'Not Applicable (Unofficial)', color: 'bg-gray-400 dark:bg-gray-500' },
+  { value: 'NOT_ASSESSED', label: 'Not Assessed', color: 'bg-blue-500 dark:bg-blue-600' }
 ]
 
 export default function ControlDetailPage({ familyId, familyName, familyIconName = 'Shield' }: ControlDetailPageProps) {
@@ -355,7 +363,7 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
           {isEnhancement ? "Enhancement" : "Baseline"}
         </Badge>
         {baselineControl ? (
-          <Badge variant="outline" className="bg-green-50">
+          <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20">
             <CheckCircle className="h-3 w-3 mr-1" />
             In Baseline
           </Badge>
@@ -543,6 +551,15 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
                                                 {system.systemName}
                                               </span>
                                               <div className="flex items-center gap-2">
+                                                {system.activeStps && system.activeStps > 0 && (
+                                                  <Badge
+                                                    variant="outline"
+                                                    className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700"
+                                                  >
+                                                    <FileCheck className="h-3 w-3 mr-1" />
+                                                    Active STP ({system.activeStps})
+                                                  </Badge>
+                                                )}
                                                 {system.catIOpen > 0 && (
                                                   <span className="text-xs text-red-600 font-medium">
                                                     CAT I: {system.catIOpen}
@@ -559,7 +576,7 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
                                                   </span>
                                                 )}
                                                 {system.openFindings === 0 && (
-                                                  <Badge variant="outline" className="text-xs bg-green-50">
+                                                  <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-900/20">
                                                     Compliant
                                                   </Badge>
                                                 )}

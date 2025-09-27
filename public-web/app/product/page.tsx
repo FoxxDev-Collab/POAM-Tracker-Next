@@ -80,6 +80,15 @@ export default function Product() {
               <p className="text-lg text-muted-foreground">
                 The only platform built from the ground up to follow the NIST Risk Management Framework methodology
               </p>
+              <div className="mt-4 flex items-center justify-center gap-2">
+                <Badge variant="secondary" className="text-sm">
+                  <Zap className="mr-2 h-3 w-3" />
+                  Accelerated Development with AI Tools
+                </Badge>
+                <Badge variant="outline" className="text-sm">
+                  Current: September 2025
+                </Badge>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -139,7 +148,7 @@ export default function Product() {
                       <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold">
                         3
                       </div>
-                      <Badge className="bg-yellow-500 text-white">Q1 2025</Badge>
+                      <Badge className="bg-yellow-500 text-white">Oct 2025</Badge>
                     </div>
                     <CardTitle className="mt-4">Implement</CardTitle>
                   </CardHeader>
@@ -163,7 +172,7 @@ export default function Product() {
                       <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-muted-foreground font-bold">
                         4
                       </div>
-                      <Badge variant="outline">Q2 2025</Badge>
+                      <Badge variant="outline">Nov-Dec 2025</Badge>
                     </div>
                     <CardTitle className="mt-4">Assess</CardTitle>
                   </CardHeader>
@@ -187,7 +196,7 @@ export default function Product() {
                       <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-muted-foreground font-bold">
                         5
                       </div>
-                      <Badge variant="outline">Q3 2025</Badge>
+                      <Badge variant="outline">Jan-Feb 2026</Badge>
                     </div>
                     <CardTitle className="mt-4">Authorize</CardTitle>
                   </CardHeader>
@@ -211,7 +220,7 @@ export default function Product() {
                       <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-muted-foreground font-bold">
                         6
                       </div>
-                      <Badge variant="outline">Q4 2025</Badge>
+                      <Badge variant="outline">Mar-Apr 2026</Badge>
                     </div>
                     <CardTitle className="mt-4">Monitor</CardTitle>
                   </CardHeader>

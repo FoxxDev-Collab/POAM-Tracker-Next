@@ -50,11 +50,23 @@ export async function POST(req: NextRequest) {
   try {
     const headers = await getAuthHeaders();
     const body = await req.json();
-    
+
+    // Map frontend field names to backend field names
+    const mappedBody = {
+      title: body.title,
+      description: body.description,
+      systemId: body.system_id,
+      packageId: body.package_id,
+      priority: body.priority,
+      dueDate: body.due_date,
+      createdBy: body.createdBy,
+      vulnerabilities: body.vulnerabilities
+    };
+
     const response = await fetch(`${BACKEND_URL}/stps`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(body)
+      body: JSON.stringify(mappedBody)
     });
     
     if (!response.ok) {

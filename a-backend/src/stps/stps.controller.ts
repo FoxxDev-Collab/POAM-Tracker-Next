@@ -125,4 +125,29 @@ export class StpsController {
       1, // TODO: Get from auth
     );
   }
+
+  @Post('test-cases/:testCaseId/mark-not-a-finding')
+  markAsNotAFinding(
+    @Param('testCaseId', ParseIntPipe) testCaseId: number,
+    @Body() body: { justification: string },
+  ) {
+    return this.stpsService.markTestCaseAsNotAFinding(
+      testCaseId,
+      body.justification,
+      1, // TODO: Get from auth
+    );
+  }
+
+  @Post('test-cases/:testCaseId/update-vulnerability-status')
+  updateVulnerabilityStatus(
+    @Param('testCaseId', ParseIntPipe) testCaseId: number,
+    @Body() body: { status: string; justification: string },
+  ) {
+    return this.stpsService.updateVulnerabilityStatus(
+      testCaseId,
+      body.status,
+      body.justification,
+      1, // TODO: Get from auth
+    );
+  }
 }

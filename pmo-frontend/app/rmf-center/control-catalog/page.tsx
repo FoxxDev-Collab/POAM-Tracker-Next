@@ -298,8 +298,8 @@ export default function ControlCatalogDashboard() {
   }
 
   const getComplianceBadge = (percentage: number) => {
-    if (percentage >= 90) return <Badge className="bg-green-500">Compliant</Badge>
-    if (percentage >= 70) return <Badge className="bg-yellow-500">Partially Compliant</Badge>
+    if (percentage >= 90) return <Badge className="bg-green-500 dark:bg-green-600">Compliant</Badge>
+    if (percentage >= 70) return <Badge className="bg-yellow-500 dark:bg-yellow-600">Partially Compliant</Badge>
     return <Badge variant="destructive">Non-Compliant</Badge>
   }
 
@@ -384,19 +384,19 @@ export default function ControlCatalogDashboard() {
                 </div>
                 <Progress value={complianceSummary.compliancePercentage} className="h-3" />
                 <div className="grid grid-cols-4 gap-2 text-xs">
-                  <div className="text-center p-2 bg-green-50 rounded">
+                  <div className="text-center p-2 bg-green-50 dark:bg-green-900/20 rounded">
                     <p className="font-medium text-green-700">{complianceSummary.breakdown.compliant}</p>
                     <p className="text-green-600">Compliant</p>
                   </div>
-                  <div className="text-center p-2 bg-red-50 rounded">
+                  <div className="text-center p-2 bg-red-50 dark:bg-red-900/20 rounded">
                     <p className="font-medium text-red-700">{complianceSummary.breakdown.nonCompliant}</p>
                     <p className="text-red-600">Non-Compliant</p>
                   </div>
-                  <div className="text-center p-2 bg-gray-50 rounded">
+                  <div className="text-center p-2 bg-gray-50 dark:bg-gray-900/20 rounded">
                     <p className="font-medium text-gray-700">{complianceSummary.breakdown.notApplicable}</p>
                     <p className="text-gray-600">N/A</p>
                   </div>
-                  <div className="text-center p-2 bg-blue-50 rounded">
+                  <div className="text-center p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
                     <p className="font-medium text-blue-700">{complianceSummary.breakdown.notAssessed}</p>
                     <p className="text-blue-600">Not Assessed</p>
                   </div>
@@ -503,15 +503,15 @@ export default function ControlCatalogDashboard() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex gap-4 text-sm">
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full" />
+                        <div className="w-3 h-3 bg-green-500 dark:bg-green-400 rounded-full" />
                         <span>Compliant ({stigMappedControls.filter(c => c.status === 'Compliant').length})</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-red-500 rounded-full" />
+                        <div className="w-3 h-3 bg-red-500 dark:bg-red-400 rounded-full" />
                         <span>Non-Compliant ({stigMappedControls.filter(c => c.status === 'Non-Compliant').length})</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-yellow-500 rounded-full" />
+                        <div className="w-3 h-3 bg-yellow-500 dark:bg-yellow-400 rounded-full" />
                         <span>Partially Compliant ({stigMappedControls.filter(c => c.status === 'Partially Compliant').length})</span>
                       </div>
                     </div>
@@ -574,13 +574,13 @@ export default function ControlCatalogDashboard() {
                                     )}
                                     {control.catIIOpen > 0 && (
                                       <div className="flex items-center gap-1">
-                                        <Badge className="bg-orange-500 text-xs px-1 py-0">CAT II</Badge>
+                                        <Badge className="bg-orange-500 dark:bg-orange-600 text-xs px-1 py-0">CAT II</Badge>
                                         <span>{control.catIIOpen}</span>
                                       </div>
                                     )}
                                     {control.catIIIOpen > 0 && (
                                       <div className="flex items-center gap-1">
-                                        <Badge className="bg-yellow-500 text-xs px-1 py-0">CAT III</Badge>
+                                        <Badge className="bg-yellow-500 dark:bg-yellow-600 text-xs px-1 py-0">CAT III</Badge>
                                         <span>{control.catIIIOpen}</span>
                                       </div>
                                     )}
@@ -596,8 +596,8 @@ export default function ControlCatalogDashboard() {
                                 <Badge
                                   variant={control.status === 'Compliant' ? 'default' :
                                           control.status === 'Non-Compliant' ? 'destructive' : 'outline'}
-                                  className={control.status === 'Compliant' ? 'bg-green-500' :
-                                            control.status === 'Partially Compliant' ? 'bg-yellow-500' : ''}
+                                  className={control.status === 'Compliant' ? 'bg-green-500 dark:bg-green-600' :
+                                            control.status === 'Partially Compliant' ? 'bg-yellow-500 dark:bg-yellow-600' : ''}
                                 >
                                   {control.status}
                                 </Badge>

@@ -183,6 +183,7 @@ model System {
   systemScores         SystemScore[]
   controlSystemStatus  ControlSystemStatus[]
   stps                 Stp[]
+  stpVulnerabilities   StpVulnerability[]
   nessusReports        NessusReport[]
   fileAssociations     FileAssociation[]
   vulnerabilityScans   VulnerabilityScan[]
@@ -329,6 +330,7 @@ model StigFinding {
   system   System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
   scan     StigScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
   reviewer User?    @relation("StigFindingReviewer", fields: [reviewedBy], references: [id])
+  stpVulnerabilities StpVulnerability[]
 
   @@unique([systemId, ruleId])
   @@index([systemId])
@@ -363,6 +365,7 @@ model Stp {
   testCases      StpTestCase[]
   evidence       StpEvidence[]
   poams          PoamStp[]
+  vulnerabilities StpVulnerability[]
 
   fileAssociations FileAssociation[]
 
@@ -416,6 +419,25 @@ model StpEvidence {
   @@index([stpId])
   @@index([testCaseId])
   @@map("stp_evidence")
+}
+
+model StpVulnerability {
+  id         Int      @id @default(autoincrement())
+  stpId      Int      @map("stp_id")
+  systemId   Int      @map("system_id")
+  vulnId     String   @map("vuln_id")
+  ruleId     String   @map("rule_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  stp        Stp      @relation(fields: [stpId], references: [id], onDelete: Cascade)
+  system     System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  finding    StigFinding? @relation(fields: [systemId, ruleId], references: [systemId, ruleId], onDelete: Cascade)
+
+  @@unique([stpId, systemId, vulnId])
+  @@index([stpId])
+  @@index([systemId])
+  @@index([vulnId])
+  @@map("stp_vulnerabilities")
 }
 
 // ---

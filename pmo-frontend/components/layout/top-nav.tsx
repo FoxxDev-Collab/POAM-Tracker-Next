@@ -83,21 +83,18 @@ export function TopNav() {
         // Clear any client-side storage
         localStorage.clear()
         sessionStorage.clear()
-        
+
         // Redirect to login page
-        router.push('/auth/login')
-        
-        // Force a hard refresh to clear any cached data
-        window.location.href = '/auth/login'
+        router.push('/login')
       } else {
         console.error('Logout failed')
         // Still redirect even if logout API fails for security
-        router.push('/auth/login')
+        router.push('/login')
       }
     } catch (error) {
       console.error('Logout error:', error)
       // Still redirect even if there's an error for security
-      router.push('/auth/login')
+      router.push('/login')
     }
   }
 
@@ -138,56 +135,58 @@ export function TopNav() {
         </nav>
 
         {/* Right side actions */}
-        <div className="ml-auto flex items-center space-x-2">
-          <Button 
-            size="icon" 
-            variant="ghost" 
-            aria-label="Toggle dark mode" 
+        <div className="ml-auto flex items-center gap-1">
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Toggle dark mode"
             onClick={toggleDark}
+            className="h-9 w-9"
           >
             {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
           
           {/* Admin Button - Only visible to admins */}
           {isAdmin && (
-            <Link href="/admin">
-              <Button 
-                size="icon" 
-                variant="ghost" 
-                aria-label="Admin Panel"
-              >
-                <UserCog className="h-4 w-4" />
-              </Button>
-            </Link>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Admin Panel"
+              className="h-9 w-9"
+              onClick={() => router.push('/admin')}
+            >
+              <UserCog className="h-4 w-4" />
+            </Button>
           )}
 
           {/* Settings Button */}
-          <Link href="/settings">
-            <Button 
-              size="icon" 
-              variant="ghost" 
-              aria-label="Settings"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-          </Link>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Settings"
+            className="h-9 w-9"
+            onClick={() => router.push('/settings')}
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
 
           {/* User Profile Button */}
-          <Link href="/profile">
-            <Button 
-              size="icon" 
-              variant="ghost" 
-              aria-label="User profile"
-            >
-              <User className="h-4 w-4" />
-            </Button>
-          </Link>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="User profile"
+            className="h-9 w-9"
+            onClick={() => router.push('/profile')}
+          >
+            <User className="h-4 w-4" />
+          </Button>
           
           {/* Logout Button */}
-          <Button 
-            size="icon" 
-            variant="ghost" 
+          <Button
+            size="icon"
+            variant="ghost"
             aria-label="Logout"
+            className="h-9 w-9"
             onClick={handleLogout}
           >
             <LogOut className="h-4 w-4" />

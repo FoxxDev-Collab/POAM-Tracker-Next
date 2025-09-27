@@ -90,8 +90,42 @@ export class StpsService {
             },
           },
         },
+        vulnerabilities: {
+          include: {
+            finding: {
+              select: {
+                vulnId: true,
+                ruleId: true,
+                ruleTitle: true,
+                severity: true,
+                status: true,
+                controlId: true,
+              },
+            },
+          },
+        },
       },
     });
+
+    // Get unique control IDs from vulnerabilities
+    if (stp && stp.vulnerabilities) {
+      const controlIds = [...new Set(
+        stp.vulnerabilities
+          .filter(v => v.finding?.controlId)
+          .map(v => v.finding!.controlId)
+      )];
+
+      // For now, return empty controls array since ControlImplementation model doesn't exist yet
+      // This will be implemented when the control tracking is fully integrated
+      const controls = [];
+
+      return {
+        item: {
+          ...stp,
+          relatedControls: controls,
+        }
+      };
+    }
 
     return stp ? { item: stp } : null;
   }
@@ -134,6 +168,18 @@ export class StpsService {
         },
       },
     });
+
+    // Create vulnerability associations if provided
+    if (createStpDto.vulnerabilities && createStpDto.vulnerabilities.length > 0) {
+      await this.prisma.stpVulnerability.createMany({
+        data: createStpDto.vulnerabilities.map(vuln => ({
+          stpId: stp.id,
+          systemId: vuln.systemId,
+          vulnId: vuln.vulnId,
+          ruleId: vuln.ruleId,
+        })),
+      });
+    }
 
     return { item: stp };
   }
@@ -343,5 +389,118 @@ export class StpsService {
     };
 
     return { item: mockComment };
+  }
+
+  async markTestCaseAsNotAFinding(
+    testCaseId: number,
+    justification: string,
+    userId: number,
+  ) {
+    // First, get the test case to find associated vulnerabilities
+    const testCase = await this.prisma.stpTestCase.findUnique({
+      where: { id: testCaseId },
+      include: {
+        stp: {
+          include: {
+            vulnerabilities: true,
+          },
+        },
+      },
+    });
+
+    if (!testCase) {
+      throw new Error('Test case not found');
+    }
+
+    // Update the test case status to Passed with Not A Finding result
+    const updatedTestCase = await this.prisma.stpTestCase.update({
+      where: { id: testCaseId },
+      data: {
+        status: 'Passed',
+        actualResult: `Not A Finding: ${justification}`,
+      },
+    });
+
+    // Update associated STIG findings to mark them as Not A Finding
+    if (testCase.stp.vulnerabilities.length > 0) {
+      const vulnIds = testCase.stp.vulnerabilities.map(v => v.vulnId);
+
+      await this.prisma.stigFinding.updateMany({
+        where: {
+          vulnId: { in: vulnIds },
+          systemId: testCase.stp.systemId,
+        },
+        data: {
+          status: 'Not_A_Finding',
+          justification: justification,
+          reviewedAt: new Date(),
+          reviewedBy: userId,
+        },
+      });
+    }
+
+    return { item: updatedTestCase };
+  }
+
+  async updateVulnerabilityStatus(
+    testCaseId: number,
+    status: string,
+    justification: string,
+    userId: number,
+  ) {
+    // First, get the test case to find associated vulnerabilities
+    const testCase = await this.prisma.stpTestCase.findUnique({
+      where: { id: testCaseId },
+      include: {
+        stp: {
+          include: {
+            vulnerabilities: true,
+          },
+        },
+      },
+    });
+
+    if (!testCase) {
+      throw new Error('Test case not found');
+    }
+
+    // Validate status is allowed
+    const allowedStatuses = ['Not_A_Finding', 'Not_Applicable', 'Not_Reviewed', 'Open'];
+    if (!allowedStatuses.includes(status)) {
+      throw new Error(`Invalid status: ${status}. Must be one of: ${allowedStatuses.join(', ')}`);
+    }
+
+    // Update the test case status to Passed with the new vulnerability status
+    const updatedTestCase = await this.prisma.stpTestCase.update({
+      where: { id: testCaseId },
+      data: {
+        status: 'Passed',
+        actualResult: `STIG Finding updated to ${status}: ${justification}`,
+      },
+    });
+
+    // Update associated STIG findings
+    if (testCase.stp.vulnerabilities.length > 0) {
+      const vulnIds = testCase.stp.vulnerabilities.map(v => v.vulnId);
+
+      await this.prisma.stigFinding.updateMany({
+        where: {
+          vulnId: { in: vulnIds },
+          systemId: testCase.stp.systemId,
+        },
+        data: {
+          status: status,
+          justification: justification,
+          reviewedAt: new Date(),
+          reviewedBy: userId,
+        },
+      });
+    }
+
+    return {
+      item: updatedTestCase,
+      message: `Vulnerability status updated to ${status}`,
+      updatedVulnerabilities: testCase.stp.vulnerabilities.map(v => v.vulnId)
+    };
   }
 }

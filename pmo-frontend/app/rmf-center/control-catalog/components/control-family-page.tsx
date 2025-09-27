@@ -59,11 +59,11 @@ const ICON_MAP = {
 } as const
 
 const COMPLIANCE_STATUSES = [
-  { value: 'compliant', label: 'Compliant', color: 'bg-green-500' },
-  { value: 'non_compliant_unofficial', label: 'Non-Compliant (Unofficial)', color: 'bg-yellow-500' },
-  { value: 'non_compliant_official', label: 'Non-Compliant (Official)', color: 'bg-red-500' },
-  { value: 'not_applicable', label: 'Not Applicable', color: 'bg-gray-500' },
-  { value: 'not_reviewed', label: 'Not Reviewed', color: 'bg-blue-500' }
+  { value: 'compliant', label: 'Compliant', color: 'bg-green-500 dark:bg-green-600' },
+  { value: 'non_compliant_unofficial', label: 'Non-Compliant (Unofficial)', color: 'bg-yellow-500 dark:bg-yellow-600' },
+  { value: 'non_compliant_official', label: 'Non-Compliant (Official)', color: 'bg-red-500 dark:bg-red-600' },
+  { value: 'not_applicable', label: 'Not Applicable', color: 'bg-gray-500 dark:bg-gray-600' },
+  { value: 'not_reviewed', label: 'Not Reviewed', color: 'bg-blue-500 dark:bg-blue-600' }
 ]
 
 const IMPLEMENTATION_STATUSES = [
@@ -420,7 +420,7 @@ export default function ControlFamilyPage({ familyId, familyName, familyIconName
                       </TableCell>
                       <TableCell>
                         {control.includeInBaseline ? (
-                          <Badge variant="outline" className="bg-green-50">
+                          <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Yes
                           </Badge>
