@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Navigation } from "@/components/navigation";
 import {
   Mountain, TrendingUp, BarChart3, DollarSign, Clock, Shield,
-  Users, Target, Award, CheckCircle2, AlertTriangle, FileText,
-  Eye, Mail, Download, BookOpen, Search, Building, Zap
+  Users, Target, Award, CheckCircle2, AlertTriangle,
+  Eye, Mail, BookOpen, Search, Building, Zap
 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -290,7 +290,7 @@ export default function Research() {
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold mb-4">Competitive Landscape</h2>
               <p className="text-lg text-muted-foreground">
-                Market leaders, gaps, and Bedrock's competitive advantages
+                Market leaders, gaps, and Bedrock&apos;s competitive advantages
               </p>
             </div>
 
@@ -329,7 +329,7 @@ export default function Research() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-3">
                       <Award className="h-5 w-5 text-primary" />
-                      Bedrock's Advantages
+                      Bedrock&apos;s Advantages
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -365,7 +365,7 @@ export default function Research() {
                       <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                       <div>
                         <strong className="text-sm">User Experience</strong>
-                        <p className="text-xs text-muted-foreground">Modern UX vs "bulky dashboards"</p>
+                        <p className="text-xs text-muted-foreground">Modern UX vs &quot;bulky dashboards&quot;</p>
                       </div>
                     </div>
                   </CardContent>
@@ -378,7 +378,7 @@ export default function Research() {
                 <h4 className="font-semibold mb-4 text-orange-800 dark:text-orange-400">Documented Market Gaps</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <ul className="space-y-2 text-muted-foreground">
-                    <li>• User experience problems ("bulky dashboards")</li>
+                    <li>• User experience problems (&quot;bulky dashboards&quot;)</li>
                     <li>• Lack of pricing transparency across vendors</li>
                     <li>• Long implementation cycles (6-18 months)</li>
                   </ul>
