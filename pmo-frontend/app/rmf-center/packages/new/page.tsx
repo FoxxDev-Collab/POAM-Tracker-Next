@@ -182,37 +182,85 @@ export default function NewPackageWizardPage() {
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      const payload = {
-        name: formData.name,
-        description: formData.description,
-        authorizationExpiry: formData.authorizationExpiry,
-        systemType: formData.systemType,
-        operationalStatus: formData.operationalStatus,
-        impactLevel: formData.impactLevel,
-        dataClassification: formData.dataClassification,
-        systemBoundary: formData.systemBoundary,
-        interconnections: formData.interconnections,
-        environmentType: formData.environmentType,
-        authorizedOfficialName: formData.authorizedOfficialName,
-        authorizedOfficialEmail: formData.authorizedOfficialEmail,
-        systemOwnerName: formData.systemOwnerName,
-        systemOwnerEmail: formData.systemOwnerEmail,
-        isssoName: formData.isssoName,
-        isssoEmail: formData.isssoEmail,
-        issmName: formData.issmName,
-        issmEmail: formData.issmEmail,
-        confidentialityImpact: formData.confidentialityImpact,
-        integrityImpact: formData.integrityImpact,
-        availabilityImpact: formData.availabilityImpact,
-        complianceFrameworks: formData.complianceFrameworks,
-        specialRequirements: formData.specialRequirements,
-        rmfStep: 'CATEGORIZE'
+      // Map frontend values to backend enum values
+      const mapSystemType = (type: string) => {
+        const mapping: Record<string, string> = {
+          'MAJOR_APPLICATION': 'Major_Application',
+          'GENERAL_SUPPORT_SYSTEM': 'General_Support_System',
+          'MINOR_APPLICATION': 'Minor_Application',
+          'INFORMATION_SYSTEM': 'Major_Application', // Default mapping
+          'PLATFORM_SYSTEM': 'General_Support_System',
+          'CLOUD_SERVICE': 'Major_Application',
+          'MOBILE_APPLICATION': 'Minor_Application'
+        }
+        return mapping[type] || 'Major_Application'
       }
+
+      const mapImpactLevel = (level: string) => {
+        const mapping: Record<string, string> = {
+          'LOW': 'Low',
+          'MODERATE': 'Moderate',
+          'HIGH': 'High'
+        }
+        return mapping[level] || level
+      }
+
+      const mapDataClassification = (classification: string) => {
+        const mapping: Record<string, string> = {
+          'UNCLASSIFIED': 'Unclassified',
+          'CUI': 'CUI',
+          'CONFIDENTIAL': 'Confidential',
+          'SECRET': 'Secret',
+          'TOP_SECRET': 'Top_Secret',
+          'TS_SCI': 'TS_SCI'
+        }
+        return mapping[classification] || classification
+      }
+
+      const payload = {
+        // Required field
+        name: formData.name,
+
+        // Optional fields that match backend DTO
+        description: formData.description || undefined,
+        rmfStep: 'Categorize',
+        systemType: formData.systemType ? mapSystemType(formData.systemType) : undefined,
+        dataClassification: formData.dataClassification ? mapDataClassification(formData.dataClassification) : undefined,
+        authorizationExpiry: formData.authorizationExpiry || undefined,
+
+        // People assignments - using correct field names from DTO
+        authorizingOfficial: formData.authorizedOfficialName || undefined,
+        systemOwner: formData.systemOwnerName || undefined,
+        issoName: formData.isssoName || undefined,
+        issmName: formData.issmName || undefined,
+
+        // CIA Triad impacts
+        confidentialityImpact: formData.confidentialityImpact ? mapImpactLevel(formData.confidentialityImpact) : undefined,
+        integrityImpact: formData.integrityImpact ? mapImpactLevel(formData.integrityImpact) : undefined,
+        availabilityImpact: formData.availabilityImpact ? mapImpactLevel(formData.availabilityImpact) : undefined,
+
+        // Set overall categorization based on highest impact level
+        overallCategorization: formData.confidentialityImpact || formData.integrityImpact || formData.availabilityImpact
+          ? mapImpactLevel(
+              [formData.confidentialityImpact, formData.integrityImpact, formData.availabilityImpact]
+                .filter(Boolean)
+                .sort((a, b) => {
+                  const order = ['LOW', 'MODERATE', 'HIGH'];
+                  return order.indexOf(b) - order.indexOf(a);
+                })[0]
+            )
+          : undefined
+      }
+
+      // Remove undefined values to avoid sending them
+      const cleanPayload = Object.fromEntries(
+        Object.entries(payload).filter(([_, v]) => v !== undefined)
+      )
 
       const response = await fetch('/api/packages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(cleanPayload)
       })
 
       if (!response.ok) {

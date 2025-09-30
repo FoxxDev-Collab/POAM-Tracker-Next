@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import type { Package } from '@prisma/client';
+import type { Package, PackageDocument } from '@prisma/client';
 import { CreatePackageDto, UpdatePackageDto } from './dto';
+import type { Response } from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class PackagesService {
@@ -339,5 +342,120 @@ export class PackagesService {
     return this.prisma.package.delete({
       where: { id },
     });
+  }
+
+  // Package Documents Methods
+  async getDocuments(packageId: number): Promise<PackageDocument[]> {
+    return this.prisma.packageDocument.findMany({
+      where: {
+        packageId,
+        isActive: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async uploadDocument(packageId: number, file: Express.Multer.File, body: any): Promise<PackageDocument> {
+    // Ensure package exists
+    const packageExists = await this.prisma.package.findUnique({
+      where: { id: packageId }
+    });
+
+    if (!packageExists) {
+      throw new Error('Package not found');
+    }
+
+    // Create uploads directory if it doesn't exist
+    const uploadDir = path.join(process.cwd(), 'uploads', 'packages', packageId.toString());
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Generate unique filename
+    const fileExtension = path.extname(file.originalname);
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExtension}`;
+    const filePath = path.join(uploadDir, fileName);
+
+    // Save file to disk - handle both buffer and path scenarios
+    if (file.buffer) {
+      fs.writeFileSync(filePath, file.buffer);
+    } else if (file.path) {
+      // If multer saved to temp path, move it
+      fs.copyFileSync(file.path, filePath);
+      fs.unlinkSync(file.path);
+    } else {
+      throw new Error('No file data available');
+    }
+
+    // Save document record to database
+    const document = await this.prisma.packageDocument.create({
+      data: {
+        packageId,
+        filename: fileName,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        documentType: body.documentType || 'OTHER',
+        rmfStep: body.rmfStep || 'Categorize',
+        uploadedBy: body.uploadedBy || 'System', // TODO: get from auth context
+        description: body.description || '',
+        path: filePath,
+      }
+    });
+
+    return document;
+  }
+
+  async downloadDocument(packageId: number, documentId: string, res: Response): Promise<void> {
+    const document = await this.prisma.packageDocument.findFirst({
+      where: {
+        id: documentId,
+        packageId,
+        isActive: true
+      }
+    });
+
+    if (!document) {
+      res.status(404).json({ error: 'Document not found' });
+      return;
+    }
+
+    if (!fs.existsSync(document.path)) {
+      res.status(404).json({ error: 'File not found on disk' });
+      return;
+    }
+
+    res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
+    res.setHeader('Content-Type', document.mimeType || 'application/octet-stream');
+
+    const fileStream = fs.createReadStream(document.path);
+    fileStream.pipe(res);
+  }
+
+  async deleteDocument(packageId: number, documentId: string): Promise<{ message: string }> {
+    const document = await this.prisma.packageDocument.findFirst({
+      where: {
+        id: documentId,
+        packageId,
+        isActive: true
+      }
+    });
+
+    if (!document) {
+      throw new Error('Document not found');
+    }
+
+    // Delete file from disk
+    if (fs.existsSync(document.path)) {
+      fs.unlinkSync(document.path);
+    }
+
+    // Mark document as inactive (soft delete)
+    await this.prisma.packageDocument.update({
+      where: { id: documentId },
+      data: { isActive: false }
+    });
+
+    return { message: 'Document deleted successfully' };
   }
 }

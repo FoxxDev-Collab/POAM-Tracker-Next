@@ -128,4 +128,18 @@ export class CreatePoamDto {
 
   @IsInt()
   createdBy: number;
+
+  // STP Linking
+  @IsOptional()
+  stpIds?: number[];
+
+  // Initial Milestones
+  @IsOptional()
+  initialMilestones?: Array<{
+    title: string;
+    description?: string;
+    targetDate?: string;
+    milestoneType?: string;
+    assignedUserId?: number;
+  }>;
 }

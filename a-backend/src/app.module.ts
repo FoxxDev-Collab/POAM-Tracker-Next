@@ -23,6 +23,8 @@ import { CatalogModule } from './catalog/catalog.module';
 import { VulnerabilityCenterModule } from './vulnerability-center/vulnerability-center.module';
 import { RedisModule } from './redis/redis.module';
 import { QueuesModule } from './queues/queues.module';
+import { DocumentsModule } from './documents/documents.module';
+import { PpsmModule } from './ppsm/ppsm.module';
 
 @Module({
   imports: [
@@ -48,6 +50,8 @@ import { QueuesModule } from './queues/queues.module';
     CatalogModule,
     VulnerabilityCenterModule,
     FileManagerModule,
+    DocumentsModule,
+    PpsmModule,
   ],
   controllers: [AppController],
   providers: [

@@ -42,6 +42,11 @@ export class SystemsController {
     return this.systemsService.findAll();
   }
 
+  @Get('package/:packageId')
+  findByPackageId(@Param('packageId', ParseIntPipe) packageId: number) {
+    return this.systemsService.findByPackage(packageId);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.systemsService.findOne(id);

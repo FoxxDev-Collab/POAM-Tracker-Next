@@ -86,8 +86,33 @@ model Package {
   packageScores PackageScore[]
   controlPackageStatus ControlPackageStatus[]
   packageControlBaselines PackageControlBaseline[]
+  documents PackageDocument[]
+  controlDocuments ControlDocument[]
 
   @@map("packages")
+}
+
+model PackageDocument {
+  id           String   @id @default(cuid())
+  packageId    Int      @map("package_id")
+  filename     String
+  originalName String   @map("original_name")
+  mimeType     String   @map("mime_type")
+  size         Int
+  documentType String   @map("document_type")
+  rmfStep      String   @map("rmf_step")
+  uploadedBy   String   @map("uploaded_by")
+  description  String?
+  version      Int      @default(1)
+  isActive     Boolean  @default(true) @map("is_active")
+  path         String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@index([packageId, documentType, isActive])
+  @@map("package_documents")
 }
 
 model Group {
@@ -157,6 +182,11 @@ model System {
   supportContract String?  @map("support_contract")
   supportExpiry   String?  @map("support_expiry")
   
+  // Virtual/Physical Information
+  isVirtual        Boolean? @default(false) @map("is_virtual")
+  hypervisor       String?  // VMware, Hyper-V, etc.
+  hostSystem       String?  @map("host_system") // Name of the host system if virtual
+
   // Physical Information
   physicalLocation String? @map("physical_location")
   rackLocation     String? @map("rack_location")
@@ -189,6 +219,7 @@ model System {
   vulnerabilityScans   VulnerabilityScan[]
   worstSystemForGroup  GroupScore[]         @relation("GroupWorstSystem")
   worstSystemForPackage PackageScore[]      @relation("PackageWorstSystem")
+  ppsmEntries          SystemPPSM[]
 
   @@index([packageId])
   @@index([groupId])
@@ -231,6 +262,11 @@ model User {
   uploadedFiles        File[]
   createdFileVersions  FileVersion[]
   fileAuditLogs        FileAuditLog[]
+  uploadedDocuments    DocumentVersion[]      @relation("DocumentUploader")
+  approvedDocuments    DocumentVersion[]      @relation("DocumentApprover")
+  createdPPSM          SystemPPSM[]           @relation("PPSMCreator")
+  approvedPPSM         SystemPPSM[]           @relation("PPSMApprover")
+  reviewedPPSM         SystemPPSM[]           @relation("PPSMReviewer")
   kcSpacesCreated      KcSpace[]              @relation("KcSpaceCreatedBy")
   kcPagesCreated       KcPage[]               @relation("KcPageCreatedBy")
   notifications        Notification[]
@@ -1703,4 +1739,130 @@ model PackageControlBaseline {
   @@index([includeInBaseline])
   @@index([complianceStatus])
   @@map("package_control_baselines")
+}
+
+// ---
+// Document Management Models for RMF Document Center
+// ---
+
+model DocumentCategory {
+  id            Int      @id @default(autoincrement())
+  controlFamily String   @map("control_family") // AC, AT, AU, CA, CM, CP, IA, IR, MA, MP, PE, PL, PM, PS, PT, RA, SA, SC, SI, SR
+  name          String   // Access Control, Audit and Accountability, etc.
+  description   String?
+  displayOrder  Int      @default(0) @map("display_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  documents ControlDocument[]
+
+  @@unique([controlFamily])
+  @@index([controlFamily])
+  @@map("document_categories")
+}
+
+model ControlDocument {
+  id               Int      @id @default(autoincrement())
+  packageId        Int      @map("package_id")
+  categoryId       Int      @map("category_id")
+  documentType     DocumentType @map("document_type") // Policy, Procedure, Plan
+  documentSubType  String?  @map("document_sub_type") // For specific plan types (BCP, DRP, IRP, etc.)
+  title            String
+  description      String?
+  currentVersionId Int?     @map("current_version_id") @unique
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  package         Package               @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  category        DocumentCategory      @relation(fields: [categoryId], references: [id])
+  currentVersion  DocumentVersion?      @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+  versions        DocumentVersion[]     @relation("DocumentVersions")
+
+  @@index([packageId])
+  @@index([categoryId])
+  @@index([documentType])
+  @@unique([packageId, categoryId, documentType, documentSubType])
+  @@map("control_documents")
+}
+
+model DocumentVersion {
+  id              Int      @id @default(autoincrement())
+  documentId      Int      @map("document_id")
+  versionNumber   Int      @map("version_number")
+  fileName        String   @map("file_name")
+  filePath        String   @map("file_path")
+  fileSize        Int      @map("file_size")
+  mimeType        String   @map("mime_type")
+  checksum        String?  // For file integrity
+  uploadedBy      Int      @map("uploaded_by")
+  uploadedAt      DateTime @default(now()) @map("uploaded_at")
+  changeNotes     String?  @map("change_notes")
+  approvalStatus  ApprovalStatus @default(Pending) @map("approval_status")
+  approvedBy      Int?     @map("approved_by")
+  approvedAt      DateTime? @map("approved_at")
+
+  document        ControlDocument  @relation("DocumentVersions", fields: [documentId], references: [id], onDelete: Cascade)
+  uploader        User             @relation("DocumentUploader", fields: [uploadedBy], references: [id])
+  approver        User?            @relation("DocumentApprover", fields: [approvedBy], references: [id])
+  currentDocument ControlDocument? @relation("CurrentVersion")
+
+  @@unique([documentId, versionNumber])
+  @@index([documentId])
+  @@index([uploadedBy])
+  @@map("document_versions")
+}
+
+// ---
+// PPSM (Ports, Protocols, Services Management) Models
+// ---
+
+model SystemPPSM {
+  id                 Int      @id @default(autoincrement())
+  systemId           Int      @map("system_id")
+  port               String
+  protocol           String   // TCP, UDP, ICMP, etc.
+  service            String
+  direction          PPSMDirection @map("direction") // Inbound, Outbound, Bidirectional
+  sourceIP           String?  @map("source_ip")
+  destinationIP      String?  @map("destination_ip")
+  justification      String
+  riskAssessment     String?  @map("risk_assessment")
+  approvalStatus     ApprovalStatus @default(Pending) @map("approval_status")
+  approvedBy         Int?     @map("approved_by")
+  approvedAt         DateTime? @map("approved_at")
+  lastReviewed       DateTime? @map("last_reviewed")
+  reviewedBy         Int?     @map("reviewed_by")
+  isActive           Boolean  @default(true) @map("is_active")
+  expirationDate     DateTime? @map("expiration_date")
+  createdBy          Int      @map("created_by")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  system    System  @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  creator   User    @relation("PPSMCreator", fields: [createdBy], references: [id])
+  approver  User?   @relation("PPSMApprover", fields: [approvedBy], references: [id])
+  reviewer  User?   @relation("PPSMReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([systemId])
+  @@index([port])
+  @@index([protocol])
+  @@index([approvalStatus])
+  @@map("system_ppsm")
+}
+
+// ---
+// New Enums for Document Management and PPSM
+// ---
+
+enum DocumentType {
+  Policy
+  Procedure
+  Plan
+}
+
+enum PPSMDirection {
+  Inbound
+  Outbound
+  Bidirectional
 }

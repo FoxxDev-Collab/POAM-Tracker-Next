@@ -67,7 +67,7 @@ export class VulnerabilitiesService {
   constructor(private prisma: PrismaService) {}
 
   async findBySystem(systemId: number) {
-    return this.prisma.stigFinding.findMany({
+    const findings = await this.prisma.stigFinding.findMany({
       where: { systemId },
       include: {
         system: {
@@ -83,13 +83,31 @@ export class VulnerabilitiesService {
             checklistId: true,
           },
         },
+        stpVulnerabilities: {
+          include: {
+            stp: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+              },
+            },
+          },
+        },
       },
       orderBy: [{ severity: 'desc' }, { lastSeen: 'desc' }],
     });
+
+    // Transform findings to include activeStps array
+    return findings.map(finding => ({
+      ...finding,
+      activeStps: finding.stpVulnerabilities.map(sv => sv.stp),
+      stpVulnerabilities: undefined, // Remove the nested relation
+    }));
   }
 
   async findByGroup(groupId: number) {
-    return this.prisma.stigFinding.findMany({
+    const findings = await this.prisma.stigFinding.findMany({
       where: {
         system: {
           groupId,
@@ -115,9 +133,27 @@ export class VulnerabilitiesService {
             checklistId: true,
           },
         },
+        stpVulnerabilities: {
+          include: {
+            stp: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+              },
+            },
+          },
+        },
       },
       orderBy: [{ severity: 'desc' }, { lastSeen: 'desc' }],
     });
+
+    // Transform findings to include activeStps array
+    return findings.map(finding => ({
+      ...finding,
+      activeStps: finding.stpVulnerabilities.map(sv => sv.stp),
+      stpVulnerabilities: undefined, // Remove the nested relation
+    }));
   }
 
   async findAll(filters?: {
@@ -143,7 +179,7 @@ export class VulnerabilitiesService {
       };
     }
 
-    return this.prisma.stigFinding.findMany({
+    const findings = await this.prisma.stigFinding.findMany({
       where,
       include: {
         system: {
@@ -165,13 +201,31 @@ export class VulnerabilitiesService {
             checklistId: true,
           },
         },
+        stpVulnerabilities: {
+          include: {
+            stp: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+              },
+            },
+          },
+        },
       },
       orderBy: [{ severity: 'desc' }, { lastSeen: 'desc' }],
     });
+
+    // Transform findings to include activeStps array
+    return findings.map(finding => ({
+      ...finding,
+      activeStps: finding.stpVulnerabilities.map(sv => sv.stp),
+      stpVulnerabilities: undefined, // Remove the nested relation
+    }));
   }
 
   async findOne(id: number) {
-    return this.prisma.stigFinding.findUnique({
+    const finding = await this.prisma.stigFinding.findUnique({
       where: { id },
       include: {
         system: {
@@ -194,8 +248,27 @@ export class VulnerabilitiesService {
             createdAt: true,
           },
         },
+        stpVulnerabilities: {
+          include: {
+            stp: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+              },
+            },
+          },
+        },
       },
     });
+
+    if (!finding) return null;
+
+    return {
+      ...finding,
+      activeStps: finding.stpVulnerabilities.map(sv => sv.stp),
+      stpVulnerabilities: undefined, // Remove the nested relation
+    };
   }
 
   async update(id: number, data: Prisma.StigFindingUpdateInput) {

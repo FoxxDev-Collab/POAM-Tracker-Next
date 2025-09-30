@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthHeaders, BACKEND_URL } from "@/lib/server-api-helpers";
+import { getAuthHeaders, backendApiUrl } from "@/lib/server-api-helpers";
 
 export async function GET() {
   try {
     const headers = await getAuthHeaders();
     
-    const response = await fetch(`${BACKEND_URL}/packages`, {
+    const response = await fetch(backendApiUrl('packages'), {
       method: 'GET',
       headers,
     });
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     const headers = await getAuthHeaders();
     const body = await req.json();
     
-    const response = await fetch(`${BACKEND_URL}/packages`, {
+    const response = await fetch(backendApiUrl('packages'), {
       method: 'POST',
       headers,
       body: JSON.stringify(body)

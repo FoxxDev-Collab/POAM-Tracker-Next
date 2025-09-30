@@ -23,7 +23,7 @@ export async function GET(
     const headers = await getAuthHeaders();
     const resolvedParams = await params;
     
-    const response = await fetch(`${BACKEND_URL}/systems/${resolvedParams.id}`, {
+    const response = await fetch(`${BACKEND_URL}/api/systems/${resolvedParams.id}`, {
       method: 'GET',
       headers,
     });
@@ -50,7 +50,7 @@ export async function PATCH(
     const resolvedParams = await params;
     const body = await req.json();
     
-    const response = await fetch(`${BACKEND_URL}/systems/${resolvedParams.id}`, {
+    const response = await fetch(`${BACKEND_URL}/api/systems/${resolvedParams.id}`, {
       method: 'PATCH',
       headers,
       body: JSON.stringify(body)
@@ -77,7 +77,7 @@ export async function DELETE(
     const headers = await getAuthHeaders();
     const resolvedParams = await params;
     
-    const response = await fetch(`${BACKEND_URL}/systems/${resolvedParams.id}`, {
+    const response = await fetch(`${BACKEND_URL}/api/systems/${resolvedParams.id}`, {
       method: 'DELETE',
       headers,
     });

@@ -273,7 +273,7 @@ export class PoamsService {
   }
 
   async update(id: number, updatePoamDto: UpdatePoamDto) {
-    // Calculate risk score if likelihood and impact are updated
+    // Calculate risk score if likelihood and impact are provided
     let inherentRiskScore = updatePoamDto.inherentRiskScore;
     if (!inherentRiskScore && updatePoamDto.likelihood && updatePoamDto.impact) {
       inherentRiskScore = this.calculateRiskScore(

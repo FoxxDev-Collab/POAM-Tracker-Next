@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { useState } from "react"
 import {
   Package, FileCheck, ShieldCheck, ChevronDown, ChevronRight,
-  Shield, Activity, Settings, AlertTriangle
+  Shield, Activity, Settings, AlertTriangle, FolderOpen
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -60,8 +60,12 @@ export function NistRmfSidebar() {
   const [isControlsOpen, setIsControlsOpen] = useState(
     pathname?.startsWith("/rmf-center/control-catalog") || false
   )
+  const [isDocumentCenterOpen, setIsDocumentCenterOpen] = useState(
+    pathname?.startsWith("/rmf-center/document-center") || false
+  )
 
   const isControlCatalogActive = pathname?.startsWith("/rmf-center/control-catalog")
+  const isDocumentCenterActive = pathname?.startsWith("/rmf-center/document-center")
 
   return (
     <aside className="w-64 shrink-0 border-r border-border bg-muted/10">
@@ -164,6 +168,87 @@ export function NistRmfSidebar() {
                     >
                       <Icon className="h-3 w-3 shrink-0" />
                       <span className="text-xs font-medium">{family.id}-Family</span>
+                    </Button>
+                  </Link>
+                )
+              })}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Document Center Section */}
+          <Collapsible open={isDocumentCenterOpen} onOpenChange={setIsDocumentCenterOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant={isDocumentCenterActive ? "secondary" : "ghost"}
+                className={`w-full justify-start gap-3 h-auto p-3 ${
+                  isDocumentCenterActive
+                    ? "bg-secondary text-secondary-foreground"
+                    : "hover:bg-muted"
+                }`}
+              >
+                <FolderOpen className="h-4 w-4 shrink-0" />
+                <div className="flex flex-col items-start text-left flex-1">
+                  <span className="text-sm font-medium">Document Center</span>
+                  <span className="text-xs text-muted-foreground">
+                    RMF documentation management
+                  </span>
+                </div>
+                {isDocumentCenterOpen ? (
+                  <ChevronDown className="h-4 w-4 shrink-0" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 shrink-0" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1">
+              {/* Dashboard Link */}
+              <Link href="/rmf-center/document-center">
+                <Button
+                  variant={pathname === "/rmf-center/document-center" ? "secondary" : "ghost"}
+                  className={`w-full justify-start gap-3 h-auto p-2 ml-4 ${
+                    pathname === "/rmf-center/document-center"
+                      ? "bg-secondary text-secondary-foreground"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  <FolderOpen className="h-3 w-3 shrink-0" />
+                  <span className="text-xs font-medium">All Documents</span>
+                </Button>
+              </Link>
+
+              {/* PPSM Link */}
+              <Link href="/rmf-center/document-center/ppsm">
+                <Button
+                  variant={pathname?.startsWith("/rmf-center/document-center/ppsm") ? "secondary" : "ghost"}
+                  className={`w-full justify-start gap-3 h-auto p-2 ml-4 ${
+                    pathname?.startsWith("/rmf-center/document-center/ppsm")
+                      ? "bg-secondary text-secondary-foreground"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  <Settings className="h-3 w-3 shrink-0" />
+                  <span className="text-xs font-medium">PPSM Management</span>
+                </Button>
+              </Link>
+
+              {/* Control Family Documents */}
+              {controlFamilies.map((family) => {
+                const Icon = family.icon
+                const isActive = pathname === `/rmf-center/document-center/${family.id}` ||
+                                pathname?.startsWith(`/rmf-center/document-center/${family.id}/`)
+
+                return (
+                  <Link key={family.id} href={`/rmf-center/document-center/${family.id}`}>
+                    <Button
+                      variant={isActive ? "secondary" : "ghost"}
+                      className={`w-full justify-start gap-3 h-auto p-2 ml-4 ${
+                        isActive
+                          ? "bg-secondary text-secondary-foreground"
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                      <Icon className="h-3 w-3 shrink-0" />
+                      <span className="text-xs font-medium">{family.id} Documents</span>
                     </Button>
                   </Link>
                 )

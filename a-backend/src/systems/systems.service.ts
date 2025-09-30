@@ -71,7 +71,7 @@ export class SystemsService {
     return { items: systems };
   }
 
-  async findByPackage(packageId: number): Promise<{ items: any[] }> {
+  async findByPackage(packageId: number): Promise<{ items: any[]; systems: any[] }> {
     const systems = await this.prisma.system.findMany({
       where: { packageId },
       include: {
@@ -152,7 +152,11 @@ export class SystemsService {
       })
     );
 
-    return { items: enrichedSystems };
+    // Return both 'items' and 'systems' for compatibility
+    return {
+      items: enrichedSystems,
+      systems: enrichedSystems
+    };
   }
 
   async findByGroup(groupId: number): Promise<{ items: any[] }> {

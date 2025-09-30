@@ -14,6 +14,7 @@ import { DetailsTab } from "./components/details-tab"
 import { TopologyTab } from "./components/topology-tab"
 import { PPSMTab } from "./components/ppsm-tab"
 import { AssetManagementTab } from "./components/asset-management-tab"
+import RMFProcessTracker from "../components/rmf-process-tracker"
 
 interface Package {
   id: number
@@ -56,7 +57,7 @@ export default function PackageManagementPage() {
   
   const [packageData, setPackageData] = useState<Package | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'details')
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'rmf-process')
 
   const fetchPackage = useCallback(async () => {
     setLoading(true)
@@ -75,6 +76,31 @@ export default function PackageManagementPage() {
       setLoading(false)
     }
   }, [packageId])
+
+  const handleRmfStepUpdate = async (newStep: string) => {
+    try {
+      const response = await fetch(`/api/packages/${packageId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rmfStep: newStep
+        })
+      })
+
+      if (response.ok) {
+        await fetchPackage()
+        toast.success(`Successfully transitioned to ${newStep} phase`)
+      } else {
+        throw new Error('Failed to update RMF step')
+      }
+    } catch (error) {
+      console.error('Error updating RMF step:', error)
+      toast.error('Failed to update RMF step')
+      throw error
+    }
+  }
 
   useEffect(() => {
     fetchPackage()
@@ -218,12 +244,22 @@ export default function PackageManagementPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="rmf-process">RMF Process</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="topology">Topology</TabsTrigger>
           <TabsTrigger value="ppsm">PPSM</TabsTrigger>
           <TabsTrigger value="assets">Asset Management</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="rmf-process">
+          <RMFProcessTracker
+            packageId={packageId}
+            currentStep={packageData.rmfStep}
+            packageData={packageData}
+            onStepUpdate={handleRmfStepUpdate}
+          />
+        </TabsContent>
 
         <TabsContent value="details">
           <DetailsTab packageData={packageData} onUpdate={fetchPackage} />

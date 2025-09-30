@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthHeaders, BACKEND_URL } from "@/lib/server-api-helpers";
+import { getAuthHeaders, backendApiUrl } from "@/lib/server-api-helpers";
 
 export async function GET(
   req: NextRequest,
@@ -9,7 +9,8 @@ export async function GET(
     const { id } = await params;
     const headers = await getAuthHeaders();
     
-    const response = await fetch(`${BACKEND_URL}/packages/${id}/systems`, {
+    // Try the systems/package endpoint instead
+    const response = await fetch(backendApiUrl(`systems/package/${id}`), {
       method: 'GET',
       headers,
     });
@@ -43,7 +44,7 @@ export async function POST(
     };
     
     // Use the /systems endpoint instead of /packages/{id}/systems
-    const response = await fetch(`${BACKEND_URL}/systems`, {
+    const response = await fetch(backendApiUrl('systems'), {
       method: 'POST',
       headers,
       body: JSON.stringify(payload)

@@ -179,6 +179,20 @@ export class StpsService {
           ruleId: vuln.ruleId,
         })),
       });
+
+      // Update STIG findings to mark them as having an active STP
+      for (const vuln of createStpDto.vulnerabilities) {
+        await this.prisma.stigFinding.updateMany({
+          where: {
+            systemId: vuln.systemId,
+            ruleId: vuln.ruleId,
+          },
+          data: {
+            stpStatus: 'Active',
+            lastStpId: stp.id,
+          },
+        });
+      }
     }
 
     return { item: stp };
@@ -223,6 +237,29 @@ export class StpsService {
   }
 
   async remove(id: number) {
+    // First, get the STP with its vulnerabilities to clear the stpStatus
+    const stp = await this.prisma.stp.findUnique({
+      where: { id },
+      include: { vulnerabilities: true },
+    });
+
+    if (stp && stp.vulnerabilities) {
+      // Clear the STP status from associated STIG findings
+      for (const vuln of stp.vulnerabilities) {
+        await this.prisma.stigFinding.updateMany({
+          where: {
+            systemId: vuln.systemId,
+            ruleId: vuln.ruleId,
+            lastStpId: id,
+          },
+          data: {
+            stpStatus: 'None',
+            lastStpId: null,
+          },
+        });
+      }
+    }
+
     return this.prisma.stp.delete({
       where: { id },
     });
