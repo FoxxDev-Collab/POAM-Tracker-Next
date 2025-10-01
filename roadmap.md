@@ -79,7 +79,10 @@ Create a professional, comprehensive cybersecurity management platform that tran
   - [ ] Control implementation progress dashboard
   - [ ] Implementation milestone tracking
   - [ ] Resource allocation and timeline management
-
+  - [ ] User action tracking, all features need user action history
+- [ ] **API Issues**
+  - [ ] Multiple issues with accurate data in the Vuln. Center.
+ 
 ### 🎯 **Step 4: ASSESS** *(Q3 2025)*
 - [ ] **Assessment Planning**
   - [ ] Security Assessment Plan (SAP) generation

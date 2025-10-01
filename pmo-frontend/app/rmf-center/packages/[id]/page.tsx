@@ -11,8 +11,6 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 
 import { DetailsTab } from "./components/details-tab"
-import { TopologyTab } from "./components/topology-tab"
-import { PPSMTab } from "./components/ppsm-tab"
 import { AssetManagementTab } from "./components/asset-management-tab"
 import RMFProcessTracker from "../components/rmf-process-tracker"
 
@@ -244,11 +242,9 @@ export default function PackageManagementPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="rmf-process">RMF Process</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="topology">Topology</TabsTrigger>
-          <TabsTrigger value="ppsm">PPSM</TabsTrigger>
           <TabsTrigger value="assets">Asset Management</TabsTrigger>
         </TabsList>
 
@@ -263,14 +259,6 @@ export default function PackageManagementPage() {
 
         <TabsContent value="details">
           <DetailsTab packageData={packageData} onUpdate={fetchPackage} />
-        </TabsContent>
-
-        <TabsContent value="topology">
-          <TopologyTab packageId={packageId} />
-        </TabsContent>
-
-        <TabsContent value="ppsm">
-          <PPSMTab packageId={packageId} />
         </TabsContent>
 
         <TabsContent value="assets">

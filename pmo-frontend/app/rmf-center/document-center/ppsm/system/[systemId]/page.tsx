@@ -75,17 +75,6 @@ export default function SystemPPSMManagementPage() {
   const router = useRouter()
   const systemId = params?.systemId as string
 
-  // Early return if no systemId
-  if (!systemId) {
-    return (
-      <div className="container mx-auto py-6">
-        <div className="text-center">
-          <p className="text-muted-foreground">Loading system information...</p>
-        </div>
-      </div>
-    )
-  }
-
   const [loading, setLoading] = useState(true)
   const [system, setSystem] = useState<SystemDetails | null>(null)
   const [ppsmEntries, setPpsmEntries] = useState<PPSMEntry[]>([])
@@ -93,7 +82,6 @@ export default function SystemPPSMManagementPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterProtocol, setFilterProtocol] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
-  const [filterDirection, setFilterDirection] = useState<string>("all")
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [editingEntry, setEditingEntry] = useState<PPSMEntry | null>(null)
 
@@ -116,7 +104,7 @@ export default function SystemPPSMManagementPage() {
 
   useEffect(() => {
     filterPPSMEntries()
-  }, [ppsmEntries, searchQuery, filterProtocol, filterStatus, filterDirection])
+  }, [ppsmEntries, searchQuery, filterProtocol, filterStatus])
 
   const fetchSystemDetails = async () => {
     try {
@@ -170,11 +158,6 @@ export default function SystemPPSMManagementPage() {
     // Status filter
     if (filterStatus !== "all") {
       filtered = filtered.filter(entry => entry.approvalStatus === filterStatus)
-    }
-
-    // Direction filter
-    if (filterDirection !== "all") {
-      filtered = filtered.filter(entry => entry.direction === filterDirection)
     }
 
     setFilteredEntries(filtered)
@@ -355,8 +338,17 @@ export default function SystemPPSMManagementPage() {
     approved: ppsmEntries.filter(e => e.approvalStatus === "Approved").length,
     pending: ppsmEntries.filter(e => e.approvalStatus === "Pending").length,
     highRisk: ppsmEntries.filter(e => e.riskLevel === "High" || e.riskLevel === "Critical").length,
-    inbound: ppsmEntries.filter(e => e.direction === "Inbound").length,
-    outbound: ppsmEntries.filter(e => e.direction === "Outbound").length,
+  }
+
+  // Early return check after all hooks
+  if (!systemId) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading system information...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -441,42 +433,6 @@ export default function SystemPPSMManagementPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="direction">Direction</Label>
-                <Select
-                  value={formData.direction}
-                  onValueChange={(v) => setFormData({ ...formData, direction: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Inbound">Inbound</SelectItem>
-                    <SelectItem value="Outbound">Outbound</SelectItem>
-                    <SelectItem value="Bidirectional">Bidirectional</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="source">Source IP/Network</Label>
-                  <Input
-                    id="source"
-                    value={formData.sourceIP}
-                    onChange={(e) => setFormData({ ...formData, sourceIP: e.target.value })}
-                    placeholder="10.0.0.0/24 or Any"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="destination">Destination IP/Network</Label>
-                  <Input
-                    id="destination"
-                    value={formData.destinationIP}
-                    onChange={(e) => setFormData({ ...formData, destinationIP: e.target.value })}
-                    placeholder="192.168.1.0/24 or Any"
-                  />
-                </div>
-              </div>
-              <div className="grid gap-2">
                 <Label htmlFor="justification">Business Justification</Label>
                 <Textarea
                   id="justification"
@@ -514,7 +470,7 @@ export default function SystemPPSMManagementPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Entries</CardTitle>
@@ -547,22 +503,6 @@ export default function SystemPPSMManagementPage() {
             <div className="text-2xl font-bold text-red-600">{stats.highRisk}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Inbound</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.inbound}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Outbound</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.outbound}</div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* PPSM Table */}
@@ -593,17 +533,6 @@ export default function SystemPPSMManagementPage() {
                   <SelectItem value="ICMP">ICMP</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={filterDirection} onValueChange={setFilterDirection}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="Direction" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="Inbound">Inbound</SelectItem>
-                  <SelectItem value="Outbound">Outbound</SelectItem>
-                  <SelectItem value="Bidirectional">Bidirectional</SelectItem>
-                </SelectContent>
-              </Select>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="w-[120px]">
                   <SelectValue placeholder="Status" />
@@ -615,9 +544,6 @@ export default function SystemPPSMManagementPage() {
                   <SelectItem value="Rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="icon">
-                <Download className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </CardHeader>
@@ -640,95 +566,90 @@ export default function SystemPPSMManagementPage() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Port</TableHead>
-                  <TableHead>Protocol</TableHead>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Direction</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Destination</TableHead>
-                  <TableHead>Risk</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEntries.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell className="font-medium">{entry.port}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{entry.protocol}</Badge>
-                    </TableCell>
-                    <TableCell>{entry.service}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <span className="text-lg">{getDirectionIcon(entry.direction)}</span>
-                        <span className="text-sm">{entry.direction}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{entry.sourceIP || "Any"}</TableCell>
-                    <TableCell className="font-mono text-xs">{entry.destinationIP || "Any"}</TableCell>
-                    <TableCell>{getRiskBadge(entry.riskLevel)}</TableCell>
-                    <TableCell>{getStatusBadge(entry.approvalStatus)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {entry.approvalStatus === "Pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0"
-                              onClick={() => handleApproveEntry(entry.id)}
-                            >
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0"
-                              onClick={() => handleRejectEntry(entry.id)}
-                            >
-                              <XCircle className="h-4 w-4 text-red-600" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0"
-                          onClick={() => {
-                            setEditingEntry(entry)
-                            setFormData({
-                              port: entry.port.toString(),
-                              protocol: entry.protocol,
-                              service: entry.service,
-                              direction: entry.direction,
-                              sourceIP: entry.sourceIP,
-                              destinationIP: entry.destinationIP,
-                              justification: entry.justification,
-                              notes: entry.notes || ""
-                            })
-                            setShowAddDialog(true)
-                          }}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0"
-                          onClick={() => handleDeleteEntry(entry.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-[100px] font-semibold">Port</TableHead>
+                    <TableHead className="w-[120px] font-semibold">Protocol</TableHead>
+                    <TableHead className="font-semibold">Service</TableHead>
+                    <TableHead className="w-[120px] font-semibold">Risk Level</TableHead>
+                    <TableHead className="w-[120px] font-semibold">Status</TableHead>
+                    <TableHead className="w-[180px] text-right font-semibold">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredEntries.map((entry) => (
+                    <TableRow key={entry.id} className="hover:bg-muted/30">
+                      <TableCell className="font-mono font-semibold text-base">{entry.port}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-medium">{entry.protocol}</Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">{entry.service}</TableCell>
+                      <TableCell>{getRiskBadge(entry.riskLevel)}</TableCell>
+                      <TableCell>{getStatusBadge(entry.approvalStatus)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-1">
+                          {entry.approvalStatus === "Pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-700"
+                                onClick={() => handleApproveEntry(entry.id)}
+                                title="Approve"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-700"
+                                onClick={() => handleRejectEntry(entry.id)}
+                                title="Reject"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-700"
+                            onClick={() => {
+                              setEditingEntry(entry)
+                              setFormData({
+                                port: entry.port.toString(),
+                                protocol: entry.protocol,
+                                service: entry.service,
+                                direction: entry.direction,
+                                sourceIP: entry.sourceIP,
+                                destinationIP: entry.destinationIP,
+                                justification: entry.justification,
+                                notes: entry.notes || ""
+                              })
+                              setShowAddDialog(true)
+                            }}
+                            title="Edit"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-700"
+                            onClick={() => handleDeleteEntry(entry.id)}
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

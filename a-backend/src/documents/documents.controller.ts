@@ -13,29 +13,32 @@ import {
   Res,
   BadRequestException,
   NotFoundException,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { DocumentsService } from './documents.service';
 import { diskStorage } from 'multer';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import * as crypto from 'crypto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/user.decorator';
 
 const storage = diskStorage({
   destination: (req, file, cb) => {
-    const packageId = req.body.packageId;
-    const controlFamily = req.body.controlFamily;
+    const packageId = req.body.packageId || 'default';
+    const controlFamily = req.body.controlFamily || 'general';
     const documentType = req.body.documentType?.toLowerCase() || 'general';
 
     const uploadPath = join(
       process.cwd(),
       'uploads',
       'packages',
-      packageId,
+      String(packageId),
       'documents',
-      controlFamily,
-      documentType
+      String(controlFamily),
+      String(documentType)
     );
 
     // Create directory if it doesn't exist
@@ -105,9 +108,11 @@ export class DocumentsController {
   }
 
   @Post('upload')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file', { storage }))
   async uploadDocument(
     @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: any,
     @Body() body: {
       packageId: string;
       controlFamily: string;
@@ -123,10 +128,11 @@ export class DocumentsController {
       throw new BadRequestException('No file uploaded');
     }
 
-    // Calculate file checksum
+    // Calculate file checksum from the saved file
+    const fileBuffer = readFileSync(file.path);
     const checksum = crypto
       .createHash('sha256')
-      .update(file.buffer || '')
+      .update(fileBuffer)
       .digest('hex');
 
     return this.documentsService.uploadDocument({
@@ -146,7 +152,7 @@ export class DocumentsController {
         path: file.path,
         checksum,
       },
-      uploadedBy: 1, // TODO: Get from auth context
+      uploadedBy: parseInt(user.id),
     });
   }
 
@@ -171,27 +177,31 @@ export class DocumentsController {
   }
 
   @Put(':documentId/approve')
+  @UseGuards(JwtAuthGuard)
   async approveDocument(
     @Param('documentId', ParseIntPipe) documentId: number,
+    @CurrentUser() user: any,
     @Body() body: { versionId: number; notes?: string },
   ) {
     return this.documentsService.approveDocument(
       documentId,
       body.versionId,
-      1, // TODO: Get from auth context
+      parseInt(user.id),
       body.notes,
     );
   }
 
   @Put(':documentId/reject')
+  @UseGuards(JwtAuthGuard)
   async rejectDocument(
     @Param('documentId', ParseIntPipe) documentId: number,
+    @CurrentUser() user: any,
     @Body() body: { versionId: number; reason: string },
   ) {
     return this.documentsService.rejectDocument(
       documentId,
       body.versionId,
-      1, // TODO: Get from auth context
+      parseInt(user.id),
       body.reason,
     );
   }

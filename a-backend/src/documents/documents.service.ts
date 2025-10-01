@@ -242,7 +242,17 @@ export class DocumentsService {
     });
 
     if (!category) {
-      throw new BadRequestException('Invalid control family');
+      // Ensure categories are created
+      await this.getCategories();
+
+      // Try again
+      category = await this.prisma.documentCategory.findUnique({
+        where: { controlFamily: data.controlFamily },
+      });
+
+      if (!category) {
+        throw new BadRequestException('Invalid control family');
+      }
     }
 
     // Check if this is a new document or new version

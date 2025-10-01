@@ -103,15 +103,11 @@ export class AuthService {
       throw new UnauthorizedException('User already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(registerDto.password, 12);
     const user = await this.usersService.create({
       ...registerDto,
-      password: hashedPassword,
       role: registerDto.role || 'Auditor',
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...result } = user;
-    return result;
+    return user;
   }
 }

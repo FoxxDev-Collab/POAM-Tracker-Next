@@ -52,6 +52,14 @@ export class PackagesService {
         systems: true,
         stps: true,
         poams: true,
+        _count: {
+          select: {
+            groups: true,
+            systems: true,
+            stps: true,
+            poams: true,
+          },
+        },
       },
     });
   }

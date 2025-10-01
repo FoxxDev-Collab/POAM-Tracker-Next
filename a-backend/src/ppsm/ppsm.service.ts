@@ -48,10 +48,29 @@ export class PpsmService {
   }
 
   async getSystemPPSM(systemId: number) {
-    return this.prisma.systemPPSM.findMany({
+    const entries = await this.prisma.systemPPSM.findMany({
       where: { systemId },
       orderBy: { port: 'asc' },
     });
+
+    return {
+      entries: entries.map(entry => ({
+        id: entry.id,
+        systemId: entry.systemId,
+        port: parseInt(entry.port),
+        protocol: entry.protocol,
+        service: entry.service,
+        direction: entry.direction,
+        sourceIP: entry.sourceIP || '',
+        destinationIP: entry.destinationIP || '',
+        justification: entry.justification,
+        approvalStatus: entry.approvalStatus,
+        riskLevel: this.calculateRiskLevel(parseInt(entry.port), entry.protocol),
+        notes: entry.riskAssessment || '',
+        createdAt: entry.createdAt,
+        updatedAt: entry.updatedAt,
+      })),
+    };
   }
 
   async getPPSMById(id: number) {

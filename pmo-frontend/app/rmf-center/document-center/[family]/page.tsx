@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
 import {
   FileText, Upload, Download, Eye, History, Plus,
   FileCheck, Shield, AlertTriangle, Settings, Package,
-  Filter, Search, ChevronLeft, Clock, CheckCircle
+  Filter, Search, ChevronLeft, Clock, CheckCircle, Edit2, Trash2
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -102,6 +103,8 @@ export default function ControlFamilyDocumentsPage() {
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [uploadType, setUploadType] = useState<"Policy" | "Procedure" | "Plan">("Policy")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [documentTitle, setDocumentTitle] = useState("")
+  const [documentDescription, setDocumentDescription] = useState("")
 
   useEffect(() => {
     fetchPackages()
@@ -143,7 +146,25 @@ export default function ControlFamilyDocumentsPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setDocuments(data.documents || [])
+        // Map the backend data to our frontend format
+        const mappedDocs = (data.documents || []).map((doc: any) => ({
+          id: doc.id,
+          title: doc.title,
+          documentType: doc.documentType,
+          documentSubType: doc.documentSubType,
+          version: doc.currentVersion?.versionNumber || 1,
+          currentVersion: doc.currentVersion?.versionNumber || 1,
+          fileName: doc.currentVersion?.fileName || 'Unknown',
+          fileSize: doc.currentVersion?.fileSize || 0,
+          uploadedAt: doc.currentVersion?.uploadedAt || doc.createdAt,
+          uploadedBy: doc.currentVersion?.uploader
+            ? `${doc.currentVersion.uploader.firstName} ${doc.currentVersion.uploader.lastName}`
+            : 'Unknown',
+          approvalStatus: doc.currentVersion?.approvalStatus || 'Draft',
+          description: doc.description,
+          changeNotes: doc.currentVersion?.changeNotes
+        }))
+        setDocuments(mappedDocs)
       } else {
         setDocuments([])
       }
@@ -161,11 +182,20 @@ export default function ControlFamilyDocumentsPage() {
       return
     }
 
+    if (!documentTitle.trim()) {
+      toast.error("Please enter a document title")
+      return
+    }
+
     const formData = new FormData()
     formData.append("file", selectedFile)
     formData.append("packageId", selectedPackage)
     formData.append("controlFamily", familyId)
     formData.append("documentType", uploadType)
+    formData.append("title", documentTitle)
+    if (documentDescription) {
+      formData.append("description", documentDescription)
+    }
 
     try {
       const response = await fetch("/api/documents/upload", {
@@ -177,6 +207,8 @@ export default function ControlFamilyDocumentsPage() {
         toast.success("Document uploaded successfully")
         setShowUploadDialog(false)
         setSelectedFile(null)
+        setDocumentTitle("")
+        setDocumentDescription("")
         fetchDocuments()
       } else {
         const error = await response.json()
@@ -302,6 +334,25 @@ export default function ControlFamilyDocumentsPage() {
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
+                      <Label htmlFor="title">Document Title *</Label>
+                      <Input
+                        id="title"
+                        value={documentTitle}
+                        onChange={(e) => setDocumentTitle(e.target.value)}
+                        placeholder="e.g., Access Control Policy"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="description">Description (Optional)</Label>
+                      <Textarea
+                        id="description"
+                        value={documentDescription}
+                        onChange={(e) => setDocumentDescription(e.target.value)}
+                        placeholder="Brief description of this document..."
+                        rows={2}
+                      />
+                    </div>
+                    <div className="grid gap-2">
                       <Label htmlFor="type">Document Type</Label>
                       <Select value={uploadType} onValueChange={(v) => setUploadType(v as any)}>
                         <SelectTrigger>
@@ -381,9 +432,9 @@ function DocumentTable({ documents, loading }: { documents: Document[]; loading:
 
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {[...Array(3)].map((_, i) => (
-          <Skeleton key={i} className="h-16 w-full" />
+          <Skeleton key={i} className="h-24 w-full" />
         ))}
       </div>
     )
@@ -391,70 +442,118 @@ function DocumentTable({ documents, loading }: { documents: Document[]; loading:
 
   if (documents.length === 0) {
     return (
-      <div className="text-center py-8">
-        <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-        <p className="mt-2 text-sm text-muted-foreground">No documents uploaded yet</p>
+      <div className="text-center py-12 border-2 border-dashed rounded-lg">
+        <FileText className="mx-auto h-16 w-16 text-muted-foreground/50" />
+        <h3 className="mt-4 text-lg font-semibold">No documents uploaded yet</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Upload your first document to get started
+        </p>
       </div>
     )
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Document</TableHead>
-          <TableHead>Version</TableHead>
-          <TableHead>File Size</TableHead>
-          <TableHead>Uploaded</TableHead>
-          <TableHead>Uploaded By</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {documents.map((doc) => (
-          <TableRow key={doc.id}>
-            <TableCell>
-              <div>
-                <div className="font-medium">{doc.title}</div>
-                {doc.description && (
-                  <div className="text-sm text-muted-foreground">{doc.description}</div>
-                )}
-              </div>
-            </TableCell>
-            <TableCell>
-              <Badge variant="outline">v{doc.version}</Badge>
-            </TableCell>
-            <TableCell>{formatFileSize(doc.fileSize)}</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3 text-muted-foreground" />
-                {new Date(doc.uploadedAt).toLocaleDateString()}
-              </div>
-            </TableCell>
-            <TableCell>{doc.uploadedBy}</TableCell>
-            <TableCell>{getStatusBadge(doc.approvalStatus)}</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => router.push(`/rmf-center/document-center/view/${doc.id}`)}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="ghost">
-                  <Download className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="ghost">
-                  <History className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <TableHead className="font-semibold">Document</TableHead>
+            <TableHead className="w-[100px] font-semibold">Version</TableHead>
+            <TableHead className="w-[120px] font-semibold">Size</TableHead>
+            <TableHead className="w-[140px] font-semibold">Uploaded</TableHead>
+            <TableHead className="w-[180px] font-semibold">Uploaded By</TableHead>
+            <TableHead className="w-[120px] font-semibold">Status</TableHead>
+            <TableHead className="w-[140px] text-right font-semibold">Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {documents.map((doc) => (
+            <TableRow key={doc.id} className="hover:bg-muted/30">
+              <TableCell>
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10 mt-1">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-base truncate">{doc.title}</div>
+                    {doc.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
+                        {doc.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge variant="secondary" className="font-medium">
+                  v{doc.version}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-sm font-medium">
+                {formatFileSize(doc.fileSize)}
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                </div>
+              </TableCell>
+              <TableCell className="text-sm">{doc.uploadedBy}</TableCell>
+              <TableCell>{getStatusBadge(doc.approvalStatus)}</TableCell>
+              <TableCell>
+                <div className="flex items-center justify-end gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-700"
+                    onClick={() => router.push(`/rmf-center/document-center/view/${doc.id}`)}
+                    title="View Document"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 hover:bg-yellow-100 hover:text-yellow-700"
+                    title="Edit Document"
+                    onClick={() => {
+                      toast.info("Edit functionality coming soon")
+                    }}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-700"
+                    title="Delete Document"
+                    onClick={async () => {
+                      if (confirm(`Are you sure you want to delete "${doc.title}"?`)) {
+                        try {
+                          const response = await fetch(`/api/documents/${doc.id}`, {
+                            method: 'DELETE'
+                          })
+                          if (response.ok) {
+                            toast.success("Document deleted successfully")
+                            fetchDocuments()
+                          } else {
+                            toast.error("Failed to delete document")
+                          }
+                        } catch (error) {
+                          toast.error("Failed to delete document")
+                        }
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 }
 

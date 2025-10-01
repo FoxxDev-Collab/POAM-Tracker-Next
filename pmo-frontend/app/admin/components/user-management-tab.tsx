@@ -32,7 +32,7 @@ interface PasswordValidation {
   special: boolean
 }
 
-const ROLES = ['Admin', 'User', 'Viewer', 'Auditor']
+const ROLES = ['Admin', 'ISSM', 'ISSO', 'SysAdmin', 'ISSE', 'Auditor']
 
 export function UserManagementTab() {
   const [users, setUsers] = useState<User[]>([])
@@ -46,7 +46,7 @@ export function UserManagementTab() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'User',
+    role: 'Auditor',
     isActive: true
   })
 

@@ -5,9 +5,18 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+    // Get the JWT token from the request cookies
+    const token = request.cookies.get('token')?.value;
+
     // Forward the form data to the backend
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${backendUrl}/api/documents/upload`, {
       method: 'POST',
+      headers,
       body: formData,
     });
 

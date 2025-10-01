@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { User } from '@prisma/client';
 import { CreateUserDto, UpdateUserDto } from './dto';
+import * as bcrypt from 'bcrypt';
 
 export type SafeUser = Omit<User, 'password'>;
 
@@ -9,10 +10,30 @@ export type SafeUser = Omit<User, 'password'>;
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    return this.prisma.user.create({
-      data: createUserDto,
+  async create(createUserDto: CreateUserDto): Promise<SafeUser> {
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+
+    const user = await this.prisma.user.create({
+      data: {
+        ...createUserDto,
+        password: hashedPassword,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        lastLogin: true,
+        createdAt: true,
+        updatedAt: true,
+        password: false,
+      },
     });
+
+    return user;
   }
 
   async findAll(): Promise<SafeUser[]> {

@@ -5,14 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   CheckCircle2,
   Circle,
   Clock,
-  AlertTriangle,
-  ChevronRight,
   FileText,
   Shield,
   Settings,
@@ -25,15 +28,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import DocumentUpload from './document-upload'
 
 interface RmfStep {
   key: string
@@ -190,11 +189,7 @@ export default function RmfProcessTracker({
   onStepUpdate,
   readOnly = false
 }: RmfProcessTrackerProps) {
-  const [selectedStep, setSelectedStep] = useState<RmfStep | null>(null)
-  const [transitionStep, setTransitionStep] = useState<RmfStep | null>(null)
-  const [transitionNotes, setTransitionNotes] = useState('')
-  const [isTransitioning, setIsTransitioning] = useState(false)
-  const [showTransitionDialog, setShowTransitionDialog] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
   const { toast } = useToast()
 
   const currentStepIndex = RMF_STEPS.findIndex(s => s.key === currentStep)
@@ -257,39 +252,26 @@ export default function RmfProcessTracker({
     return 'pending'
   }
 
-  const canTransitionTo = (step: RmfStep) => {
-    if (readOnly) return false
-    const stepIndex = RMF_STEPS.findIndex(s => s.key === step.key)
-    return stepIndex === currentStepIndex + 1 || stepIndex === currentStepIndex - 1
-  }
+  const handleStepChange = async (newStepKey: string) => {
+    if (!onStepUpdate || readOnly) return
 
-  const handleStepTransition = async () => {
-    if (!transitionStep || !onStepUpdate) {
-      console.error('No step selected or onStepUpdate not provided')
-      return
-    }
-
-    setIsTransitioning(true)
+    setIsUpdating(true)
     try {
-      await onStepUpdate(transitionStep.key)
-
+      await onStepUpdate(newStepKey)
+      const newStep = RMF_STEPS.find(s => s.key === newStepKey)
       toast({
         title: 'RMF Step Updated',
-        description: `Successfully transitioned to ${transitionStep.label} phase`,
+        description: `Successfully updated to ${newStep?.label} phase`,
       })
-
-      setTransitionStep(null)
-      setTransitionNotes('')
-      setShowTransitionDialog(false)
     } catch (error) {
-      console.error('Error transitioning step:', error)
+      console.error('Error updating step:', error)
       toast({
         title: 'Update Failed',
         description: 'Failed to update RMF step. Please try again.',
         variant: 'destructive'
       })
     } finally {
-      setIsTransitioning(false)
+      setIsUpdating(false)
     }
   }
 
@@ -316,10 +298,30 @@ export default function RmfProcessTracker({
     <>
       <Card>
         <CardHeader>
-          <CardTitle>RMF Process Tracker</CardTitle>
-          <CardDescription>
-            Track and manage the Risk Management Framework lifecycle
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>RMF Process Tracker</CardTitle>
+              <CardDescription>
+                Track and manage the Risk Management Framework lifecycle
+              </CardDescription>
+            </div>
+            {!readOnly && onStepUpdate && (
+              <div className="w-48">
+                <Select value={currentStep} onValueChange={handleStepChange} disabled={isUpdating}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select step" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RMF_STEPS.map((step) => (
+                      <SelectItem key={step.key} value={step.key}>
+                        {step.order}. {step.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
@@ -330,14 +332,8 @@ export default function RmfProcessTracker({
             <Progress value={progressPercentage} className="h-2" />
           </div>
 
-          <Tabs defaultValue="timeline" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="timeline">Process Timeline</TabsTrigger>
-              <TabsTrigger value="documents">Document Management</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="timeline" className="space-y-6">
-              <div className="relative">
+          <div className="space-y-6">
+            <div className="relative">
                 {RMF_STEPS.map((step, index) => {
                   const status = getStepStatus(step)
                   const isLast = index === RMF_STEPS.length - 1
@@ -388,7 +384,6 @@ export default function RmfProcessTracker({
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setSelectedStep(step)}
                               >
                                 View Details
                               </Button>
@@ -549,20 +544,6 @@ export default function RmfProcessTracker({
                               </div>
                             </DialogContent>
                           </Dialog>
-
-                          {canTransitionTo(step) && !readOnly && (
-                            <Button
-                              size="sm"
-                              variant={status === 'current' ? 'default' : 'secondary'}
-                              onClick={() => {
-                                setTransitionStep(step)
-                                setShowTransitionDialog(true)
-                              }}
-                            >
-                              <ChevronRight className="h-4 w-4 mr-1" />
-                              Transition Here
-                            </Button>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -571,94 +552,9 @@ export default function RmfProcessTracker({
               )
             })}
               </div>
-            </TabsContent>
-
-            <TabsContent value="documents" className="space-y-6">
-              <DocumentUpload
-                packageId={packageId}
-                currentRmfStep={currentStep}
-                onDocumentUploaded={() => {
-                  // Refresh document completion status when new documents are uploaded
-                  const checkDocumentCompletion = async () => {
-                    const completionStatus: Record<string, boolean> = {}
-
-                    for (const step of RMF_STEPS) {
-                      try {
-                        const response = await fetch(`/api/packages/${packageId}/documents/required/${step.key}`)
-                        if (response.ok) {
-                          const data = await response.json()
-                          completionStatus[step.key] = data.complete
-                        }
-                      } catch (error) {
-                        console.error(`Error checking documents for ${step.key}:`, error)
-                        completionStatus[step.key] = false
-                      }
-                    }
-
-                    setDocumentCompletionStatus(completionStatus)
-                  }
-
-                  checkDocumentCompletion()
-                }}
-              />
-            </TabsContent>
-          </Tabs>
+            </div>
         </CardContent>
       </Card>
-
-      {/* Transition Dialog */}
-      <Dialog open={showTransitionDialog} onOpenChange={setShowTransitionDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Transition to {transitionStep?.label}
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to transition to the {transitionStep?.label} phase?
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                This will update the package's RMF status. Ensure all requirements
-                for the previous step have been completed.
-              </AlertDescription>
-            </Alert>
-
-            <div className="space-y-2">
-              <Label htmlFor="transition-notes">Transition Notes (Optional)</Label>
-              <Textarea
-                id="transition-notes"
-                placeholder="Add any notes about this transition..."
-                value={transitionNotes}
-                onChange={(e) => setTransitionNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setTransitionStep(null)
-                setTransitionNotes('')
-                setShowTransitionDialog(false)
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleStepTransition}
-              disabled={isTransitioning}
-            >
-              {isTransitioning ? 'Updating...' : 'Confirm Transition'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }

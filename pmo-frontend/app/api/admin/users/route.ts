@@ -1,23 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, validateSession } from '@/lib/session';
 import { cookies } from 'next/headers';
 
 const API_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await validateSession();
-    
-    if (!session?.isLoggedIn || session.userRole !== 'Admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
 
-    const response = await fetch(`${API_URL}/admin/users`, {
+    const response = await fetch(`${API_URL}/api/admin/users`, {
       headers: {
         'Authorization': token ? `Bearer ${token}` : '',
+        'Content-Type': 'application/json',
       },
     });
 
@@ -36,17 +30,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await validateSession();
-    
-    if (!session?.isLoggedIn || session.userRole !== 'Admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
     const body = await request.json();
 
-    const response = await fetch(`${API_URL}/admin/users`, {
+    const response = await fetch(`${API_URL}/api/admin/users`, {
       method: 'POST',
       headers: {
         'Authorization': token ? `Bearer ${token}` : '',
