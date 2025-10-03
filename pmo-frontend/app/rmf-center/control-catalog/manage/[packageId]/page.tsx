@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import {
-  Shield, ArrowLeft, Search, Filter, Save,
-  CheckCircle, XCircle, AlertCircle, Info,
-  Plus, Minus, Edit, ChevronDown, ChevronRight
+  Shield, ArrowLeft, Search, Save,
+  AlertCircle,
+  Edit, ChevronDown, ChevronRight
 } from "lucide-react"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,13 +15,11 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
-import { cn } from "@/lib/utils"
 
 interface Control {
   controlId: string
@@ -71,7 +69,6 @@ const IMPLEMENTATION_STATUSES = [
 
 export default function ManagePackageControls() {
   const params = useParams()
-  const router = useRouter()
   const { toast } = useToast()
   const packageId = params.packageId as string
 
@@ -90,12 +87,14 @@ export default function ManagePackageControls() {
 
   useEffect(() => {
     fetchBaseline()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [packageId])
 
   useEffect(() => {
     if (baseline) {
       filterControls()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseline, searchTerm, filterFamily, filterStatus])
 
   const fetchBaseline = async () => {
@@ -107,8 +106,7 @@ export default function ManagePackageControls() {
         setBaseline(data.data)
         setFilteredControls(data.data.controls)
       }
-    } catch (error) {
-      console.error('Failed to fetch baseline:', error)
+    } catch {
       toast({
         title: "Error",
         description: "Failed to load package baseline",
@@ -180,7 +178,7 @@ export default function ManagePackageControls() {
           description: `Control ${controlId} updated successfully`,
         })
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update control",
@@ -218,7 +216,7 @@ export default function ManagePackageControls() {
           description: `${updates.length} controls updated successfully`,
         })
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update controls",
@@ -255,7 +253,7 @@ export default function ManagePackageControls() {
 
   const getComplianceStatusBadge = (status?: string) => {
     const config = COMPLIANCE_STATUSES.find(s => s.value === status) || COMPLIANCE_STATUSES[6]
-    return <Badge className={cn(config.color, "text-white")}>{config.label}</Badge>
+    return <Badge className={`${config.color} text-white`}>{config.label}</Badge>
   }
 
   const getImplementationStatusBadge = (status?: string) => {

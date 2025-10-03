@@ -83,7 +83,11 @@ export default function ControlFamilyPage({ familyId, familyName, familyIconName
   const [filteredControls, setFilteredControls] = useState<Control[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [familyCompliance, setFamilyCompliance] = useState<any>(null)
+  const [familyCompliance, setFamilyCompliance] = useState<{
+    compliancePercentage?: number;
+    compliantControls?: number;
+    totalControls?: number;
+  } | null>(null)
 
   useEffect(() => {
     fetchPackages()
@@ -94,6 +98,7 @@ export default function ControlFamilyPage({ familyId, familyName, familyIconName
       localStorage.setItem('selectedATOPackage', selectedPackageId)
       fetchControls()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPackageId])
 
   useEffect(() => {
@@ -131,8 +136,11 @@ export default function ControlFamilyPage({ familyId, familyName, familyIconName
       const controlsResponse = await fetch(`/api/catalog/controls?family=${familyId}&limit=100`)
 
       // Fetch package baseline if a package is selected
-      let baselineData: any = null
-      let packageComplianceData: any = null
+      let baselineData: { controls?: { controlId: string }[] } | null = null
+      let packageComplianceData: {
+        families?: Record<string, unknown>;
+        controlStatus?: Record<string, unknown>;
+      } | null = null
 
       if (selectedPackageId) {
         const [baselineResponse, complianceResponse] = await Promise.all([
@@ -156,10 +164,16 @@ export default function ControlFamilyPage({ familyId, familyName, familyIconName
         const data = await controlsResponse.json()
         const controlsData = data.data?.controls || []
 
-        const processedControls = controlsData.map((control: any) => {
+        const processedControls = controlsData.map((control: {
+          controlId: string;
+          name: string;
+          controlText: string;
+          discussion: string;
+          complianceStatus?: string;
+        }) => {
           // Check if control is in baseline
           const baselineControl = baselineData?.controls?.find(
-            (bc: any) => bc.controlId === control.controlId
+            (bc: { controlId: string }) => bc.controlId === control.controlId
           )
 
           // Get STIG compliance data for this control
@@ -182,8 +196,8 @@ export default function ControlFamilyPage({ familyId, familyName, familyIconName
         setControls(processedControls)
         setFilteredControls(processedControls)
       }
-    } catch (error) {
-      console.error('Failed to fetch controls:', error)
+    } catch {
+      // Failed to fetch controls
     } finally {
       setLoading(false)
     }
@@ -240,14 +254,14 @@ export default function ControlFamilyPage({ familyId, familyName, familyIconName
         // Refresh the controls data to show updated status
         fetchControls()
       } else {
-        const error = await response.json()
+        const errorData = await response.json()
         toast({
           title: "Error",
-          description: error.message || "Failed to add control to baseline",
+          description: errorData.message || "Failed to add control to baseline",
           variant: "destructive"
         })
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to add control to baseline",

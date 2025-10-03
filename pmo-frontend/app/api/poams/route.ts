@@ -75,8 +75,8 @@ export async function POST(req: NextRequest) {
             createdBy = users[0].id;
           }
         }
-      } catch (error) {
-        console.error('Failed to fetch users for createdBy:', error);
+      } catch {
+        // Failed to fetch users
       }
 
       // If still no createdBy or still invalid, use admin user as fallback
@@ -86,8 +86,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Transform frontend field names to match backend expectations
-    console.log('POAM creation - using createdBy:', createdBy);
-    console.log('POAM creation - original body:', JSON.stringify(body, null, 2));
     const transformedBody = {
       packageId: body.package_id,
       groupId: body.group_id,
@@ -121,8 +119,6 @@ export async function POST(req: NextRequest) {
       riskAcceptance: body.risk_acceptance,
       riskAcceptanceRationale: body.risk_acceptance_rationale,
     };
-
-    console.log('POAM creation - sending to backend:', JSON.stringify(transformedBody, null, 2));
 
     const response = await fetch(`${BACKEND_URL}/poams`, {
       method: 'POST',

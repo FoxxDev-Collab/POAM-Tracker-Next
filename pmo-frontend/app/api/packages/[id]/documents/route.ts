@@ -17,7 +17,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const data = await response.json();
-    console.log('Documents from backend:', data);
     return NextResponse.json(data);
   } catch (error) {
     console.error('Package documents fetch error:', error);

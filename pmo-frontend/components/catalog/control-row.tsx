@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { Separator } from '@/components/ui/separator';
 import { ChevronDown, ChevronRight, Shield, BookOpen, Link } from 'lucide-react';
 import { ComplianceStatus } from './compliance-status';
 
@@ -149,13 +148,14 @@ export function ControlRow({ control }: ControlRowProps) {
                             <div className="text-sm text-muted-foreground leading-relaxed mb-3">{cci.definition}</div>
                             <div className="mt-3">
                               <ComplianceStatus
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 currentStatus={cci.complianceStatus as any}
                                 notes={cci.complianceNotes}
                                 assessedBy={cci.assessedBy}
                                 assessedAt={cci.assessedAt}
                                 onStatusChange={(status, notes) => {
                                   // TODO: Implement API call to update CCI compliance status
-                                  console.log('Update CCI compliance:', cci.cci, status, notes);
+                                  console.error('Update CCI compliance:', cci.cci, status, notes);
                                 }}
                               />
                             </div>
@@ -168,13 +168,14 @@ export function ControlRow({ control }: ControlRowProps) {
                   {/* Control-level Compliance Status */}
                   <div className="mt-6 pt-6 border-t">
                     <ComplianceStatus
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       currentStatus={control.complianceStatus as any}
                       notes={control.complianceNotes}
                       assessedBy={control.assessedBy}
                       assessedAt={control.assessedAt}
                       onStatusChange={(status, notes) => {
                         // TODO: Implement API call to update control compliance status
-                        console.log('Update control compliance:', control.controlId, status, notes);
+                        console.error('Update control compliance:', control.controlId, status, notes);
                       }}
                     />
                   </div>

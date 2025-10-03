@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BACKEND_URL, getAuthHeaders } from '@/lib/server-api-helpers';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const headers = await getAuthHeaders();
 

@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { 
-  Plus, Package, Shield, Users, Edit, Trash2, Calendar, 
-  AlertCircle, BarChart3, CheckCircle, Clock, TrendingUp
+import {
+  Plus, Package, Shield, Users, Edit, Trash2, Calendar,
+  BarChart3
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
 
 interface Package {
   id: number

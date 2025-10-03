@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Upload,
-  FileText,
   AlertTriangle,
   CheckCircle
 } from 'lucide-react'
@@ -60,7 +59,7 @@ export default function SimpleFileUpload({ packageId }: SimpleFileUploadProps) {
           title: 'Success',
           description: `${file.name} uploaded successfully`
         })
-        console.log('Upload result:', result)
+        console.error('Upload result:', result)
 
         // Trigger a page refresh to show the uploaded file
         window.location.reload()

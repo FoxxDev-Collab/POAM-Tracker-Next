@@ -6,9 +6,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string; groupId: string }> }
 ) {
   try {
-    const { id, groupId } = await params;
+    const { groupId } = await params;
     const headers = await getAuthHeaders();
-    
+
     // Use the /groups/{id} endpoint instead of nested route
     const response = await fetch(`${BACKEND_URL}/groups/${groupId}`, {
       method: 'GET',
@@ -33,10 +33,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; groupId: string }> }
 ) {
   try {
-    const { id, groupId } = await params;
+    const { groupId } = await params;
     const headers = await getAuthHeaders();
     const body = await req.json();
-    
+
     // Use the /groups/{id} endpoint instead of nested route
     const response = await fetch(`${BACKEND_URL}/groups/${groupId}`, {
       method: 'PATCH',
@@ -62,9 +62,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; groupId: string }> }
 ) {
   try {
-    const { id, groupId } = await params;
+    const { groupId } = await params;
     const headers = await getAuthHeaders();
-    
+
     // Use the /groups/{id} endpoint instead of nested route
     const response = await fetch(`${BACKEND_URL}/groups/${groupId}`, {
       method: 'DELETE',

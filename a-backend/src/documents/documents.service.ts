@@ -394,4 +394,183 @@ export class DocumentsService {
       data: { isActive: false },
     });
   }
+
+  async getDocument(documentId: number) {
+    const document = await this.prisma.controlDocument.findUnique({
+      where: { id: documentId },
+      include: {
+        category: true,
+        currentVersion: {
+          include: {
+            uploader: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+            approver: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
+        versions: {
+          include: {
+            uploader: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+            approver: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: { versionNumber: 'desc' },
+        },
+      },
+    });
+
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+
+    return {
+      id: document.id,
+      title: document.title,
+      controlFamily: document.category?.controlFamily || '',
+      documentType: document.documentType,
+      description: document.description,
+      currentVersion: document.currentVersion,
+      versions: document.versions,
+    };
+  }
+
+  async getDocumentVersionByNumber(documentId: number, versionNumber: number) {
+    return this.prisma.documentVersion.findFirst({
+      where: {
+        documentId,
+        versionNumber,
+      },
+      include: {
+        uploader: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        approver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+
+  async trackView(documentId: number, userId: number) {
+    // Create a view record
+    try {
+      await this.prisma.documentView.create({
+        data: {
+          documentId,
+          userId,
+          viewedAt: new Date(),
+        },
+      });
+      return { success: true };
+    } catch (error) {
+      console.error('Error tracking view:', error);
+      return { success: false };
+    }
+  }
+
+  async getComments(documentId: number) {
+    const comments = await this.prisma.documentComment.findMany({
+      where: {
+        documentId,
+        isDeleted: false,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return { comments };
+  }
+
+  async addComment(
+    documentId: number,
+    content: string,
+    authorId: number,
+    versionNumber?: number,
+  ) {
+    const comment = await this.prisma.documentComment.create({
+      data: {
+        documentId,
+        content,
+        authorId,
+        versionNumber,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return comment;
+  }
+
+  async deleteComment(commentId: number, userId: number) {
+    // Verify the user owns this comment
+    const comment = await this.prisma.documentComment.findUnique({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    if (comment.authorId !== userId) {
+      throw new BadRequestException('You can only delete your own comments');
+    }
+
+    // Soft delete
+    return this.prisma.documentComment.update({
+      where: { id: commentId },
+      data: { isDeleted: true },
+    });
+  }
 }

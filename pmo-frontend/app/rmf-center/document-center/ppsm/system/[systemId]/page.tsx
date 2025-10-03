@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import {
-  Network, Shield, Server, Globe, Lock, AlertTriangle,
-  Plus, Edit2, Trash2, Search, Filter, Download, Upload,
-  ChevronLeft, CheckCircle, XCircle, Clock, Activity
+  Network,
+  Plus, Edit2, Trash2,
+  ChevronLeft, CheckCircle, XCircle
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -39,7 +39,6 @@ import {
 } from "@/components/ui/select"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Separator } from "@/components/ui/separator"
 
 interface PPSMEntry {
   id: string
@@ -97,13 +96,16 @@ export default function SystemPPSMManagementPage() {
     notes: ""
   })
 
+   
   useEffect(() => {
     fetchSystemDetails()
     fetchPPSMEntries()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [systemId])
 
   useEffect(() => {
     filterPPSMEntries()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ppsmEntries, searchQuery, filterProtocol, filterStatus])
 
   const fetchSystemDetails = async () => {
@@ -319,18 +321,6 @@ export default function SystemPPSMManagementPage() {
     }
   }
 
-  const getDirectionIcon = (direction: string) => {
-    switch (direction) {
-      case "Inbound":
-        return "→"
-      case "Outbound":
-        return "←"
-      case "Bidirectional":
-        return "↔"
-      default:
-        return "?"
-    }
-  }
 
   // Stats calculation
   const stats = {

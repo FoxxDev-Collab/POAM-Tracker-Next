@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import {
-  ArrowLeft, Shield, Server, Users, AlertTriangle,
-  CheckCircle, Clock, Download, RefreshCw, ExternalLink,
+  ArrowLeft, Shield, Server, Users,
+  CheckCircle, Download, RefreshCw, ExternalLink,
   TrendingDown, TrendingUp, ChevronDown
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -104,12 +104,6 @@ export default function ControlStigMapPage() {
   const family = CONTROL_FAMILIES.find(f => f.id === familyId)
   const FamilyIcon = family?.icon || Shield
 
-  useEffect(() => {
-    if (packageId && controlId) {
-      fetchControlFindings()
-    }
-  }, [packageId, controlId])
-
   const fetchControlFindings = async () => {
     if (!packageId || !controlId) return
 
@@ -138,6 +132,13 @@ export default function ControlStigMapPage() {
     }
   }
 
+  useEffect(() => {
+    if (packageId && controlId) {
+      fetchControlFindings()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [packageId, controlId])
+
   const toggleGroup = (groupId: number) => {
     const newExpanded = new Set(expandedGroups)
     if (newExpanded.has(groupId)) {
@@ -148,7 +149,7 @@ export default function ControlStigMapPage() {
     setExpandedGroups(newExpanded)
   }
 
-  const getStatusBadge = (status: string, score: number) => {
+  const getStatusBadge = (status: string, score: number): JSX.Element => {
     if (status === 'Compliant') {
       return <Badge className="bg-green-500">Compliant ({score}%)</Badge>
     } else if (status === 'Partially Compliant') {
@@ -158,12 +159,6 @@ export default function ControlStigMapPage() {
     }
   }
 
-  const getSeverityColor = (catI: number, catII: number, catIII: number) => {
-    if (catI > 0) return "text-red-600"
-    if (catII > 0) return "text-orange-600"
-    if (catIII > 0) return "text-yellow-600"
-    return "text-green-600"
-  }
 
   if (!packageId) {
     return (

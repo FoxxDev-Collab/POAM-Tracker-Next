@@ -210,4 +210,116 @@ export class DocumentsController {
   async deleteDocument(@Param('documentId', ParseIntPipe) documentId: number) {
     return this.documentsService.deleteDocument(documentId);
   }
+
+  @Get(':documentId')
+  async getDocument(@Param('documentId', ParseIntPipe) documentId: number) {
+    return this.documentsService.getDocument(documentId);
+  }
+
+  @Get(':documentId/preview')
+  async previewDocument(
+    @Param('documentId', ParseIntPipe) documentId: number,
+    @Res() res: Response,
+  ) {
+    const document = await this.documentsService.getDocument(documentId);
+
+    if (!document || !document.currentVersion) {
+      throw new NotFoundException('Document not found');
+    }
+
+    const filePath = document.currentVersion.filePath;
+
+    if (!existsSync(filePath)) {
+      throw new NotFoundException('File not found on server');
+    }
+
+    const fileBuffer = readFileSync(filePath);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline');
+    res.send(fileBuffer);
+  }
+
+  @Get(':documentId/version/:versionNumber/preview')
+  async previewDocumentVersion(
+    @Param('documentId', ParseIntPipe) documentId: number,
+    @Param('versionNumber', ParseIntPipe) versionNumber: number,
+    @Res() res: Response,
+  ) {
+    const version = await this.documentsService.getDocumentVersionByNumber(documentId, versionNumber);
+
+    if (!version) {
+      throw new NotFoundException('Document version not found');
+    }
+
+    const filePath = version.filePath;
+
+    if (!existsSync(filePath)) {
+      throw new NotFoundException('File not found on server');
+    }
+
+    const fileBuffer = readFileSync(filePath);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline');
+    res.send(fileBuffer);
+  }
+
+  @Get(':documentId/download')
+  async downloadDocumentById(
+    @Param('documentId', ParseIntPipe) documentId: number,
+    @Res() res: Response,
+  ) {
+    const document = await this.documentsService.getDocument(documentId);
+
+    if (!document || !document.currentVersion) {
+      throw new NotFoundException('Document not found');
+    }
+
+    const filePath = document.currentVersion.filePath;
+
+    if (!existsSync(filePath)) {
+      throw new NotFoundException('File not found on server');
+    }
+
+    res.download(filePath, document.currentVersion.fileName);
+  }
+
+  @Post(':documentId/track-view')
+  @UseGuards(JwtAuthGuard)
+  async trackView(
+    @Param('documentId', ParseIntPipe) documentId: number,
+    @CurrentUser() user: any,
+    @Body() body: { userId?: number },
+  ) {
+    return this.documentsService.trackView(documentId, body.userId || parseInt(user.id));
+  }
+
+  @Get(':documentId/comments')
+  async getComments(@Param('documentId', ParseIntPipe) documentId: number) {
+    return this.documentsService.getComments(documentId);
+  }
+
+  @Post(':documentId/comments')
+  @UseGuards(JwtAuthGuard)
+  async addComment(
+    @Param('documentId', ParseIntPipe) documentId: number,
+    @CurrentUser() user: any,
+    @Body() body: { content: string; versionNumber?: number; authorId?: number },
+  ) {
+    return this.documentsService.addComment(
+      documentId,
+      body.content,
+      body.authorId || parseInt(user.id),
+      body.versionNumber,
+    );
+  }
+
+  @Delete(':documentId/comments/:commentId')
+  @UseGuards(JwtAuthGuard)
+  async deleteComment(
+    @Param('documentId', ParseIntPipe) documentId: number,
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @CurrentUser() user: any,
+  ) {
+    return this.documentsService.deleteComment(commentId, parseInt(user.id));
+  }
 }

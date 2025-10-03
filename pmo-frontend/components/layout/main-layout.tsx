@@ -5,6 +5,8 @@ import { ReactNode } from "react"
 import { TopNav } from "./top-nav"
 import { VulnerabilityCenterSidebar } from "./vulnerability-center-sidebar"
 import { NistRmfSidebar } from "./nist-rmf-sidebar"
+import { AuthProvider } from "@/contexts/auth-context"
+import { Toaster } from "@/components/ui/sonner"
 
 interface MainLayoutProps {
   children: ReactNode
@@ -18,21 +20,24 @@ export function MainLayout({ children }: MainLayoutProps) {
   const showNistRmfSidebar = pathname?.startsWith("/rmf-center")
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <TopNav />
-      
-      <div className="flex flex-1">
-        {/* Contextual Sidebar */}
-        {showVulnerabilityCenterSidebar && <VulnerabilityCenterSidebar />}
-        {showNistRmfSidebar && <NistRmfSidebar />}
-        
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto">
-          <div className="container mx-auto p-6">
-            {children}
-          </div>
-        </main>
+    <AuthProvider>
+      <div className="min-h-screen flex flex-col bg-background">
+        <TopNav />
+
+        <div className="flex flex-1">
+          {/* Contextual Sidebar */}
+          {showVulnerabilityCenterSidebar && <VulnerabilityCenterSidebar />}
+          {showNistRmfSidebar && <NistRmfSidebar />}
+
+          {/* Main Content */}
+          <main className="flex-1 overflow-auto">
+            <div className="container mx-auto p-6">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+      <Toaster />
+    </AuthProvider>
   )
 }

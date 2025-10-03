@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 
 interface SSEMessage {
   type: string;
-  [key: string]: any;
+  message?: string;
+  [key: string]: unknown;
 }
 
 interface UseSSEOptions {
@@ -44,7 +45,6 @@ export function useSSE(options: UseSSEOptions = {}) {
         setConnected(true);
         setError(null);
         reconnectAttempts.current = 0;
-        console.log(`SSE connected to channel: ${channel}`);
       };
 
       eventSource.onmessage = (event) => {
@@ -60,8 +60,8 @@ export function useSSE(options: UseSSEOptions = {}) {
           if (message.type === 'error') {
             setError(message.message || 'Unknown error');
           }
-        } catch (err) {
-          console.error('Error parsing SSE message:', err);
+        } catch {
+          // Error parsing SSE message
         }
       };
 
@@ -77,8 +77,6 @@ export function useSSE(options: UseSSEOptions = {}) {
           reconnectAttempts.current++;
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
 
-          console.log(`SSE reconnecting in ${delay}ms (attempt ${reconnectAttempts.current}/${maxReconnectAttempts})`);
-
           reconnectTimeoutRef.current = setTimeout(() => {
             connect();
           }, delay);
@@ -87,9 +85,8 @@ export function useSSE(options: UseSSEOptions = {}) {
         }
       };
 
-    } catch (err) {
+    } catch {
       setError('Failed to establish SSE connection');
-      console.error('SSE connection error:', err);
     }
   };
 
@@ -107,7 +104,7 @@ export function useSSE(options: UseSSEOptions = {}) {
     setConnected(false);
   };
 
-  const sendMessage = async (message: any) => {
+  const sendMessage = async (message: unknown) => {
     // Helper to publish messages via Redis (could be used for bidirectional communication)
     try {
       await fetch('/api/sse/publish', {
@@ -120,8 +117,8 @@ export function useSSE(options: UseSSEOptions = {}) {
           message,
         }),
       });
-    } catch (err) {
-      console.error('Error sending SSE message:', err);
+    } catch {
+      // Error sending SSE message
     }
   };
 
@@ -131,6 +128,7 @@ export function useSSE(options: UseSSEOptions = {}) {
     return () => {
       disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel]);
 
   return {

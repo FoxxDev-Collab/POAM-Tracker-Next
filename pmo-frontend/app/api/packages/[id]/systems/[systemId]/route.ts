@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string; systemId: string }> }
 ) {
   try {
-    const { id, systemId } = await params;
+    const { systemId } = await params;
     const headers = await getAuthHeaders();
     
     // Use the /systems/{id} endpoint instead of nested route
@@ -33,7 +33,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; systemId: string }> }
 ) {
   try {
-    const { id, systemId } = await params;
+    const { systemId } = await params;
     const headers = await getAuthHeaders();
     const body = await req.json();
     
@@ -62,7 +62,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; systemId: string }> }
 ) {
   try {
-    const { id, systemId } = await params;
+    const { systemId } = await params;
     const headers = await getAuthHeaders();
     
     // Use the /systems/{id} endpoint instead of nested route

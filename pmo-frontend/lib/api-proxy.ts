@@ -16,17 +16,17 @@ interface ProxyConfig {
   /**
    * Transform the request before forwarding (optional)
    */
-  transformRequest?: (req: NextRequest) => Promise<any> | any;
+  transformRequest?: (req: NextRequest) => Promise<unknown> | unknown;
 
   /**
    * Transform the response before returning (optional)
    */
-  transformResponse?: (data: any) => any;
+  transformResponse?: (data: unknown) => unknown;
 
   /**
    * Custom error handler (optional)
    */
-  onError?: (error: any) => NextResponse;
+  onError?: (error: unknown) => NextResponse;
 }
 
 // ============================================================================
@@ -49,7 +49,7 @@ export function createProxyHandler(
   backendPath: string,
   config: ProxyConfig = {}
 ) {
-  return async (req: NextRequest, context?: any) => {
+  return async (req: NextRequest, context?: { params?: Record<string, string> }) => {
     try {
       const method = req.method;
       const url = new URL(req.url);

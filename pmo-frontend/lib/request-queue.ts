@@ -106,7 +106,7 @@ class RequestQueue {
     } catch (error) {
       const shouldRetry = request.retries < this.maxRetries &&
         (error instanceof TypeError || // Network error
-         (error as any)?.name === 'AbortError'); // Timeout
+         (error as Error)?.name === 'AbortError'); // Timeout
 
       if (shouldRetry) {
         request.retries++;

@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
-  Network, Server, Globe, Shield, Activity, Database,
-  ChevronRight, Search, Filter, Plus, ExternalLink
+  Network, Server, Database,
+  ChevronRight
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -46,6 +46,7 @@ export default function PPSMAssetsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [selectedPackage, setSelectedPackage] = useState<string>("")
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [packages, setPackages] = useState<any[]>([])
   const [systems, setSystems] = useState<System[]>([])
   const [filteredSystems, setFilteredSystems] = useState<System[]>([])
@@ -56,14 +57,17 @@ export default function PPSMAssetsPage() {
     fetchPackages()
   }, [])
 
+   
   useEffect(() => {
     if (selectedPackage) {
       fetchSystems()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPackage])
 
   useEffect(() => {
     filterSystemsList()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [systems, searchQuery, filterType])
 
   const fetchPackages = async () => {

@@ -25,6 +25,7 @@ import { RedisModule } from './redis/redis.module';
 import { QueuesModule } from './queues/queues.module';
 import { DocumentsModule } from './documents/documents.module';
 import { PpsmModule } from './ppsm/ppsm.module';
+import { PmoModule } from './pmo/pmo.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { PpsmModule } from './ppsm/ppsm.module';
     QueuesModule,
     AuthModule,
     UsersModule,
+    PmoModule,
     PackagesModule,
     GroupsModule,
     SystemsModule,

@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Read(//d/Dev Projects/POAM-Tracker-Next/backend/prisma/**)"
+      "Read(//d/Dev Projects/POAM-Tracker-Next/backend/prisma/**)",
+      "Bash(npm run lint)",
+      "Bash(npx eslint:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

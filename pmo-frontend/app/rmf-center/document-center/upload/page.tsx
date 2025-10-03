@@ -46,6 +46,7 @@ const CONTROL_FAMILIES = [
 export default function DocumentUploadPage() {
   const router = useRouter()
   const [selectedPackage, setSelectedPackage] = useState<string>("")
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [packages, setPackages] = useState<any[]>([])
   const [selectedFamily, setSelectedFamily] = useState<string>("")
   const [documentType, setDocumentType] = useState<string>("Policy")
@@ -141,7 +142,7 @@ export default function DocumentUploadPage() {
         <CardHeader>
           <CardTitle>Document Details</CardTitle>
           <CardDescription>
-            Provide information about the document you're uploading
+            Provide information about the document you&apos;re uploading
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

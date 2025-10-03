@@ -2,7 +2,7 @@ import { createProxyHandler } from "@/lib/api-proxy";
 
 // GET /api/packages/:id/groups -> GET /api/groups?packageId=:id
 export const GET = createProxyHandler('groups', {
-  transformRequest: async (req) => {
+  transformRequest: async (_req) => {
     // Query params are automatically forwarded
     return null;
   }

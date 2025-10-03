@@ -3,15 +3,14 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
-  FileText, FolderOpen, Shield, AlertTriangle, Settings,
-  Package, Clock, CheckCircle, XCircle, Upload, Search,
-  Filter, Download, Eye, History, FileCheck
+  FileText, Shield, AlertTriangle, Settings,
+  Package, CheckCircle, Upload,
+  Download, Eye, History, FileCheck
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Table,
   TableBody,
@@ -78,6 +77,7 @@ export default function DocumentCenterPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [selectedPackage, setSelectedPackage] = useState<string>("")
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [packages, setPackages] = useState<any[]>([])
   const [stats, setStats] = useState<DocumentStats>({
     totalDocuments: 0,
@@ -96,11 +96,13 @@ export default function DocumentCenterPage() {
     fetchPackages()
   }, [])
 
+   
   useEffect(() => {
     if (selectedPackage) {
       fetchDocumentStats()
       fetchRecentDocuments()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPackage])
 
   const fetchPackages = async () => {

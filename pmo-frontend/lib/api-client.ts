@@ -22,7 +22,7 @@ interface RequestConfig extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
 }
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
   message?: string;
@@ -49,7 +49,7 @@ export function buildApiUrl(path: string): string {
 /**
  * Appends query parameters to a URL
  */
-function appendQueryParams(url: string, params?: Record<string, any>): string {
+function appendQueryParams(url: string, params?: Record<string, unknown>): string {
   if (!params) return url;
 
   const queryParams = new URLSearchParams();
@@ -113,7 +113,7 @@ class ApiClient {
    * @param config - Request configuration
    * @param isServer - Whether this is a server-side request
    */
-  private async request<T = any>(
+  private async request<T = unknown>(
     path: string,
     config: RequestConfig = {},
     isServer: boolean = false
@@ -144,7 +144,7 @@ class ApiClient {
       const ok = response.ok;
 
       // Try to parse JSON response
-      let data: any;
+      let data: unknown;
       let error: string | undefined;
 
       try {
@@ -173,11 +173,11 @@ class ApiClient {
   }
 
   // HTTP Methods for server-side use
-  async get<T = any>(path: string, config?: RequestConfig): Promise<ApiResponse<T>> {
+  async get<T = unknown>(path: string, config?: RequestConfig): Promise<ApiResponse<T>> {
     return this.request<T>(path, { ...config, method: 'GET' }, true);
   }
 
-  async post<T = any>(path: string, body?: any, config?: RequestConfig): Promise<ApiResponse<T>> {
+  async post<T = unknown>(path: string, body?: unknown, config?: RequestConfig): Promise<ApiResponse<T>> {
     return this.request<T>(path, {
       ...config,
       method: 'POST',
@@ -185,7 +185,7 @@ class ApiClient {
     }, true);
   }
 
-  async patch<T = any>(path: string, body?: any, config?: RequestConfig): Promise<ApiResponse<T>> {
+  async patch<T = unknown>(path: string, body?: unknown, config?: RequestConfig): Promise<ApiResponse<T>> {
     return this.request<T>(path, {
       ...config,
       method: 'PATCH',
@@ -193,7 +193,7 @@ class ApiClient {
     }, true);
   }
 
-  async put<T = any>(path: string, body?: any, config?: RequestConfig): Promise<ApiResponse<T>> {
+  async put<T = unknown>(path: string, body?: unknown, config?: RequestConfig): Promise<ApiResponse<T>> {
     return this.request<T>(path, {
       ...config,
       method: 'PUT',
@@ -201,12 +201,12 @@ class ApiClient {
     }, true);
   }
 
-  async delete<T = any>(path: string, config?: RequestConfig): Promise<ApiResponse<T>> {
+  async delete<T = unknown>(path: string, config?: RequestConfig): Promise<ApiResponse<T>> {
     return this.request<T>(path, { ...config, method: 'DELETE' }, true);
   }
 
   // Special method for file uploads
-  async upload<T = any>(path: string, formData: FormData, config?: RequestConfig): Promise<ApiResponse<T>> {
+  async upload<T = unknown>(path: string, formData: FormData, config?: RequestConfig): Promise<ApiResponse<T>> {
     const { params, ...fetchConfig } = config || {};
     const url = appendQueryParams(buildApiUrl(path), params);
     const headers = await getServerAuthHeaders();
@@ -224,7 +224,7 @@ class ApiClient {
 
       const status = response.status;
       const ok = response.ok;
-      let data: any;
+      let data: unknown;
       let error: string | undefined;
 
       try {
@@ -261,12 +261,12 @@ export const apiClient = new ApiClient();
 
 // Direct exports for common operations
 export const api = {
-  get: <T = any>(path: string, config?: RequestConfig) => apiClient.get<T>(path, config),
-  post: <T = any>(path: string, body?: any, config?: RequestConfig) => apiClient.post<T>(path, body, config),
-  patch: <T = any>(path: string, body?: any, config?: RequestConfig) => apiClient.patch<T>(path, body, config),
-  put: <T = any>(path: string, body?: any, config?: RequestConfig) => apiClient.put<T>(path, body, config),
-  delete: <T = any>(path: string, config?: RequestConfig) => apiClient.delete<T>(path, config),
-  upload: <T = any>(path: string, formData: FormData, config?: RequestConfig) => apiClient.upload<T>(path, formData, config),
+  get: <T = unknown>(path: string, config?: RequestConfig) => apiClient.get<T>(path, config),
+  post: <T = unknown>(path: string, body?: unknown, config?: RequestConfig) => apiClient.post<T>(path, body, config),
+  patch: <T = unknown>(path: string, body?: unknown, config?: RequestConfig) => apiClient.patch<T>(path, body, config),
+  put: <T = unknown>(path: string, body?: unknown, config?: RequestConfig) => apiClient.put<T>(path, body, config),
+  delete: <T = unknown>(path: string, config?: RequestConfig) => apiClient.delete<T>(path, config),
+  upload: <T = unknown>(path: string, formData: FormData, config?: RequestConfig) => apiClient.upload<T>(path, formData, config),
 };
 
 // Export types

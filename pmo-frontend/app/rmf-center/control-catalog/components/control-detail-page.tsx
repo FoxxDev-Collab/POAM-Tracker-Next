@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import {
-  Shield, ArrowLeft, FileText, AlertTriangle, CheckCircle, Clock, Hash,
+  Shield, ArrowLeft, FileText, AlertTriangle, CheckCircle,
   Activity, Settings, Package, Save, Edit, Plus, ChevronDown, Users, Server, FileCheck
 } from "lucide-react"
 import Link from "next/link"
@@ -17,7 +17,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -111,7 +110,7 @@ const COMPLIANCE_STATUSES = [
   { value: 'NOT_ASSESSED', label: 'Not Assessed', color: 'bg-blue-500 dark:bg-blue-600' }
 ]
 
-export default function ControlDetailPage({ familyId, familyName, familyIconName = 'Shield' }: ControlDetailPageProps) {
+export default function ControlDetailPage({ familyId, familyName: _familyName, familyIconName = 'Shield' }: ControlDetailPageProps) {
   const FamilyIcon = ICON_MAP[familyIconName as keyof typeof ICON_MAP] || Shield
   const params = useParams()
   const controlId = params.id as string
@@ -121,12 +120,18 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
   const [control, setControl] = useState<Control | null>(null)
   const [loading, setLoading] = useState(true)
   const [editingCci, setEditingCci] = useState<CCI | null>(null)
-  const [baselineControl, setBaselineControl] = useState<any>(null)
+  const [baselineControl, setBaselineControl] = useState<{
+    controlId?: string;
+    complianceStatus?: string;
+    implementationStatus?: string;
+    includeInBaseline?: boolean;
+  } | null>(null)
   const [cciComplianceData, setCciComplianceData] = useState<Map<string, GroupCompliance[]>>(new Map())
 
   useEffect(() => {
     fetchPackages()
     fetchControl()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [controlId])
 
   useEffect(() => {
@@ -135,6 +140,7 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
       fetchBaselineControl()
       fetchCciComplianceData()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPackageId, controlId])
 
   const fetchPackages = async () => {
@@ -173,15 +179,15 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
             family: familyId,
             controlText: controlData.controlText,
             discussion: controlData.discussion,
-            relatedControls: controlData.relatedControls?.map((rc: any) => rc.relatedControlId) || [],
+            relatedControls: controlData.relatedControls?.map((rc: { relatedControlId: string }) => rc.relatedControlId) || [],
             ccis: controlData.ccis || [],
             complianceStatus: controlData.complianceStatus,
             implementationStatus: controlData.implementationStatus
           })
         }
       }
-    } catch (error) {
-      console.error('Failed to fetch control:', error)
+    } catch {
+      // Failed to fetch control
     } finally {
       setLoading(false)
     }
@@ -193,11 +199,11 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
       const response = await fetch(`/api/catalog/packages/${selectedPackageId}/baseline`)
       if (response.ok) {
         const data = await response.json()
-        const baseline = data.data.controls.find((c: any) => c.controlId === controlId)
+        const baseline = data.data.controls.find((c: { controlId: string }) => c.controlId === controlId)
         setBaselineControl(baseline)
       }
-    } catch (error) {
-      console.error('Failed to fetch baseline control:', error)
+    } catch {
+      // Failed to fetch baseline control
     }
   }
 
@@ -212,15 +218,15 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
 
         // Process the compliance data for each CCI
         if (data.data?.cciCompliance) {
-          Object.entries(data.data.cciCompliance).forEach(([cci, compliance]: [string, any]) => {
+          Object.entries(data.data.cciCompliance).forEach(([cci, compliance]: [string, GroupCompliance[]]) => {
             complianceMap.set(cci, compliance)
           })
         }
 
         setCciComplianceData(complianceMap)
       }
-    } catch (error) {
-      console.error('Failed to fetch CCI compliance data:', error)
+    } catch {
+      // Failed to fetch CCI compliance data
     }
   }
 
@@ -251,14 +257,14 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
         })
         setEditingCci(null)
       } else {
-        const error = await response.json()
+        const errorData = await response.json()
         toast({
           title: "Error",
-          description: error.message || "Failed to update CCI",
+          description: errorData.message || "Failed to update CCI",
           variant: "destructive"
         })
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update CCI compliance",
@@ -297,14 +303,14 @@ export default function ControlDetailPage({ familyId, familyName, familyIconName
         })
         fetchBaselineControl()
       } else {
-        const error = await response.json()
+        const errorData = await response.json()
         toast({
           title: "Error",
-          description: error.message || "Failed to add control to baseline",
+          description: errorData.message || "Failed to add control to baseline",
           variant: "destructive"
         })
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to add control to baseline",

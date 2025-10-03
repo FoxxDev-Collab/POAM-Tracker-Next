@@ -26,12 +26,12 @@ export function getRedisClient(): Redis {
         commandTimeout: 5000,
       });
 
-      redis.on('error', (error) => {
-        console.error('Redis connection error:', error);
+      redis.on('error', (_error) => {
+        // Redis connection error
       });
 
       redis.on('connect', () => {
-        console.log('Redis connected successfully');
+        // Redis connected successfully
       });
 
     } catch (error) {
@@ -68,9 +68,8 @@ export async function checkRedisRateLimit(
     const resetTime = (window + 1) * windowMs;
 
     return { allowed, remaining, resetTime };
-  } catch (error) {
-    console.error('Redis rate limit error:', error);
-    // Fallback to allowing the request if Redis is down
+  } catch {
+    // Redis rate limit error - fallback to allowing the request if Redis is down
     return { allowed: true, remaining: limit - 1, resetTime: Date.now() + windowMs };
   }
 }
@@ -84,8 +83,8 @@ export async function deduplicateRequest(
     const client = getRedisClient();
     const result = await client.set(`dedup:${key}`, '1', 'EX', ttlSeconds, 'NX');
     return result === 'OK'; // Returns true if this is a new request
-  } catch (error) {
-    console.error('Redis deduplication error:', error);
+  } catch {
+    // Redis deduplication error
     return true; // Allow request if Redis is down
   }
 }
@@ -93,24 +92,24 @@ export async function deduplicateRequest(
 // Cache API responses
 export async function cacheResponse(
   key: string,
-  data: any,
+  data: unknown,
   ttlSeconds: number = 300
 ): Promise<void> {
   try {
     const client = getRedisClient();
     await client.set(`cache:${key}`, JSON.stringify(data), 'EX', ttlSeconds);
-  } catch (error) {
-    console.error('Redis cache set error:', error);
+  } catch {
+    // Redis cache set error
   }
 }
 
-export async function getCachedResponse(key: string): Promise<any | null> {
+export async function getCachedResponse(key: string): Promise<unknown | null> {
   try {
     const client = getRedisClient();
     const cached = await client.get(`cache:${key}`);
     return cached ? JSON.parse(cached) : null;
-  } catch (error) {
-    console.error('Redis cache get error:', error);
+  } catch {
+    // Redis cache get error
     return null;
   }
 }

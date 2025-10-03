@@ -9,11 +9,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Get the form data from the request
     const formData = await req.formData();
 
-    // Log what we're receiving for debugging
-    console.log('Upload request to package:', id);
-    console.log('FormData keys:', Array.from(formData.keys()));
-
     // Remove the Content-Type header to let fetch set it properly with boundary
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { 'Content-Type': _, ...cleanHeaders } = headers;
 
     // Forward the form data to the backend

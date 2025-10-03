@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import {
   Shield, Package, AlertTriangle, CheckCircle,
-  FileText, TrendingUp, Activity, Settings,
+  FileText, Activity, Settings,
   Download, RefreshCw, ListChecks, Link2,
   Eye, ExternalLink, ChevronDown, ChevronUp
 } from "lucide-react"
@@ -47,15 +47,9 @@ interface ControlFamily {
   compliance: number
 }
 
-interface CatalogStats {
-  totalControls: number
-  totalCCIs: number
-  controlFamilies: number
-}
-
 interface PackageBaseline {
   packageId: number
-  controls: any[]
+  controls: unknown[]
   summary: {
     total: number
     included: number
@@ -120,7 +114,6 @@ export default function ControlCatalogDashboard() {
   const [packages, setPackages] = useState<ATOPackage[]>([])
   const [selectedPackageId, setSelectedPackageId] = useState<string>("")
   const [selectedPackage, setSelectedPackage] = useState<ATOPackage | null>(null)
-  const [catalogStats, setCatalogStats] = useState<CatalogStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [familyStats, setFamilyStats] = useState<Map<string, ControlFamily>>(new Map())
   const [packageBaseline, setPackageBaseline] = useState<PackageBaseline | null>(null)
@@ -171,8 +164,7 @@ export default function ControlCatalogDashboard() {
     try {
       const response = await fetch('/api/catalog/stats')
       if (response.ok) {
-        const data = await response.json()
-        setCatalogStats(data.data)
+        await response.json()
       }
     } catch (error) {
       console.error('Failed to fetch catalog stats:', error)

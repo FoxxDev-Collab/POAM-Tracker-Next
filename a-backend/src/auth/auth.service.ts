@@ -71,7 +71,12 @@ export class AuthService {
         correlationId,
       });
 
-      const payload = { email: user.email, sub: user.id, role: user.role };
+      const payload = { 
+        email: user.email, 
+        sub: user.id, 
+        role: user.role,
+        pmoId: user.pmoId,
+      };
       return {
         access_token: this.jwtService.sign(payload),
         user: {
@@ -79,6 +84,7 @@ export class AuthService {
           name: user.name,
           email: user.email,
           role: user.role,
+          pmoId: user.pmoId,
           isActive: user.isActive,
         },
       };

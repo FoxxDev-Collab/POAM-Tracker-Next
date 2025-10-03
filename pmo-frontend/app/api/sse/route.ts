@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
         const encoder = new TextEncoder();
 
         // Send initial connection message
-        const send = (data: any) => {
+        const send = (data: unknown) => {
           try {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
           } catch (error) {
@@ -38,17 +38,17 @@ export async function GET(request: NextRequest) {
         request.signal.addEventListener('abort', cleanup);
 
         // Store cleanup function for later use
-        (controller as any).cleanup = cleanup;
+        (controller as unknown as { cleanup: () => void }).cleanup = cleanup;
 
         // TODO: Re-enable Redis integration once stability issues are resolved
         // For now, just provide basic SSE functionality
         send({ type: 'info', message: 'Basic SSE mode - Redis integration disabled' });
       },
 
-      cancel() {
+      cancel(this: { cleanup?: () => void }) {
         // Call cleanup if it exists
-        if ((this as any).cleanup) {
-          (this as any).cleanup();
+        if (this.cleanup) {
+          this.cleanup();
         }
       }
     });

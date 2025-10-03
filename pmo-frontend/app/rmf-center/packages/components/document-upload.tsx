@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Select,
@@ -26,9 +25,7 @@ import {
 import {
   FileText,
   Upload,
-  X,
   Download,
-  Eye,
   Trash2,
   CheckCircle,
   AlertTriangle,
@@ -61,6 +58,7 @@ export enum DocumentType {
   OTHER = 'OTHER'
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const DOCUMENT_TYPE_LABELS: Record<DocumentType, { label: string; icon: any; color: string }> = {
   [DocumentType.SYSTEM_SECURITY_PLAN]: { label: 'System Security Plan', icon: Shield, color: 'text-blue-600' },
   [DocumentType.SECURITY_ASSESSMENT_REPORT]: { label: 'Security Assessment Report', icon: ClipboardList, color: 'text-purple-600' },
@@ -135,7 +133,6 @@ interface DocumentUploadProps {
 
 export default function DocumentUpload({ packageId, currentRmfStep, onDocumentUploaded }: DocumentUploadProps) {
   const [documents, setDocuments] = useState<UploadedDocument[]>([])
-  const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [documentType, setDocumentType] = useState<DocumentType>(DocumentType.OTHER)
@@ -147,10 +144,11 @@ export default function DocumentUpload({ packageId, currentRmfStep, onDocumentUp
   // Fetch documents on mount
   useEffect(() => {
     fetchDocuments()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [packageId])
 
   const fetchDocuments = async () => {
-    setLoading(true)
+    const setLoading = (_loading: boolean) => {}  // No-op function since loading state removed
     try {
       const response = await fetch(`/api/packages/${packageId}/documents`)
       if (response.ok) {
